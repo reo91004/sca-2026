@@ -1,0 +1,1300 @@
+Archive member included to satisfy reference by file (symbol)
+
+/home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(kem.c.o)
+                              objdir-CW308_STM32F4/simpleserial-smaug.o (crypto_kem_keypair)
+/home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(verify.c.o)
+                              /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(kem.c.o) (cryptolab_smaug1_verify)
+/home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+                              /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(kem.c.o) (sha3_256)
+/home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(randombytes.c.o)
+                              /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(kem.c.o) (PQCLEAN_randombytes)
+/home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(keccakf1600.S.o)
+                              /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o) (KeccakF1600_StateXORBytes)
+/home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(hash.c.o)
+                              /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(kem.c.o) (cryptolab_smaug1_shake256_absorb_twice_squeeze)
+/home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o)
+                              /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(kem.c.o) (cryptolab_smaug1_indcpa_keypair)
+/home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(io.c.o)
+                              /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o) (cryptolab_smaug1_save_to_string)
+/home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(key.c.o)
+                              /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(io.c.o) (cryptolab_smaug1_genAx)
+/home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(pack.c.o)
+                              /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(key.c.o) (cryptolab_smaug1_bytes_to_Rq)
+/home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(poly.c.o)
+                              /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o) (cryptolab_smaug1_vec_vec_mult_add)
+/home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(toomcook.c.o)
+                              /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(poly.c.o) (cryptolab_smaug1_poly_mul_acc)
+/home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(cbd.c.o)
+                              /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o) (cryptolab_smaug1_poly_cbd)
+/home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(ciphertext.c.o)
+                              /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o) (cryptolab_smaug1_computeC1)
+/home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(dg.c.o)
+                              /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(key.c.o) (cryptolab_smaug1_addGaussianErrorVec)
+/home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(hwt.c.o)
+                              /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(key.c.o) (cryptolab_smaug1_hwt)
+/usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-atexit.o)
+                              /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/crt0.o (atexit)
+/usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-errno.o)
+                              objdir-CW308_STM32F4/stm32f4_sysmem.o (__errno)
+/usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-exit.o)
+                              /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/crt0.o (exit)
+/usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-fini.o)
+                              /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/crt0.o (__libc_fini_array)
+/usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-impure.o)
+                              /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-exit.o) (_global_impure_ptr)
+/usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-init.o)
+                              /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/crt0.o (__libc_init_array)
+/usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-memcpy.o)
+                              objdir-CW308_STM32F4/simpleserial.o (memcpy)
+/usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-memset.o)
+                              /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/crt0.o (memset)
+/usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__atexit.o)
+                              /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-atexit.o) (__register_exitproc)
+/usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__call_atexit.o)
+                              /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-exit.o) (__call_exitprocs)
+/usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libnosys.a(_exit.o)
+                              /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-exit.o) (_exit)
+
+Discarded input sections
+
+ .text          0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crti.o
+ .data          0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crti.o
+ .bss           0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crti.o
+ .data          0x0000000000000000        0x4 /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtbegin.o
+ .rodata        0x0000000000000000       0x24 /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtbegin.o
+ .text          0x0000000000000000       0x70 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/crt0.o
+ .data          0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/crt0.o
+ .bss           0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/crt0.o
+ .ARM.extab     0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/crt0.o
+ .ARM.exidx     0x0000000000000000       0x10 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/crt0.o
+ .debug_line    0x0000000000000000       0x87 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/crt0.o
+ .debug_info    0x0000000000000000       0x26 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/crt0.o
+ .debug_abbrev  0x0000000000000000       0x14 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/crt0.o
+ .debug_aranges
+                0x0000000000000000       0x20 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/crt0.o
+ .debug_str     0x0000000000000000       0x98 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/crt0.o
+ .ARM.attributes
+                0x0000000000000000       0x1c /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/crt0.o
+ .text          0x0000000000000000        0x0 objdir-CW308_STM32F4/simpleserial-smaug.o
+ .data          0x0000000000000000        0x0 objdir-CW308_STM32F4/simpleserial-smaug.o
+ .text          0x0000000000000000        0x0 objdir-CW308_STM32F4/smaug_rng.o
+ .data          0x0000000000000000        0x0 objdir-CW308_STM32F4/smaug_rng.o
+ .bss           0x0000000000000000        0x0 objdir-CW308_STM32F4/smaug_rng.o
+ .text          0x0000000000000000        0x0 objdir-CW308_STM32F4/simpleserial.o
+ .data          0x0000000000000000        0x0 objdir-CW308_STM32F4/simpleserial.o
+ .text.hex_decode
+                0x0000000000000000       0x78 objdir-CW308_STM32F4/simpleserial.o
+ .text.ss_puts  0x0000000000000000       0x14 objdir-CW308_STM32F4/simpleserial.o
+ .text          0x0000000000000000        0x0 objdir-CW308_STM32F4/hal.o
+ .data          0x0000000000000000        0x0 objdir-CW308_STM32F4/hal.o
+ .bss           0x0000000000000000        0x0 objdir-CW308_STM32F4/hal.o
+ .text.led_ok   0x0000000000000000        0x2 objdir-CW308_STM32F4/hal.o
+ .text.led_error
+                0x0000000000000000        0x2 objdir-CW308_STM32F4/hal.o
+ .debug_info    0x0000000000000000       0xc0 objdir-CW308_STM32F4/hal.o
+ .debug_abbrev  0x0000000000000000       0x7c objdir-CW308_STM32F4/hal.o
+ .debug_aranges
+                0x0000000000000000       0x20 objdir-CW308_STM32F4/hal.o
+ .debug_ranges  0x0000000000000000       0x10 objdir-CW308_STM32F4/hal.o
+ .debug_line    0x0000000000000000       0x76 objdir-CW308_STM32F4/hal.o
+ .debug_str     0x0000000000000000      0x207 objdir-CW308_STM32F4/hal.o
+ .comment       0x0000000000000000       0x34 objdir-CW308_STM32F4/hal.o
+ .debug_frame   0x0000000000000000       0x30 objdir-CW308_STM32F4/hal.o
+ .ARM.attributes
+                0x0000000000000000       0x34 objdir-CW308_STM32F4/hal.o
+ .text          0x0000000000000000        0x0 objdir-CW308_STM32F4/stm32f4_hal.o
+ .data          0x0000000000000000        0x0 objdir-CW308_STM32F4/stm32f4_hal.o
+ .text.HW_AES128_LoadKey
+                0x0000000000000000       0x18 objdir-CW308_STM32F4/stm32f4_hal.o
+ .text.HW_AES128_Init
+                0x0000000000000000       0x4c objdir-CW308_STM32F4/stm32f4_hal.o
+ .text.HW_AES128_Enc_pretrigger
+                0x0000000000000000        0xc objdir-CW308_STM32F4/stm32f4_hal.o
+ .text.HW_AES128_Enc
+                0x0000000000000000       0x20 objdir-CW308_STM32F4/stm32f4_hal.o
+ .text.HW_AES128_Enc_posttrigger
+                0x0000000000000000        0x2 objdir-CW308_STM32F4/stm32f4_hal.o
+ .text.HW_AES128_Dec
+                0x0000000000000000       0x28 objdir-CW308_STM32F4/stm32f4_hal.o
+ .text          0x0000000000000000        0x0 objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+ .data          0x0000000000000000        0x0 objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+ .text.CRYP_SetKey
+                0x0000000000000000       0x7e objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+ .text.CRYP_ProcessData
+                0x0000000000000000       0x9a objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+ .text.RCC_AHB2PeriphClockCmd
+                0x0000000000000000       0x18 objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+ .text.HAL_RCC_GetPCLK1Freq
+                0x0000000000000000        0x8 objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+ .text.HAL_RCC_GetPCLK2Freq
+                0x0000000000000000        0x8 objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+ .text.HAL_CRYP_Init
+                0x0000000000000000       0x3c objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+ .text.HAL_CRYP_DeInit
+                0x0000000000000000       0x2a objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+ .text.HAL_CRYP_AESECB_Encrypt
+                0x0000000000000000       0x78 objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+ .text.HAL_CRYP_AESECB_Decrypt
+                0x0000000000000000       0xd4 objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+ .text          0x0000000000000000        0x0 objdir-CW308_STM32F4/stm32f4_sysmem.o
+ .data          0x0000000000000000        0x0 objdir-CW308_STM32F4/stm32f4_sysmem.o
+ .bss           0x0000000000000000        0x4 objdir-CW308_STM32F4/stm32f4_sysmem.o
+ .text._sbrk    0x0000000000000000       0x34 objdir-CW308_STM32F4/stm32f4_sysmem.o
+ .debug_info    0x0000000000000000      0x10d objdir-CW308_STM32F4/stm32f4_sysmem.o
+ .debug_abbrev  0x0000000000000000       0xd2 objdir-CW308_STM32F4/stm32f4_sysmem.o
+ .debug_loc     0x0000000000000000       0x74 objdir-CW308_STM32F4/stm32f4_sysmem.o
+ .debug_aranges
+                0x0000000000000000       0x20 objdir-CW308_STM32F4/stm32f4_sysmem.o
+ .debug_ranges  0x0000000000000000       0x10 objdir-CW308_STM32F4/stm32f4_sysmem.o
+ .debug_line    0x0000000000000000      0x117 objdir-CW308_STM32F4/stm32f4_sysmem.o
+ .debug_str     0x0000000000000000      0x252 objdir-CW308_STM32F4/stm32f4_sysmem.o
+ .comment       0x0000000000000000       0x34 objdir-CW308_STM32F4/stm32f4_sysmem.o
+ .debug_frame   0x0000000000000000       0x28 objdir-CW308_STM32F4/stm32f4_sysmem.o
+ .ARM.attributes
+                0x0000000000000000       0x34 objdir-CW308_STM32F4/stm32f4_sysmem.o
+ .text          0x0000000000000000        0x0 objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+ .data          0x0000000000000000        0x0 objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+ .bss           0x0000000000000000        0x0 objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+ .text.HAL_RNG_MspDeInit
+                0x0000000000000000        0x2 objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+ .text.HAL_RNG_DeInit
+                0x0000000000000000       0x2a objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+ .text.HAL_RNG_GenerateRandomNumber_IT
+                0x0000000000000000       0x2e objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+ .text.HAL_RNG_GetRandomNumber
+                0x0000000000000000       0x16 objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+ .text.HAL_RNG_GetRandomNumber_IT
+                0x0000000000000000       0x22 objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+ .text.HAL_RNG_ReadLastRandomNumber
+                0x0000000000000000        0x4 objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+ .text.HAL_RNG_ReadyDataCallback
+                0x0000000000000000        0x2 objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+ .text.HAL_RNG_ErrorCallback
+                0x0000000000000000        0x2 objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+ .text.HAL_RNG_IRQHandler
+                0x0000000000000000       0x4a objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+ .text.HAL_RNG_GetState
+                0x0000000000000000        0x4 objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+ .text          0x0000000000000000       0x14 objdir-CW308_STM32F4/stm32f4_startup.o
+ .data          0x0000000000000000        0x0 objdir-CW308_STM32F4/stm32f4_startup.o
+ .bss           0x0000000000000000        0x0 objdir-CW308_STM32F4/stm32f4_startup.o
+ .data          0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(kem.c.o)
+ .bss           0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(kem.c.o)
+ .data          0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(verify.c.o)
+ .bss           0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(verify.c.o)
+ .data          0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+ .bss           0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+ .data          0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(randombytes.c.o)
+ .bss           0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(randombytes.c.o)
+ .data          0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(keccakf1600.S.o)
+ .bss           0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(keccakf1600.S.o)
+ .data          0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(hash.c.o)
+ .bss           0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(hash.c.o)
+ .data          0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o)
+ .bss           0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o)
+ .data          0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(io.c.o)
+ .bss           0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(io.c.o)
+ .data          0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(key.c.o)
+ .bss           0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(key.c.o)
+ .data          0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(pack.c.o)
+ .bss           0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(pack.c.o)
+ .data          0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(poly.c.o)
+ .bss           0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(poly.c.o)
+ .data          0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(toomcook.c.o)
+ .bss           0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(toomcook.c.o)
+ .data          0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(cbd.c.o)
+ .bss           0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(cbd.c.o)
+ .data          0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(ciphertext.c.o)
+ .bss           0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(ciphertext.c.o)
+ .data          0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(dg.c.o)
+ .bss           0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(dg.c.o)
+ .data          0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(hwt.c.o)
+ .bss           0x0000000000000000        0x0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(hwt.c.o)
+ .data          0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-atexit.o)
+ .bss           0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-atexit.o)
+ .text          0x0000000000000000        0xc /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-errno.o)
+ .data          0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-errno.o)
+ .bss           0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-errno.o)
+ .debug_info    0x0000000000000000      0x914 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-errno.o)
+ .debug_abbrev  0x0000000000000000      0x1be /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-errno.o)
+ .debug_aranges
+                0x0000000000000000       0x20 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-errno.o)
+ .debug_line    0x0000000000000000      0x109 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-errno.o)
+ .debug_str     0x0000000000000000      0x56a /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-errno.o)
+ .comment       0x0000000000000000       0x34 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-errno.o)
+ .debug_frame   0x0000000000000000       0x20 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-errno.o)
+ .ARM.attributes
+                0x0000000000000000       0x34 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-errno.o)
+ .text          0x0000000000000000       0x20 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-exit.o)
+ .data          0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-exit.o)
+ .bss           0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-exit.o)
+ .debug_info    0x0000000000000000      0x969 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-exit.o)
+ .debug_abbrev  0x0000000000000000      0x20c /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-exit.o)
+ .debug_loc     0x0000000000000000       0x22 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-exit.o)
+ .debug_aranges
+                0x0000000000000000       0x20 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-exit.o)
+ .debug_line    0x0000000000000000      0x179 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-exit.o)
+ .debug_str     0x0000000000000000      0x58b /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-exit.o)
+ .comment       0x0000000000000000       0x34 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-exit.o)
+ .debug_frame   0x0000000000000000       0x28 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-exit.o)
+ .ARM.attributes
+                0x0000000000000000       0x34 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-exit.o)
+ .data          0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-fini.o)
+ .bss           0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-fini.o)
+ .text          0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-impure.o)
+ .bss           0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-impure.o)
+ .data          0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-init.o)
+ .bss           0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-init.o)
+ .data          0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-memcpy.o)
+ .bss           0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-memcpy.o)
+ .data          0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-memset.o)
+ .bss           0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-memset.o)
+ .data          0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__atexit.o)
+ .bss           0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__atexit.o)
+ .text          0x0000000000000000       0xb8 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__call_atexit.o)
+ .data          0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__call_atexit.o)
+ .bss           0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__call_atexit.o)
+ .text          0x0000000000000000        0x4 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libnosys.a(_exit.o)
+ .data          0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libnosys.a(_exit.o)
+ .bss           0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libnosys.a(_exit.o)
+ .debug_info    0x0000000000000000       0xa3 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libnosys.a(_exit.o)
+ .debug_abbrev  0x0000000000000000       0x6a /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libnosys.a(_exit.o)
+ .debug_loc     0x0000000000000000       0x15 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libnosys.a(_exit.o)
+ .debug_aranges
+                0x0000000000000000       0x20 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libnosys.a(_exit.o)
+ .debug_line    0x0000000000000000       0x75 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libnosys.a(_exit.o)
+ .debug_str     0x0000000000000000      0x181 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libnosys.a(_exit.o)
+ .comment       0x0000000000000000       0x34 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libnosys.a(_exit.o)
+ .debug_frame   0x0000000000000000       0x20 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libnosys.a(_exit.o)
+ .ARM.attributes
+                0x0000000000000000       0x34 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libnosys.a(_exit.o)
+ .text          0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtend.o
+ .data          0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtend.o
+ .bss           0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtend.o
+ .rodata        0x0000000000000000       0x24 /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtend.o
+ .eh_frame      0x0000000000000000        0x4 /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtend.o
+ .text          0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtn.o
+ .data          0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtn.o
+ .bss           0x0000000000000000        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtn.o
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+RAM              0x0000000020000000 0x0000000000020000 xrw
+ROM              0x0000000008000000 0x0000000000100000 xr
+*default*        0x0000000000000000 0xffffffffffffffff
+
+Linker script and memory map
+
+LOAD /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crti.o
+LOAD /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtbegin.o
+LOAD /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/crt0.o
+LOAD objdir-CW308_STM32F4/simpleserial-smaug.o
+LOAD objdir-CW308_STM32F4/smaug_rng.o
+LOAD objdir-CW308_STM32F4/simpleserial.o
+LOAD objdir-CW308_STM32F4/hal.o
+LOAD objdir-CW308_STM32F4/stm32f4_hal.o
+LOAD objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+LOAD objdir-CW308_STM32F4/stm32f4_sysmem.o
+LOAD objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+LOAD objdir-CW308_STM32F4/stm32f4_startup.o
+LOAD /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a
+LOAD /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libm.a
+LOAD /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libm.a
+START GROUP
+LOAD /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/libgcc.a
+LOAD /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a
+LOAD /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libc.a
+END GROUP
+START GROUP
+LOAD /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/libgcc.a
+LOAD /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libc.a
+LOAD /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libnosys.a
+END GROUP
+LOAD /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtend.o
+LOAD /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtn.o
+                0x0000000020020000                _estack = 0x20020000
+                0x0000000000000000                _Min_Heap_Size = 0x0
+                0x0000000000000400                _Min_Stack_Size = 0x400
+
+.isr_vector     0x0000000008000000      0x188
+                0x0000000008000000                . = ALIGN (0x4)
+ *(.isr_vector)
+ .isr_vector    0x0000000008000000      0x188 objdir-CW308_STM32F4/stm32f4_startup.o
+                0x0000000008000000                g_pfnVectors
+                0x0000000008000188                . = ALIGN (0x4)
+
+.text           0x0000000008000200     0x7eb0
+                0x0000000008000200                . = ALIGN (0x4)
+ *(.text)
+ .text          0x0000000008000200       0x88 /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtbegin.o
+ .text          0x0000000008000288      0x262 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(kem.c.o)
+                0x0000000008000288                crypto_kem_keypair
+                0x00000000080002d6                crypto_kem_enc
+                0x0000000008000368                crypto_kem_dec
+ .text          0x00000000080004ea       0xd2 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(verify.c.o)
+                0x00000000080004ea                cryptolab_smaug1_verify
+                0x0000000008000558                cryptolab_smaug1_cmov
+ .text          0x00000000080005bc      0xc00 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+                0x0000000008000922                shake128_inc_init
+                0x000000000800093a                shake128_inc_absorb
+                0x000000000800095a                shake128_inc_finalize
+                0x0000000008000976                shake128_inc_squeeze
+                0x0000000008000996                shake128_inc_ctx_clone
+                0x00000000080009b2                shake128_inc_ctx_release
+                0x00000000080009c6                shake256_inc_init
+                0x00000000080009de                shake256_inc_absorb
+                0x00000000080009fe                shake256_inc_finalize
+                0x0000000008000a1a                shake256_inc_squeeze
+                0x0000000008000a3a                shake256_inc_ctx_clone
+                0x0000000008000a56                shake256_inc_ctx_release
+                0x0000000008000a6a                cshake128_simple_absorb
+                0x0000000008000af6                cshake128_simple_squeezeblocks
+                0x0000000008000b16                cshake128_simple
+                0x0000000008000ba6                shake128_absorb
+                0x0000000008000bf0                shake128_squeezeblocks
+                0x0000000008000c10                shake128
+                0x0000000008000c5a                shake128_ctx_release
+                0x0000000008000c6e                shake128_ctx_clone
+                0x0000000008000c8a                shake256_absorb
+                0x0000000008000cd4                shake256_squeezeblocks
+                0x0000000008000cf4                shake256
+                0x0000000008000d3e                shake256_ctx_release
+                0x0000000008000d52                shake256_ctx_clone
+                0x0000000008000d6e                sha3_256
+                0x0000000008000db6                sha3_256_inc_init
+                0x0000000008000dce                sha3_256_inc_absorb
+                0x0000000008000dee                sha3_256_inc_finalize
+                0x0000000008000e4c                sha3_256_inc_ctx_clone
+                0x0000000008000e68                sha3_256_inc_ctx_release
+                0x0000000008000e7c                sha3_384_inc_init
+                0x0000000008000e94                sha3_384_inc_absorb
+                0x0000000008000eb4                sha3_384_inc_finalize
+                0x0000000008000f06                sha3_384_inc_ctx_clone
+                0x0000000008000f22                sha3_384_inc_ctx_release
+                0x0000000008000f36                sha3_384
+                0x0000000008000f7e                sha3_512
+                0x0000000008000fc6                sha3_512_inc_init
+                0x0000000008000fde                sha3_512_inc_absorb
+                0x0000000008000ffe                sha3_512_inc_finalize
+                0x0000000008001050                sha3_512_inc_ctx_clone
+                0x000000000800106c                sha3_512_inc_ctx_release
+                0x0000000008001080                cshake256_simple_absorb
+                0x000000000800110c                cshake256_simple_squeezeblocks
+                0x000000000800112c                cshake256_simple
+ .text          0x00000000080011bc       0x82 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(randombytes.c.o)
+                0x00000000080011bc                PQCLEAN_randombytes
+ *fill*         0x000000000800123e       0xc2 
+ .text          0x0000000008001300     0x1fa0 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(keccakf1600.S.o)
+                0x0000000008001300                KeccakF1600_Initialize
+                0x0000000008001400                KeccakF1600_StateXORBytes
+                0x0000000008001700                KeccakF1600_StateExtractBytes
+                0x0000000008001b00                KeccakF1600_StatePermute
+ .text          0x00000000080032a0       0x58 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(hash.c.o)
+                0x00000000080032a0                cryptolab_smaug1_shake256_absorb_twice_squeeze
+ .text          0x00000000080032f8      0x642 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o)
+                0x00000000080032f8                cryptolab_smaug1_genRx_vec
+                0x0000000008003372                cryptolab_smaug1_indcpa_keypair
+                0x0000000008003476                cryptolab_smaug1_indcpa_enc
+                0x0000000008003596                cryptolab_smaug1_indcpa_dec
+ .text          0x000000000800393a      0x148 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(io.c.o)
+                0x000000000800393a                cryptolab_smaug1_save_to_string
+                0x000000000800396a                cryptolab_smaug1_load_from_string
+                0x000000000800399a                cryptolab_smaug1_save_to_string_sk
+                0x00000000080039d6                cryptolab_smaug1_load_from_string_sk
+                0x0000000008003a12                cryptolab_smaug1_save_to_string_pk
+                0x0000000008003a44                cryptolab_smaug1_load_from_string_pk
+ .text          0x0000000008003a82      0x1ca /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(key.c.o)
+                0x0000000008003a82                cryptolab_smaug1_genAx
+                0x0000000008003b62                cryptolab_smaug1_genBx
+                0x0000000008003b8a                cryptolab_smaug1_genSx_vec
+                0x0000000008003c04                cryptolab_smaug1_genPubkey
+ .text          0x0000000008003c4c      0xdd8 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(pack.c.o)
+                0x0000000008003d16                cryptolab_smaug1_Rq_to_bytes
+                0x0000000008004092                cryptolab_smaug1_bytes_to_Rq
+                0x000000000800437e                cryptolab_smaug1_Rq_vec_to_bytes
+                0x00000000080043c2                cryptolab_smaug1_bytes_to_Rq_vec
+                0x0000000008004406                cryptolab_smaug1_Rq_mat_to_bytes
+                0x000000000800444a                cryptolab_smaug1_bytes_to_Rq_mat
+                0x000000000800448e                cryptolab_smaug1_Rp_to_bytes
+                0x00000000080044d2                cryptolab_smaug1_Rp2_to_bytes
+                0x0000000008004656                cryptolab_smaug1_bytes_to_Rp
+                0x000000000800469a                cryptolab_smaug1_bytes_to_Rp2
+                0x0000000008004822                cryptolab_smaug1_Rp_vec_to_bytes
+                0x000000000800485e                cryptolab_smaug1_bytes_to_Rp_vec
+                0x000000000800489a                cryptolab_smaug1_Sx_to_bytes
+                0x0000000008004930                cryptolab_smaug1_bytes_to_Sx
+ .text          0x0000000008004a24      0x4ac /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(poly.c.o)
+                0x0000000008004a24                poly_add
+                0x0000000008004a72                poly_sub
+                0x0000000008004ac0                vec_vec_mult
+                0x0000000008004b00                cryptolab_smaug1_vec_vec_mult_add
+                0x0000000008004c44                cryptolab_smaug1_matrix_vec_mult_add
+                0x0000000008004d7c                cryptolab_smaug1_matrix_vec_mult_sub
+ .text          0x0000000008004ed0     0x102e /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(toomcook.c.o)
+                0x0000000008005e12                cryptolab_smaug1_poly_mul_acc
+ *fill*         0x0000000008005efe        0x2 
+ .text          0x0000000008005f00      0x10c /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(cbd.c.o)
+                0x0000000008005ff0                cryptolab_smaug1_poly_cbd
+ .text          0x000000000800600c      0x108 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(ciphertext.c.o)
+                0x000000000800600c                cryptolab_smaug1_computeC1
+                0x0000000008006078                cryptolab_smaug1_computeC2
+ .text          0x0000000008006114      0xae6 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(dg.c.o)
+                0x00000000080062b6                cryptolab_smaug1_addGaussianError
+                0x0000000008006b98                cryptolab_smaug1_addGaussianErrorVec
+ .text          0x0000000008006bfa      0x2d6 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(hwt.c.o)
+                0x0000000008006d04                cryptolab_smaug1_hwt
+ .text          0x0000000008006ed0        0xc /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-atexit.o)
+                0x0000000008006ed0                atexit
+ .text          0x0000000008006edc       0x2c /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-fini.o)
+                0x0000000008006edc                __libc_fini_array
+ .text          0x0000000008006f08       0x48 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-init.o)
+                0x0000000008006f08                __libc_init_array
+ .text          0x0000000008006f50      0x134 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-memcpy.o)
+                0x0000000008006f50                memcpy
+ .text          0x0000000008007084       0xa4 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-memset.o)
+                0x0000000008007084                memset
+ .text          0x0000000008007128       0x68 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__atexit.o)
+                0x0000000008007128                __register_exitproc
+ *(.text*)
+ .text.cmd_pipeline
+                0x0000000008007190       0x78 objdir-CW308_STM32F4/simpleserial-smaug.o
+ .text.cmd_decaps
+                0x0000000008007208       0x5c objdir-CW308_STM32F4/simpleserial-smaug.o
+ .text.cmd_encaps
+                0x0000000008007264       0x28 objdir-CW308_STM32F4/simpleserial-smaug.o
+ .text.cmd_keypair
+                0x000000000800728c       0x24 objdir-CW308_STM32F4/simpleserial-smaug.o
+ .text.startup.main
+                0x00000000080072b0       0x50 objdir-CW308_STM32F4/simpleserial-smaug.o
+                0x00000000080072b0                main
+ .text.rng_get_random_blocking
+                0x0000000008007300        0x4 objdir-CW308_STM32F4/smaug_rng.o
+                0x0000000008007300                rng_get_random_blocking
+ .text.ss_crc   0x0000000008007304       0x2c objdir-CW308_STM32F4/simpleserial.o
+                0x0000000008007304                ss_crc
+ .text.stuff_data
+                0x0000000008007330       0x22 objdir-CW308_STM32F4/simpleserial.o
+                0x0000000008007330                stuff_data
+ .text.unstuff_data
+                0x0000000008007352       0x1e objdir-CW308_STM32F4/simpleserial.o
+                0x0000000008007352                unstuff_data
+ .text.simpleserial_addcmd
+                0x0000000008007370       0x34 objdir-CW308_STM32F4/simpleserial.o
+                0x0000000008007370                simpleserial_addcmd
+ .text.simpleserial_init
+                0x00000000080073a4       0x24 objdir-CW308_STM32F4/simpleserial.o
+                0x00000000080073a4                simpleserial_init
+ .text.simpleserial_put
+                0x00000000080073c8       0x58 objdir-CW308_STM32F4/simpleserial.o
+                0x00000000080073c8                simpleserial_put
+ .text.check_version
+                0x0000000008007420       0x1c objdir-CW308_STM32F4/simpleserial.o
+                0x0000000008007420                check_version
+ .text.ss_get_commands
+                0x000000000800743c       0x3c objdir-CW308_STM32F4/simpleserial.o
+                0x000000000800743c                ss_get_commands
+ .text.simpleserial_get
+                0x0000000008007478       0xfc objdir-CW308_STM32F4/simpleserial.o
+                0x0000000008007478                simpleserial_get
+ .text.platform_init
+                0x0000000008007574       0x90 objdir-CW308_STM32F4/stm32f4_hal.o
+                0x0000000008007574                platform_init
+ .text.init_uart
+                0x0000000008007604       0x7c objdir-CW308_STM32F4/stm32f4_hal.o
+                0x0000000008007604                init_uart
+ .text.trigger_setup
+                0x0000000008007680       0x40 objdir-CW308_STM32F4/stm32f4_hal.o
+                0x0000000008007680                trigger_setup
+ .text.trigger_high
+                0x00000000080076c0       0x10 objdir-CW308_STM32F4/stm32f4_hal.o
+                0x00000000080076c0                trigger_high
+ .text.trigger_low
+                0x00000000080076d0       0x10 objdir-CW308_STM32F4/stm32f4_hal.o
+                0x00000000080076d0                trigger_low
+ .text.getch    0x00000000080076e0       0x24 objdir-CW308_STM32F4/stm32f4_hal.o
+                0x00000000080076e0                getch
+ .text.putch    0x0000000008007704       0x20 objdir-CW308_STM32F4/stm32f4_hal.o
+                0x0000000008007704                putch
+ .text.get_rand
+                0x0000000008007724       0x20 objdir-CW308_STM32F4/stm32f4_hal.o
+                0x0000000008007724                get_rand
+ .text.HAL_GetTick
+                0x0000000008007744       0x10 objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+                0x0000000008007744                HAL_GetTick
+ .text.HAL_RCC_OscConfig
+                0x0000000008007754      0x340 objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+                0x0000000008007754                HAL_RCC_OscConfig
+ .text.HAL_RCC_ClockConfig
+                0x0000000008007a94      0x134 objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+                0x0000000008007a94                HAL_RCC_ClockConfig
+ .text.HAL_GPIO_Init
+                0x0000000008007bc8      0x1d0 objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+                0x0000000008007bc8                HAL_GPIO_Init
+ .text.HAL_GPIO_WritePin
+                0x0000000008007d98        0xa objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+                0x0000000008007d98                HAL_GPIO_WritePin
+ *fill*         0x0000000008007da2        0x2 
+ .text.HAL_UART_Init
+                0x0000000008007da4       0xe0 objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+                0x0000000008007da4                HAL_UART_Init
+ .text.HAL_UART_Transmit
+                0x0000000008007e84       0x8a objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+                0x0000000008007e84                HAL_UART_Transmit
+ .text.HAL_UART_Receive
+                0x0000000008007f0e       0x98 objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+                0x0000000008007f0e                HAL_UART_Receive
+ .text.HAL_RNG_MspInit
+                0x0000000008007fa6        0x2 objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+                0x0000000008007fa6                HAL_RNG_MspInit
+ .text.HAL_RNG_Init
+                0x0000000008007fa8       0x3a objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+                0x0000000008007fa8                HAL_RNG_Init
+ .text.HAL_RNG_GenerateRandomNumber
+                0x0000000008007fe2       0x54 objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+                0x0000000008007fe2                HAL_RNG_GenerateRandomNumber
+ *fill*         0x0000000008008036        0x2 
+ .text.Reset_Handler
+                0x0000000008008038       0x48 objdir-CW308_STM32F4/stm32f4_startup.o
+                0x0000000008008038                Reset_Handler
+ .text.Default_Handler
+                0x0000000008008080        0x2 objdir-CW308_STM32F4/stm32f4_startup.o
+                0x0000000008008080                DebugMon_Handler
+                0x0000000008008080                HardFault_Handler
+                0x0000000008008080                SysTick_Handler
+                0x0000000008008080                PendSV_Handler
+                0x0000000008008080                NMI_Handler
+                0x0000000008008080                UsageFault_Handler
+                0x0000000008008080                Default_Handler
+                0x0000000008008080                MemManage_Handler
+                0x0000000008008080                SVC_Handler
+                0x0000000008008080                BusFault_Handler
+ *fill*         0x0000000008008082        0x2 
+ .text.startup  0x0000000008008084       0x14 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__call_atexit.o)
+ *(.glue_7)
+ .glue_7        0x0000000008008098        0x0 linker stubs
+ *(.glue_7t)
+ .glue_7t       0x0000000008008098        0x0 linker stubs
+ *(.eh_frame)
+ .eh_frame      0x0000000008008098        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtbegin.o
+ *(.init)
+ .init          0x0000000008008098        0x4 /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crti.o
+                0x0000000008008098                _init
+ .init          0x000000000800809c        0x8 /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtn.o
+ *(.fini)
+ .fini          0x00000000080080a4        0x4 /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crti.o
+                0x00000000080080a4                _fini
+ .fini          0x00000000080080a8        0x8 /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtn.o
+                0x00000000080080b0                . = ALIGN (0x4)
+                0x00000000080080b0                _etext = .
+
+.vfp11_veneer   0x00000000080080b0        0x0
+ .vfp11_veneer  0x00000000080080b0        0x0 linker stubs
+
+.v4_bx          0x00000000080080b0        0x0
+ .v4_bx         0x00000000080080b0        0x0 linker stubs
+
+.iplt           0x00000000080080b0        0x0
+ .iplt          0x00000000080080b0        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtbegin.o
+
+.rodata         0x00000000080080b0        0x4
+                0x00000000080080b0                . = ALIGN (0x4)
+ *(.rodata)
+ .rodata        0x00000000080080b0        0x4 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-impure.o)
+                0x00000000080080b0                _global_impure_ptr
+ *(.rodata*)
+                0x00000000080080b4                . = ALIGN (0x4)
+
+.rel.dyn        0x00000000080080b4        0x0
+ .rel.iplt      0x00000000080080b4        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtbegin.o
+
+.ARM.extab      0x00000000080080b4        0x0
+                0x00000000080080b4                . = ALIGN (0x4)
+ *(.ARM.extab* .gnu.linkonce.armextab.*)
+                0x00000000080080b4                . = ALIGN (0x4)
+
+.ARM            0x00000000080080b4        0x0
+                0x00000000080080b4                . = ALIGN (0x4)
+                0x00000000080080b4                __exidx_start = .
+ *(.ARM.exidx*)
+                0x00000000080080b4                __exidx_end = .
+                0x00000000080080b4                . = ALIGN (0x4)
+
+.preinit_array  0x00000000080080b4        0x0
+                0x00000000080080b4                . = ALIGN (0x4)
+                0x00000000080080b4                PROVIDE (__preinit_array_start = .)
+ *(.preinit_array*)
+                0x00000000080080b4                PROVIDE (__preinit_array_end = .)
+                0x00000000080080b4                . = ALIGN (0x4)
+
+.init_array     0x00000000080080b4        0x8
+                0x00000000080080b4                . = ALIGN (0x4)
+                0x00000000080080b4                PROVIDE (__init_array_start = .)
+ *(SORT_BY_NAME(.init_array.*))
+ .init_array.00000
+                0x00000000080080b4        0x4 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__call_atexit.o)
+ *(.init_array*)
+ .init_array    0x00000000080080b8        0x4 /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtbegin.o
+                0x00000000080080bc                PROVIDE (__init_array_end = .)
+                0x00000000080080bc                . = ALIGN (0x4)
+
+.fini_array     0x00000000080080bc        0x4
+                0x00000000080080bc                . = ALIGN (0x4)
+                0x00000000080080bc                PROVIDE (__fini_array_start = .)
+ *(SORT_BY_NAME(.fini_array.*))
+ *(.fini_array*)
+ .fini_array    0x00000000080080bc        0x4 /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtbegin.o
+                0x00000000080080c0                PROVIDE (__fini_array_end = .)
+                0x00000000080080c0                . = ALIGN (0x4)
+                0x00000000080080c0                _sidata = LOADADDR (.data)
+
+.data           0x0000000020000000      0x430 load address 0x00000000080080c0
+                0x0000000020000000                . = ALIGN (0x4)
+                0x0000000020000000                _sdata = .
+ *(.data)
+ .data          0x0000000020000000      0x430 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-impure.o)
+                0x0000000020000000                _impure_ptr
+ *(.data*)
+                0x0000000020000430                . = ALIGN (0x4)
+                0x0000000020000430                _edata = .
+
+.tm_clone_table
+                0x0000000020000430        0x0 load address 0x00000000080084f0
+ .tm_clone_table
+                0x0000000020000430        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtbegin.o
+ .tm_clone_table
+                0x0000000020000430        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtend.o
+
+.igot.plt       0x0000000020000430        0x0 load address 0x00000000080084f0
+ .igot.plt      0x0000000020000430        0x0 /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtbegin.o
+                0x0000000020000430                . = ALIGN (0x4)
+
+.bss            0x0000000020000430      0xb00 load address 0x00000000080084f0
+                0x0000000020000430                _sbss = .
+                0x0000000020000430                __bss_start__ = _sbss
+ *(.bss)
+ .bss           0x0000000020000430       0x1c /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtbegin.o
+ .bss           0x000000002000044c      0x8c0 objdir-CW308_STM32F4/simpleserial-smaug.o
+ .bss           0x0000000020000d0c      0x184 objdir-CW308_STM32F4/simpleserial.o
+ .bss           0x0000000020000e90       0x9c objdir-CW308_STM32F4/stm32f4_hal.o
+                0x0000000020000e90                RngHandle
+                0x0000000020000e9c                UartHandle
+                0x0000000020000f1c                hw_key
+ .bss           0x0000000020000f2c        0x4 objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+ *(.bss*)
+ *(COMMON)
+                0x0000000020000f30                . = ALIGN (0x4)
+                0x0000000020000f30                _ebss = .
+                0x0000000020000f30                __bss_end__ = _ebss
+
+._user_heap_stack
+                0x0000000020000f30      0x400 load address 0x00000000080084f0
+                0x0000000020000f30                . = ALIGN (0x8)
+                0x0000000020000f30                PROVIDE (end = .)
+                [!provide]                        PROVIDE (_end = .)
+                0x0000000020000f30                . = (. + _Min_Heap_Size)
+                0x0000000020001330                . = (. + _Min_Stack_Size)
+ *fill*         0x0000000020000f30      0x400 
+                0x0000000020001330                . = ALIGN (0x8)
+
+/DISCARD/
+ libc.a(*)
+ libm.a(*)
+ libgcc.a(*)
+
+.ARM.attributes
+                0x0000000000000000       0x30
+ *(.ARM.attributes)
+ .ARM.attributes
+                0x0000000000000000       0x1e /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crti.o
+ .ARM.attributes
+                0x000000000000001e       0x34 /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtbegin.o
+ .ARM.attributes
+                0x0000000000000052       0x34 objdir-CW308_STM32F4/simpleserial-smaug.o
+ .ARM.attributes
+                0x0000000000000086       0x34 objdir-CW308_STM32F4/smaug_rng.o
+ .ARM.attributes
+                0x00000000000000ba       0x34 objdir-CW308_STM32F4/simpleserial.o
+ .ARM.attributes
+                0x00000000000000ee       0x34 objdir-CW308_STM32F4/stm32f4_hal.o
+ .ARM.attributes
+                0x0000000000000122       0x34 objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+ .ARM.attributes
+                0x0000000000000156       0x34 objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+ .ARM.attributes
+                0x000000000000018a       0x25 objdir-CW308_STM32F4/stm32f4_startup.o
+ .ARM.attributes
+                0x00000000000001af       0x34 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(kem.c.o)
+ .ARM.attributes
+                0x00000000000001e3       0x34 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(verify.c.o)
+ .ARM.attributes
+                0x0000000000000217       0x34 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+ .ARM.attributes
+                0x000000000000024b       0x34 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(randombytes.c.o)
+ .ARM.attributes
+                0x000000000000027f       0x20 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(keccakf1600.S.o)
+ .ARM.attributes
+                0x000000000000029f       0x34 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(hash.c.o)
+ .ARM.attributes
+                0x00000000000002d3       0x34 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o)
+ .ARM.attributes
+                0x0000000000000307       0x34 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(io.c.o)
+ .ARM.attributes
+                0x000000000000033b       0x34 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(key.c.o)
+ .ARM.attributes
+                0x000000000000036f       0x34 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(pack.c.o)
+ .ARM.attributes
+                0x00000000000003a3       0x34 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(poly.c.o)
+ .ARM.attributes
+                0x00000000000003d7       0x34 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(toomcook.c.o)
+ .ARM.attributes
+                0x000000000000040b       0x34 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(cbd.c.o)
+ .ARM.attributes
+                0x000000000000043f       0x34 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(ciphertext.c.o)
+ .ARM.attributes
+                0x0000000000000473       0x34 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(dg.c.o)
+ .ARM.attributes
+                0x00000000000004a7       0x34 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(hwt.c.o)
+ .ARM.attributes
+                0x00000000000004db       0x34 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-atexit.o)
+ .ARM.attributes
+                0x000000000000050f       0x34 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-fini.o)
+ .ARM.attributes
+                0x0000000000000543       0x32 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-impure.o)
+ .ARM.attributes
+                0x0000000000000575       0x34 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-init.o)
+ .ARM.attributes
+                0x00000000000005a9       0x1c /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-memcpy.o)
+ .ARM.attributes
+                0x00000000000005c5       0x34 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-memset.o)
+ .ARM.attributes
+                0x00000000000005f9       0x34 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__atexit.o)
+ .ARM.attributes
+                0x000000000000062d       0x34 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__call_atexit.o)
+ .ARM.attributes
+                0x0000000000000661       0x32 /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtend.o
+ .ARM.attributes
+                0x0000000000000693       0x1e /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtn.o
+OUTPUT(simpleserial-smaug-CW308_STM32F4.elf elf32-littlearm)
+LOAD linker stubs
+LOAD /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libc.a
+LOAD /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libm.a
+LOAD /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/libgcc.a
+
+.comment        0x0000000000000000       0x79
+ .comment       0x0000000000000000       0x33 /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtbegin.o
+                                         0x34 (size before relaxing)
+ .comment       0x0000000000000033       0x34 objdir-CW308_STM32F4/simpleserial-smaug.o
+ .comment       0x0000000000000033       0x34 objdir-CW308_STM32F4/smaug_rng.o
+ .comment       0x0000000000000033       0x34 objdir-CW308_STM32F4/simpleserial.o
+ .comment       0x0000000000000033       0x34 objdir-CW308_STM32F4/stm32f4_hal.o
+ .comment       0x0000000000000033       0x34 objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+ .comment       0x0000000000000033       0x34 objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+ .comment       0x0000000000000033       0x46 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(kem.c.o)
+                                         0x47 (size before relaxing)
+ .comment       0x0000000000000079       0x47 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(verify.c.o)
+ .comment       0x0000000000000079       0x47 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+ .comment       0x0000000000000079       0x47 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(randombytes.c.o)
+ .comment       0x0000000000000079       0x47 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(hash.c.o)
+ .comment       0x0000000000000079       0x47 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o)
+ .comment       0x0000000000000079       0x47 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(io.c.o)
+ .comment       0x0000000000000079       0x47 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(key.c.o)
+ .comment       0x0000000000000079       0x47 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(pack.c.o)
+ .comment       0x0000000000000079       0x47 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(poly.c.o)
+ .comment       0x0000000000000079       0x47 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(toomcook.c.o)
+ .comment       0x0000000000000079       0x47 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(cbd.c.o)
+ .comment       0x0000000000000079       0x47 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(ciphertext.c.o)
+ .comment       0x0000000000000079       0x47 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(dg.c.o)
+ .comment       0x0000000000000079       0x47 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(hwt.c.o)
+ .comment       0x0000000000000079       0x34 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-atexit.o)
+ .comment       0x0000000000000079       0x34 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-fini.o)
+ .comment       0x0000000000000079       0x34 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-impure.o)
+ .comment       0x0000000000000079       0x34 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-init.o)
+ .comment       0x0000000000000079       0x34 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-memset.o)
+ .comment       0x0000000000000079       0x34 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__atexit.o)
+ .comment       0x0000000000000079       0x34 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__call_atexit.o)
+ .comment       0x0000000000000079       0x34 /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtend.o
+
+.debug_info     0x0000000000000000     0x6bb2
+ .debug_info    0x0000000000000000      0x63d objdir-CW308_STM32F4/simpleserial-smaug.o
+ .debug_info    0x000000000000063d       0xc7 objdir-CW308_STM32F4/smaug_rng.o
+ .debug_info    0x0000000000000704      0x81a objdir-CW308_STM32F4/simpleserial.o
+ .debug_info    0x0000000000000f1e     0x175a objdir-CW308_STM32F4/stm32f4_hal.o
+ .debug_info    0x0000000000002678     0x1e63 objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+ .debug_info    0x00000000000044db      0x547 objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+ .debug_info    0x0000000000004a22      0x100 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-atexit.o)
+ .debug_info    0x0000000000004b22      0x102 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-fini.o)
+ .debug_info    0x0000000000004c24      0x92a /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-impure.o)
+ .debug_info    0x000000000000554e      0x11a /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-init.o)
+ .debug_info    0x0000000000005668       0x26 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-memcpy.o)
+ .debug_info    0x000000000000568e      0x137 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-memset.o)
+ .debug_info    0x00000000000057c5      0x9b0 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__atexit.o)
+ .debug_info    0x0000000000006175      0xa3d /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__call_atexit.o)
+
+.debug_abbrev   0x0000000000000000     0x16d4
+ .debug_abbrev  0x0000000000000000      0x157 objdir-CW308_STM32F4/simpleserial-smaug.o
+ .debug_abbrev  0x0000000000000157       0x8f objdir-CW308_STM32F4/smaug_rng.o
+ .debug_abbrev  0x00000000000001e6      0x20f objdir-CW308_STM32F4/simpleserial.o
+ .debug_abbrev  0x00000000000003f5      0x26f objdir-CW308_STM32F4/stm32f4_hal.o
+ .debug_abbrev  0x0000000000000664      0x444 objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+ .debug_abbrev  0x0000000000000aa8      0x269 objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+ .debug_abbrev  0x0000000000000d11       0xb7 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-atexit.o)
+ .debug_abbrev  0x0000000000000dc8       0xcf /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-fini.o)
+ .debug_abbrev  0x0000000000000e97      0x1b8 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-impure.o)
+ .debug_abbrev  0x000000000000104f       0xcc /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-init.o)
+ .debug_abbrev  0x000000000000111b       0x14 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-memcpy.o)
+ .debug_abbrev  0x000000000000112f       0xb4 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-memset.o)
+ .debug_abbrev  0x00000000000011e3      0x23f /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__atexit.o)
+ .debug_abbrev  0x0000000000001422      0x2b2 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__call_atexit.o)
+
+.debug_loc      0x0000000000000000     0x2d98
+ .debug_loc     0x0000000000000000      0x3cc objdir-CW308_STM32F4/simpleserial-smaug.o
+ .debug_loc     0x00000000000003cc       0x25 objdir-CW308_STM32F4/smaug_rng.o
+ .debug_loc     0x00000000000003f1      0x907 objdir-CW308_STM32F4/simpleserial.o
+ .debug_loc     0x0000000000000cf8      0x2d9 objdir-CW308_STM32F4/stm32f4_hal.o
+ .debug_loc     0x0000000000000fd1     0x138a objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+ .debug_loc     0x000000000000235b      0x3b9 objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+ .debug_loc     0x0000000000002714       0x32 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-atexit.o)
+ .debug_loc     0x0000000000002746       0x68 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-fini.o)
+ .debug_loc     0x00000000000027ae       0xba /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-init.o)
+ .debug_loc     0x0000000000002868      0x22c /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-memset.o)
+ .debug_loc     0x0000000000002a94      0x138 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__atexit.o)
+ .debug_loc     0x0000000000002bcc      0x1cc /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__call_atexit.o)
+
+.debug_aranges  0x0000000000000000      0x360
+ .debug_aranges
+                0x0000000000000000       0x40 objdir-CW308_STM32F4/simpleserial-smaug.o
+ .debug_aranges
+                0x0000000000000040       0x20 objdir-CW308_STM32F4/smaug_rng.o
+ .debug_aranges
+                0x0000000000000060       0x70 objdir-CW308_STM32F4/simpleserial.o
+ .debug_aranges
+                0x00000000000000d0       0x88 objdir-CW308_STM32F4/stm32f4_hal.o
+ .debug_aranges
+                0x0000000000000158       0x98 objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+ .debug_aranges
+                0x00000000000001f0       0x70 objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+ .debug_aranges
+                0x0000000000000260       0x20 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-atexit.o)
+ .debug_aranges
+                0x0000000000000280       0x20 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-fini.o)
+ .debug_aranges
+                0x00000000000002a0       0x18 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-impure.o)
+ .debug_aranges
+                0x00000000000002b8       0x20 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-init.o)
+ .debug_aranges
+                0x00000000000002d8       0x20 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-memcpy.o)
+ .debug_aranges
+                0x00000000000002f8       0x20 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-memset.o)
+ .debug_aranges
+                0x0000000000000318       0x20 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__atexit.o)
+ .debug_aranges
+                0x0000000000000338       0x28 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__call_atexit.o)
+
+.debug_ranges   0x0000000000000000      0x4d0
+ .debug_ranges  0x0000000000000000       0x60 objdir-CW308_STM32F4/simpleserial-smaug.o
+ .debug_ranges  0x0000000000000060       0x10 objdir-CW308_STM32F4/smaug_rng.o
+ .debug_ranges  0x0000000000000070       0xf0 objdir-CW308_STM32F4/simpleserial.o
+ .debug_ranges  0x0000000000000160      0x120 objdir-CW308_STM32F4/stm32f4_hal.o
+ .debug_ranges  0x0000000000000280      0x1a0 objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+ .debug_ranges  0x0000000000000420       0x60 objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+ .debug_ranges  0x0000000000000480       0x50 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__call_atexit.o)
+
+.debug_line     0x0000000000000000     0x3591
+ .debug_line    0x0000000000000000      0x34b objdir-CW308_STM32F4/simpleserial-smaug.o
+ .debug_line    0x000000000000034b       0x7a objdir-CW308_STM32F4/smaug_rng.o
+ .debug_line    0x00000000000003c5      0x66e objdir-CW308_STM32F4/simpleserial.o
+ .debug_line    0x0000000000000a33      0x624 objdir-CW308_STM32F4/stm32f4_hal.o
+ .debug_line    0x0000000000001057     0x15f5 objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+ .debug_line    0x000000000000264c      0x4d4 objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+ .debug_line    0x0000000000002b20       0xc0 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-atexit.o)
+ .debug_line    0x0000000000002be0       0xed /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-fini.o)
+ .debug_line    0x0000000000002ccd       0xe4 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-impure.o)
+ .debug_line    0x0000000000002db1      0x138 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-init.o)
+ .debug_line    0x0000000000002ee9       0xbe /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-memcpy.o)
+ .debug_line    0x0000000000002fa7      0x1bf /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-memset.o)
+ .debug_line    0x0000000000003166      0x19e /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__atexit.o)
+ .debug_line    0x0000000000003304      0x28d /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__call_atexit.o)
+
+.debug_str      0x0000000000000000     0x1d55
+ .debug_str     0x0000000000000000      0x29e objdir-CW308_STM32F4/simpleserial-smaug.o
+                                        0x2dc (size before relaxing)
+ .debug_str     0x000000000000029e       0x36 objdir-CW308_STM32F4/smaug_rng.o
+                                        0x1e1 (size before relaxing)
+ .debug_str     0x00000000000002d4      0x15c objdir-CW308_STM32F4/simpleserial.o
+                                        0x396 (size before relaxing)
+ .debug_str     0x0000000000000430      0xbdc objdir-CW308_STM32F4/stm32f4_hal.o
+                                        0xe37 (size before relaxing)
+ .debug_str     0x000000000000100c      0x2ae objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+                                        0xe82 (size before relaxing)
+ .debug_str     0x00000000000012ba      0x177 objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+                                        0x496 (size before relaxing)
+ .debug_str     0x0000000000001431      0x154 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-atexit.o)
+                                        0x1e4 (size before relaxing)
+ .debug_str     0x0000000000001585       0xc8 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-fini.o)
+                                        0x1dc (size before relaxing)
+ .debug_str     0x000000000000164d      0x453 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-impure.o)
+                                        0x582 (size before relaxing)
+ .debug_str     0x0000000000001aa0       0x90 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-init.o)
+                                        0x206 (size before relaxing)
+ .debug_str     0x0000000000001b30       0xb1 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-memcpy.o)
+ .debug_str     0x0000000000001be1       0xac /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-memset.o)
+                                        0x1bb (size before relaxing)
+ .debug_str     0x0000000000001c8d       0x3b /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__atexit.o)
+                                        0x5bc (size before relaxing)
+ .debug_str     0x0000000000001cc8       0x8d /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__call_atexit.o)
+                                        0x5e8 (size before relaxing)
+
+.debug_frame    0x0000000000000000      0x780
+ .debug_frame   0x0000000000000000       0x90 objdir-CW308_STM32F4/simpleserial-smaug.o
+ .debug_frame   0x0000000000000090       0x20 objdir-CW308_STM32F4/smaug_rng.o
+ .debug_frame   0x00000000000000b0      0x160 objdir-CW308_STM32F4/simpleserial.o
+ .debug_frame   0x0000000000000210      0x168 objdir-CW308_STM32F4/stm32f4_hal.o
+ .debug_frame   0x0000000000000378      0x1bc objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+ .debug_frame   0x0000000000000534      0x110 objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+ .debug_frame   0x0000000000000644       0x20 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-atexit.o)
+ .debug_frame   0x0000000000000664       0x34 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-fini.o)
+ .debug_frame   0x0000000000000698       0x2c /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-init.o)
+ .debug_frame   0x00000000000006c4       0x2c /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-memset.o)
+ .debug_frame   0x00000000000006f0       0x34 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__atexit.o)
+ .debug_frame   0x0000000000000724       0x5c /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__call_atexit.o)
+
+.stab           0x0000000000000000      0x144
+ .stab          0x0000000000000000      0x144 objdir-CW308_STM32F4/stm32f4_startup.o
+
+.stabstr        0x0000000000000000       0x80
+ .stabstr       0x0000000000000000       0x80 objdir-CW308_STM32F4/stm32f4_startup.o
+
+Cross Reference Table
+
+Symbol                                            File
+BusFault_Handler                                  objdir-CW308_STM32F4/stm32f4_startup.o
+DebugMon_Handler                                  objdir-CW308_STM32F4/stm32f4_startup.o
+Default_Handler                                   objdir-CW308_STM32F4/stm32f4_startup.o
+HAL_CRYP_AESECB_Decrypt                           objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+                                                  objdir-CW308_STM32F4/stm32f4_hal.o
+HAL_CRYP_AESECB_Encrypt                           objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+                                                  objdir-CW308_STM32F4/stm32f4_hal.o
+HAL_CRYP_DeInit                                   objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+HAL_CRYP_Init                                     objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+                                                  objdir-CW308_STM32F4/stm32f4_hal.o
+HAL_GPIO_Init                                     objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+                                                  objdir-CW308_STM32F4/stm32f4_hal.o
+HAL_GPIO_WritePin                                 objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+                                                  objdir-CW308_STM32F4/stm32f4_hal.o
+HAL_GetTick                                       objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+                                                  objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+HAL_RCC_ClockConfig                               objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+                                                  objdir-CW308_STM32F4/stm32f4_hal.o
+HAL_RCC_GetPCLK1Freq                              objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+HAL_RCC_GetPCLK2Freq                              objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+HAL_RCC_OscConfig                                 objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+                                                  objdir-CW308_STM32F4/stm32f4_hal.o
+HAL_RNG_DeInit                                    objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+HAL_RNG_ErrorCallback                             objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+HAL_RNG_GenerateRandomNumber                      objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+                                                  objdir-CW308_STM32F4/stm32f4_hal.o
+HAL_RNG_GenerateRandomNumber_IT                   objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+HAL_RNG_GetRandomNumber                           objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+HAL_RNG_GetRandomNumber_IT                        objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+HAL_RNG_GetState                                  objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+HAL_RNG_IRQHandler                                objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+HAL_RNG_Init                                      objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+                                                  objdir-CW308_STM32F4/stm32f4_hal.o
+HAL_RNG_MspDeInit                                 objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+HAL_RNG_MspInit                                   objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+HAL_RNG_ReadLastRandomNumber                      objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+HAL_RNG_ReadyDataCallback                         objdir-CW308_STM32F4/stm32f4xx_hal_rng.o
+HAL_UART_Init                                     objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+                                                  objdir-CW308_STM32F4/stm32f4_hal.o
+HAL_UART_Receive                                  objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+                                                  objdir-CW308_STM32F4/stm32f4_hal.o
+HAL_UART_Transmit                                 objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+                                                  objdir-CW308_STM32F4/stm32f4_hal.o
+HW_AES128_Dec                                     objdir-CW308_STM32F4/stm32f4_hal.o
+HW_AES128_Enc                                     objdir-CW308_STM32F4/stm32f4_hal.o
+HW_AES128_Enc_posttrigger                         objdir-CW308_STM32F4/stm32f4_hal.o
+HW_AES128_Enc_pretrigger                          objdir-CW308_STM32F4/stm32f4_hal.o
+HW_AES128_Init                                    objdir-CW308_STM32F4/stm32f4_hal.o
+HW_AES128_LoadKey                                 objdir-CW308_STM32F4/stm32f4_hal.o
+HardFault_Handler                                 objdir-CW308_STM32F4/stm32f4_startup.o
+KeccakF1600_Initialize                            /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(keccakf1600.S.o)
+KeccakF1600_StateExtractBytes                     /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(keccakf1600.S.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+KeccakF1600_StatePermute                          /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(keccakf1600.S.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+KeccakF1600_StateXORBytes                         /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(keccakf1600.S.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+MemManage_Handler                                 objdir-CW308_STM32F4/stm32f4_startup.o
+NMI_Handler                                       objdir-CW308_STM32F4/stm32f4_startup.o
+PQCLEAN_randombytes                               /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(randombytes.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(kem.c.o)
+PendSV_Handler                                    objdir-CW308_STM32F4/stm32f4_startup.o
+RCC_AHB2PeriphClockCmd                            objdir-CW308_STM32F4/stm32f4_hal_lowlevel.o
+Reset_Handler                                     objdir-CW308_STM32F4/stm32f4_startup.o
+RngHandle                                         objdir-CW308_STM32F4/stm32f4_hal.o
+SVC_Handler                                       objdir-CW308_STM32F4/stm32f4_startup.o
+SysTick_Handler                                   objdir-CW308_STM32F4/stm32f4_startup.o
+SystemInit                                        objdir-CW308_STM32F4/stm32f4_startup.o
+UartHandle                                        objdir-CW308_STM32F4/stm32f4_hal.o
+UsageFault_Handler                                objdir-CW308_STM32F4/stm32f4_startup.o
+_ITM_deregisterTMCloneTable                       /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtbegin.o
+_ITM_registerTMCloneTable                         /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtbegin.o
+__TMC_END__                                       /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtend.o
+                                                  /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtbegin.o
+__bss_end__                                       /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/crt0.o
+__bss_start__                                     /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/crt0.o
+__call_exitprocs                                  /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__call_atexit.o)
+                                                  /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-exit.o)
+__deregister_frame_info                           /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtbegin.o
+__dso_handle                                      /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtbegin.o
+__errno                                           /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-errno.o)
+                                                  objdir-CW308_STM32F4/stm32f4_sysmem.o
+__fini_array_end                                  /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-fini.o)
+__fini_array_start                                /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-fini.o)
+__init_array_end                                  /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-init.o)
+__init_array_start                                /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-init.o)
+__libc_fini                                       /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__call_atexit.o)
+__libc_fini_array                                 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-fini.o)
+                                                  /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__call_atexit.o)
+                                                  /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/crt0.o
+__libc_init_array                                 /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-init.o)
+                                                  objdir-CW308_STM32F4/stm32f4_startup.o
+                                                  /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/crt0.o
+__preinit_array_end                               /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-init.o)
+__preinit_array_start                             /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-init.o)
+__register_exitproc                               /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__atexit.o)
+                                                  /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-atexit.o)
+__register_frame_info                             /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crtbegin.o
+__stack                                           /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/crt0.o
+_ebss                                             objdir-CW308_STM32F4/stm32f4_startup.o
+_edata                                            objdir-CW308_STM32F4/stm32f4_startup.o
+_estack                                           objdir-CW308_STM32F4/stm32f4_startup.o
+_exit                                             /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libnosys.a(_exit.o)
+                                                  /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-exit.o)
+_fini                                             /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crti.o
+                                                  /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-fini.o)
+_global_impure_ptr                                /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-impure.o)
+                                                  /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__call_atexit.o)
+                                                  /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__atexit.o)
+                                                  /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-exit.o)
+_impure_ptr                                       /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-impure.o)
+                                                  /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-errno.o)
+_init                                             /usr/lib/gcc/arm-none-eabi/10.3.1/thumb/v7e-m+fp/hard/crti.o
+                                                  /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-init.o)
+_mainCRTStartup                                   /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/crt0.o
+_sbrk                                             objdir-CW308_STM32F4/stm32f4_sysmem.o
+_sbss                                             objdir-CW308_STM32F4/stm32f4_startup.o
+_sdata                                            objdir-CW308_STM32F4/stm32f4_startup.o
+_sidata                                           objdir-CW308_STM32F4/stm32f4_startup.o
+_stack_init                                       /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/crt0.o
+_start                                            /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/crt0.o
+atexit                                            /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-atexit.o)
+                                                  /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-__call_atexit.o)
+                                                  /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/crt0.o
+check_version                                     objdir-CW308_STM32F4/simpleserial.o
+crypto_kem_dec                                    /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(kem.c.o)
+                                                  objdir-CW308_STM32F4/simpleserial-smaug.o
+crypto_kem_enc                                    /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(kem.c.o)
+                                                  objdir-CW308_STM32F4/simpleserial-smaug.o
+crypto_kem_keypair                                /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(kem.c.o)
+                                                  objdir-CW308_STM32F4/simpleserial-smaug.o
+cryptolab_smaug1_Rp2_to_bytes                     /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(pack.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(io.c.o)
+cryptolab_smaug1_Rp_to_bytes                      /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(pack.c.o)
+cryptolab_smaug1_Rp_vec_to_bytes                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(pack.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(io.c.o)
+cryptolab_smaug1_Rq_mat_to_bytes                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(pack.c.o)
+cryptolab_smaug1_Rq_to_bytes                      /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(pack.c.o)
+cryptolab_smaug1_Rq_vec_to_bytes                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(pack.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(io.c.o)
+cryptolab_smaug1_Sx_to_bytes                      /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(pack.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(io.c.o)
+cryptolab_smaug1_addGaussianError                 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(dg.c.o)
+cryptolab_smaug1_addGaussianErrorVec              /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(dg.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(key.c.o)
+cryptolab_smaug1_bytes_to_Rp                      /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(pack.c.o)
+cryptolab_smaug1_bytes_to_Rp2                     /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(pack.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(io.c.o)
+cryptolab_smaug1_bytes_to_Rp_vec                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(pack.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(io.c.o)
+cryptolab_smaug1_bytes_to_Rq                      /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(pack.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(key.c.o)
+cryptolab_smaug1_bytes_to_Rq_mat                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(pack.c.o)
+cryptolab_smaug1_bytes_to_Rq_vec                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(pack.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(io.c.o)
+cryptolab_smaug1_bytes_to_Sx                      /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(pack.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(io.c.o)
+cryptolab_smaug1_cmov                             /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(verify.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(kem.c.o)
+cryptolab_smaug1_computeC1                        /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(ciphertext.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o)
+cryptolab_smaug1_computeC2                        /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(ciphertext.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o)
+cryptolab_smaug1_genAx                            /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(key.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(io.c.o)
+cryptolab_smaug1_genBx                            /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(key.c.o)
+cryptolab_smaug1_genPubkey                        /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(key.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o)
+cryptolab_smaug1_genRx_vec                        /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o)
+cryptolab_smaug1_genSx_vec                        /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(key.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o)
+cryptolab_smaug1_hwt                              /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(hwt.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(key.c.o)
+cryptolab_smaug1_indcpa_dec                       /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(kem.c.o)
+cryptolab_smaug1_indcpa_enc                       /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(kem.c.o)
+cryptolab_smaug1_indcpa_keypair                   /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(kem.c.o)
+cryptolab_smaug1_load_from_string                 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(io.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o)
+cryptolab_smaug1_load_from_string_pk              /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(io.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o)
+cryptolab_smaug1_load_from_string_sk              /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(io.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o)
+cryptolab_smaug1_matrix_vec_mult_add              /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(poly.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(ciphertext.c.o)
+cryptolab_smaug1_matrix_vec_mult_sub              /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(poly.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(key.c.o)
+cryptolab_smaug1_poly_cbd                         /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(cbd.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o)
+cryptolab_smaug1_poly_mul_acc                     /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(toomcook.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(poly.c.o)
+cryptolab_smaug1_save_to_string                   /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(io.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o)
+cryptolab_smaug1_save_to_string_pk                /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(io.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o)
+cryptolab_smaug1_save_to_string_sk                /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(io.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o)
+cryptolab_smaug1_shake256_absorb_twice_squeeze    /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(hash.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(kem.c.o)
+cryptolab_smaug1_vec_vec_mult_add                 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(poly.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(ciphertext.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o)
+cryptolab_smaug1_verify                           /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(verify.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(kem.c.o)
+cshake128_simple                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+cshake128_simple_absorb                           /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+cshake128_simple_squeezeblocks                    /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+cshake256_simple                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+cshake256_simple_absorb                           /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+cshake256_simple_squeezeblocks                    /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+end                                               objdir-CW308_STM32F4/stm32f4_sysmem.o
+exit                                              /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-exit.o)
+                                                  /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/crt0.o
+g_pfnVectors                                      objdir-CW308_STM32F4/stm32f4_startup.o
+get_rand                                          objdir-CW308_STM32F4/stm32f4_hal.o
+                                                  objdir-CW308_STM32F4/smaug_rng.o
+getch                                             objdir-CW308_STM32F4/stm32f4_hal.o
+                                                  objdir-CW308_STM32F4/simpleserial.o
+hardware_init_hook                                /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/crt0.o
+hex_decode                                        objdir-CW308_STM32F4/simpleserial.o
+hw_key                                            objdir-CW308_STM32F4/stm32f4_hal.o
+init_uart                                         objdir-CW308_STM32F4/stm32f4_hal.o
+                                                  objdir-CW308_STM32F4/simpleserial-smaug.o
+led_error                                         objdir-CW308_STM32F4/hal.o
+led_ok                                            objdir-CW308_STM32F4/hal.o
+main                                              objdir-CW308_STM32F4/simpleserial-smaug.o
+                                                  objdir-CW308_STM32F4/stm32f4_startup.o
+                                                  /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/crt0.o
+memcpy                                            /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-memcpy.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(dg.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(key.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(io.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+                                                  objdir-CW308_STM32F4/simpleserial.o
+memset                                            /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/libg.a(lib_a-memset.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(hwt.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(dg.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(toomcook.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(poly.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(pack.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(key.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(kem.c.o)
+                                                  /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/crt0.o
+platform_init                                     objdir-CW308_STM32F4/stm32f4_hal.o
+                                                  objdir-CW308_STM32F4/simpleserial-smaug.o
+poly_add                                          /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(poly.c.o)
+poly_sub                                          /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(poly.c.o)
+putch                                             objdir-CW308_STM32F4/stm32f4_hal.o
+                                                  objdir-CW308_STM32F4/simpleserial.o
+rng_get_random_blocking                           objdir-CW308_STM32F4/smaug_rng.o
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(randombytes.c.o)
+sha3_256                                          /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(kem.c.o)
+sha3_256_inc_absorb                               /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+sha3_256_inc_ctx_clone                            /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+sha3_256_inc_ctx_release                          /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+sha3_256_inc_finalize                             /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+sha3_256_inc_init                                 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+sha3_384                                          /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+sha3_384_inc_absorb                               /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+sha3_384_inc_ctx_clone                            /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+sha3_384_inc_ctx_release                          /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+sha3_384_inc_finalize                             /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+sha3_384_inc_init                                 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+sha3_512                                          /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o)
+sha3_512_inc_absorb                               /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+sha3_512_inc_ctx_clone                            /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+sha3_512_inc_ctx_release                          /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+sha3_512_inc_finalize                             /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+sha3_512_inc_init                                 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+shake128                                          /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(key.c.o)
+shake128_absorb                                   /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+shake128_ctx_clone                                /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+shake128_ctx_release                              /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+shake128_inc_absorb                               /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+shake128_inc_ctx_clone                            /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+shake128_inc_ctx_release                          /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+shake128_inc_finalize                             /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+shake128_inc_init                                 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+shake128_inc_squeeze                              /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+shake128_squeezeblocks                            /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+shake256                                          /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(dg.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(indcpa.c.o)
+shake256_absorb                                   /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+shake256_ctx_clone                                /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+shake256_ctx_release                              /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+shake256_inc_absorb                               /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(hwt.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(hash.c.o)
+shake256_inc_ctx_clone                            /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+shake256_inc_ctx_release                          /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+shake256_inc_finalize                             /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(hash.c.o)
+shake256_inc_init                                 /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(hwt.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(hash.c.o)
+shake256_inc_squeeze                              /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(hwt.c.o)
+                                                  /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(hash.c.o)
+shake256_squeezeblocks                            /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(fips202.c.o)
+simpleserial_addcmd                               objdir-CW308_STM32F4/simpleserial.o
+                                                  objdir-CW308_STM32F4/simpleserial-smaug.o
+simpleserial_get                                  objdir-CW308_STM32F4/simpleserial.o
+                                                  objdir-CW308_STM32F4/simpleserial-smaug.o
+simpleserial_init                                 objdir-CW308_STM32F4/simpleserial.o
+                                                  objdir-CW308_STM32F4/simpleserial-smaug.o
+simpleserial_put                                  objdir-CW308_STM32F4/simpleserial.o
+                                                  objdir-CW308_STM32F4/simpleserial-smaug.o
+software_init_hook                                /usr/lib/gcc/arm-none-eabi/10.3.1/../../../arm-none-eabi/lib/thumb/v7e-m+fp/hard/crt0.o
+ss_crc                                            objdir-CW308_STM32F4/simpleserial.o
+ss_get_commands                                   objdir-CW308_STM32F4/simpleserial.o
+ss_puts                                           objdir-CW308_STM32F4/simpleserial.o
+stuff_data                                        objdir-CW308_STM32F4/simpleserial.o
+trigger_high                                      objdir-CW308_STM32F4/stm32f4_hal.o
+                                                  objdir-CW308_STM32F4/simpleserial-smaug.o
+trigger_low                                       objdir-CW308_STM32F4/stm32f4_hal.o
+                                                  objdir-CW308_STM32F4/simpleserial-smaug.o
+trigger_setup                                     objdir-CW308_STM32F4/stm32f4_hal.o
+                                                  objdir-CW308_STM32F4/simpleserial-smaug.o
+unstuff_data                                      objdir-CW308_STM32F4/simpleserial.o
+vec_vec_mult                                      /home/reo/Documents/Repository/sca-2026/lib/crypto_kem/smaug1.a(poly.c.o)
