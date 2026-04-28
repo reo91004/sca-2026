@@ -15,7 +15,7 @@ TARGET = simpleserial-smaug
 
 # sca-2026/ project root and the ChipWhisperer firmware tree
 PROJ_ROOT  ?= $(abspath $(CURDIR)/../..)
-CW_FW_PATH ?= /home/reo/Documents/Repository/chipwhisperer/firmware/mcu
+CW_FW_PATH ?= /home/pacl/Documents/Repository/chipwhisperer/firmware/mcu
 
 # SMAUG-T security level: 1, 3, or 5
 SMAUG_LEVEL   ?= 1

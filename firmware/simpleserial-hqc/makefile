@@ -17,7 +17,7 @@ TARGET = simpleserial-hqc
 
 # sca-2026/ project root and the ChipWhisperer firmware tree
 PROJ_ROOT  ?= $(abspath $(CURDIR)/../..)
-CW_FW_PATH ?= /home/reo/Documents/Repository/chipwhisperer/firmware/mcu
+CW_FW_PATH ?= /home/pacl/Documents/Repository/chipwhisperer/firmware/mcu
 
 # HQC implementation: custom (default) or pqclean
 HQC_IMPL ?= custom

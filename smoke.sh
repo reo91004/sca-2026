@@ -120,9 +120,9 @@ if [[ "$SKIP_BUILD" != "1" ]]; then
 fi
 need python3 "Python 3.10+ 필요"
 
-# CW_FW_PATH: makefile 디폴트는 /home/reo/.../chipwhisperer/firmware/mcu.
+# CW_FW_PATH: makefile 디폴트는 /home/pacl/.../chipwhisperer/firmware/mcu.
 # 사용자가 env 로 덮어썼으면 그것을, 아니면 makefile 디폴트를 검사.
-EFFECTIVE_CW_FW_PATH="${CW_FW_PATH:-/home/reo/Documents/Repository/chipwhisperer/firmware/mcu}"
+EFFECTIVE_CW_FW_PATH="${CW_FW_PATH:-/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu}"
 if [[ "$SKIP_BUILD" != "1" && ! -d "$EFFECTIVE_CW_FW_PATH" ]]; then
     fail "CW_FW_PATH 가 디렉토리가 아님: $EFFECTIVE_CW_FW_PATH  (CW_FW_PATH 로 덮어쓰라)"
 fi

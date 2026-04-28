@@ -170,7 +170,7 @@ def main() -> int:
                 continue
 
             traces[i] = scope.get_last_trace()
-            responses[i, :] = bytes(ack)
+            responses[i, :] = ack
 
             if (i + 1) % 50 == 0 or i == n - 1:
                 elapsed = time.time() - started

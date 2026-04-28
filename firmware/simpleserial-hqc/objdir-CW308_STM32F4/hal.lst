@@ -1,58 +1,58 @@
    1              		.cpu cortex-m4
-   2              		.eabi_attribute 20, 1
-   3              		.eabi_attribute 21, 1
-   4              		.eabi_attribute 23, 3
-   5              		.eabi_attribute 24, 1
-   6              		.eabi_attribute 25, 1
-   7              		.eabi_attribute 26, 1
-   8              		.eabi_attribute 30, 2
-   9              		.eabi_attribute 34, 1
-  10              		.eabi_attribute 18, 4
-  11              		.file	"hal.c"
-  12              		.text
-  13              	.Ltext0:
-  14              		.cfi_sections	.debug_frame
-  15              		.section	.text.led_ok,"ax",%progbits
-  16              		.align	1
-  17              		.p2align 2,,3
-  18              		.weak	led_ok
-  19              		.arch armv7e-m
-  20              		.syntax unified
-  21              		.thumb
-  22              		.thumb_func
-  23              		.fpu softvfp
-  25              	led_ok:
-  26              	.LVL0:
-  27              	.LFB0:
-  28              		.file 1 "/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c"
-   1:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** /*
-   2:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c ****     This file is part of the ChipWhisperer Example Targets
-   3:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c ****     Copyright (C) 2012-2015 NewAE Technology Inc.
-   4:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** 
-   5:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c ****     This program is free software: you can redistribute it and/or modify
-   6:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c ****     it under the terms of the GNU General Public License as published by
-   7:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c ****     the Free Software Foundation, either version 3 of the License, or
-   8:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c ****     (at your option) any later version.
-   9:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** 
-  10:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c ****     This program is distributed in the hope that it will be useful,
-  11:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c ****     but WITHOUT ANY WARRANTY; without even the implied warranty of
-  12:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c ****     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  13:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c ****     GNU General Public License for more details.
-  14:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** 
-  15:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c ****     You should have received a copy of the GNU General Public License
-  16:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c ****     along with this program.  If not, see <http://www.gnu.org/licenses/>.
-  17:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** */
-  18:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** 
-  19:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** #include "hal.h"
-  20:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** 
-  21:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** __attribute__((weak)) void led_ok(unsigned int status)
-  22:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** {
+   2              		.arch armv7e-m
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 2
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.file	"hal.c"
+  14              		.text
+  15              	.Ltext0:
+  16              		.cfi_sections	.debug_frame
+  17              		.file 1 "/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c"
+  18              		.section	.text.led_ok,"ax",%progbits
+  19              		.align	1
+  20              		.p2align 2,,3
+  21              		.weak	led_ok
+  22              		.syntax unified
+  23              		.thumb
+  24              		.thumb_func
+  26              	led_ok:
+  27              	.LVL0:
+  28              	.LFB0:
+   1:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** /*
+   2:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c ****     This file is part of the ChipWhisperer Example Targets
+   3:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c ****     Copyright (C) 2012-2015 NewAE Technology Inc.
+   4:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** 
+   5:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c ****     This program is free software: you can redistribute it and/or modify
+   6:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c ****     it under the terms of the GNU General Public License as published by
+   7:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c ****     the Free Software Foundation, either version 3 of the License, or
+   8:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c ****     (at your option) any later version.
+   9:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** 
+  10:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c ****     This program is distributed in the hope that it will be useful,
+  11:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c ****     but WITHOUT ANY WARRANTY; without even the implied warranty of
+  12:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c ****     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  13:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c ****     GNU General Public License for more details.
+  14:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** 
+  15:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c ****     You should have received a copy of the GNU General Public License
+  16:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c ****     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  17:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** */
+  18:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** 
+  19:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** #include "hal.h"
+  20:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** 
+  21:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** __attribute__((weak)) void led_ok(unsigned int status)
+  22:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** {
   29              		.loc 1 22 1 view -0
   30              		.cfi_startproc
   31              		@ args = 0, pretend = 0, frame = 0
   32              		@ frame_needed = 0, uses_anonymous_args = 0
   33              		@ link register save eliminated.
-  23:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** }
+  23:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** }
   34              		.loc 1 23 1 view .LVU1
   35 0000 7047     		bx	lr
   36              		.cfi_endproc
@@ -64,23 +64,192 @@
   43              		.syntax unified
   44              		.thumb
   45              		.thumb_func
-  46              		.fpu softvfp
-  48              	led_error:
-  49              	.LFB3:
-  50              		.cfi_startproc
+  47              	led_error:
+  48              	.LFB11:
+  49              		.cfi_startproc
+  24:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** 
+  25:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** __attribute__((weak)) void led_error(unsigned int status)
+  50              		.loc 1 25 28 view -0
   51              		@ args = 0, pretend = 0, frame = 0
   52              		@ frame_needed = 0, uses_anonymous_args = 0
   53              		@ link register save eliminated.
   54 0000 7047     		bx	lr
   55              		.cfi_endproc
-  56              	.LFE3:
-  58 0002 00BF     		.text
-  59              	.Letext0:
+  56              	.LFE11:
+  58 0002 00BF     		.section	.text._close,"ax",%progbits
+  59              		.align	1
+  60              		.p2align 2,,3
+  61              		.weak	_close
+  62              		.syntax unified
+  63              		.thumb
+  64              		.thumb_func
+  66              	_close:
+  67              	.LFB2:
+  26:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** {
+  27:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** }
+  28:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** 
+  29:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** #ifdef __GNUC__
+  30:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** #if ((__GNUC__ > 11) || \
+  31:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c ****      ((__GNUC__ == 11) && (__GNUC_MINOR__ >= 3)))
+  32:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** __attribute__((weak)) void _close() {}
+  68              		.loc 1 32 37 view -0
+  69              		.cfi_startproc
+  70              		@ args = 0, pretend = 0, frame = 0
+  71              		@ frame_needed = 0, uses_anonymous_args = 0
+  72              		@ link register save eliminated.
+  73              		.loc 1 32 38 view .LVU4
+  74 0000 7047     		bx	lr
+  75              		.cfi_endproc
+  76              	.LFE2:
+  78 0002 00BF     		.section	.text._fstat,"ax",%progbits
+  79              		.align	1
+  80              		.p2align 2,,3
+  81              		.weak	_fstat
+  82              		.syntax unified
+  83              		.thumb
+  84              		.thumb_func
+  86              	_fstat:
+  87              	.LFB13:
+  88              		.cfi_startproc
+  33:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** __attribute__((weak)) void _fstat() {}
+  89              		.loc 1 33 28 view -0
+  90              		@ args = 0, pretend = 0, frame = 0
+  91              		@ frame_needed = 0, uses_anonymous_args = 0
+  92              		@ link register save eliminated.
+  93 0000 7047     		bx	lr
+  94              		.cfi_endproc
+  95              	.LFE13:
+  97 0002 00BF     		.section	.text._getpid,"ax",%progbits
+  98              		.align	1
+  99              		.p2align 2,,3
+ 100              		.weak	_getpid
+ 101              		.syntax unified
+ 102              		.thumb
+ 103              		.thumb_func
+ 105              	_getpid:
+ 106              	.LFB15:
+ 107              		.cfi_startproc
+  34:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** __attribute__((weak)) void _getpid() {}
+ 108              		.loc 1 34 28 view -0
+ 109              		@ args = 0, pretend = 0, frame = 0
+ 110              		@ frame_needed = 0, uses_anonymous_args = 0
+ 111              		@ link register save eliminated.
+ 112 0000 7047     		bx	lr
+ 113              		.cfi_endproc
+ 114              	.LFE15:
+ 116 0002 00BF     		.section	.text._isatty,"ax",%progbits
+ 117              		.align	1
+ 118              		.p2align 2,,3
+ 119              		.weak	_isatty
+ 120              		.syntax unified
+ 121              		.thumb
+ 122              		.thumb_func
+ 124              	_isatty:
+ 125              	.LFB17:
+ 126              		.cfi_startproc
+  35:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** __attribute__((weak)) void _isatty() {}
+ 127              		.loc 1 35 28 view -0
+ 128              		@ args = 0, pretend = 0, frame = 0
+ 129              		@ frame_needed = 0, uses_anonymous_args = 0
+ 130              		@ link register save eliminated.
+ 131 0000 7047     		bx	lr
+ 132              		.cfi_endproc
+ 133              	.LFE17:
+ 135 0002 00BF     		.section	.text._kill,"ax",%progbits
+ 136              		.align	1
+ 137              		.p2align 2,,3
+ 138              		.weak	_kill
+ 139              		.syntax unified
+ 140              		.thumb
+ 141              		.thumb_func
+ 143              	_kill:
+ 144              	.LFB19:
+ 145              		.cfi_startproc
+  36:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** __attribute__((weak)) void _kill() {}
+ 146              		.loc 1 36 28 view -0
+ 147              		@ args = 0, pretend = 0, frame = 0
+ 148              		@ frame_needed = 0, uses_anonymous_args = 0
+ 149              		@ link register save eliminated.
+ 150 0000 7047     		bx	lr
+ 151              		.cfi_endproc
+ 152              	.LFE19:
+ 154 0002 00BF     		.section	.text._lseek,"ax",%progbits
+ 155              		.align	1
+ 156              		.p2align 2,,3
+ 157              		.weak	_lseek
+ 158              		.syntax unified
+ 159              		.thumb
+ 160              		.thumb_func
+ 162              	_lseek:
+ 163              	.LFB21:
+ 164              		.cfi_startproc
+  37:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** __attribute__((weak)) void _lseek() {}
+ 165              		.loc 1 37 28 view -0
+ 166              		@ args = 0, pretend = 0, frame = 0
+ 167              		@ frame_needed = 0, uses_anonymous_args = 0
+ 168              		@ link register save eliminated.
+ 169 0000 7047     		bx	lr
+ 170              		.cfi_endproc
+ 171              	.LFE21:
+ 173 0002 00BF     		.section	.text._read,"ax",%progbits
+ 174              		.align	1
+ 175              		.p2align 2,,3
+ 176              		.weak	_read
+ 177              		.syntax unified
+ 178              		.thumb
+ 179              		.thumb_func
+ 181              	_read:
+ 182              	.LFB23:
+ 183              		.cfi_startproc
+  38:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** __attribute__((weak)) void _read() {}
+ 184              		.loc 1 38 28 view -0
+ 185              		@ args = 0, pretend = 0, frame = 0
+ 186              		@ frame_needed = 0, uses_anonymous_args = 0
+ 187              		@ link register save eliminated.
+ 188 0000 7047     		bx	lr
+ 189              		.cfi_endproc
+ 190              	.LFE23:
+ 192 0002 00BF     		.section	.text._write,"ax",%progbits
+ 193              		.align	1
+ 194              		.p2align 2,,3
+ 195              		.weak	_write
+ 196              		.syntax unified
+ 197              		.thumb
+ 198              		.thumb_func
+ 200              	_write:
+ 201              	.LFB25:
+ 202              		.cfi_startproc
+  39:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.c **** __attribute__((weak)) void _write() {}
+ 203              		.loc 1 39 28 view -0
+ 204              		@ args = 0, pretend = 0, frame = 0
+ 205              		@ frame_needed = 0, uses_anonymous_args = 0
+ 206              		@ link register save eliminated.
+ 207 0000 7047     		bx	lr
+ 208              		.cfi_endproc
+ 209              	.LFE25:
+ 211 0002 00BF     		.text
+ 212              	.Letext0:
 DEFINED SYMBOLS
-                            *ABS*:0000000000000000 hal.c
-     /tmp/cc819Klc.s:16     .text.led_ok:0000000000000000 $t
-     /tmp/cc819Klc.s:25     .text.led_ok:0000000000000000 led_ok
-     /tmp/cc819Klc.s:40     .text.led_error:0000000000000000 $t
-     /tmp/cc819Klc.s:48     .text.led_error:0000000000000000 led_error
+                            *ABS*:00000000 hal.c
+     /tmp/cciyzdDm.s:19     .text.led_ok:00000000 $t
+     /tmp/cciyzdDm.s:26     .text.led_ok:00000000 led_ok
+     /tmp/cciyzdDm.s:40     .text.led_error:00000000 $t
+     /tmp/cciyzdDm.s:47     .text.led_error:00000000 led_error
+     /tmp/cciyzdDm.s:59     .text._close:00000000 $t
+     /tmp/cciyzdDm.s:66     .text._close:00000000 _close
+     /tmp/cciyzdDm.s:79     .text._fstat:00000000 $t
+     /tmp/cciyzdDm.s:86     .text._fstat:00000000 _fstat
+     /tmp/cciyzdDm.s:98     .text._getpid:00000000 $t
+     /tmp/cciyzdDm.s:105    .text._getpid:00000000 _getpid
+     /tmp/cciyzdDm.s:117    .text._isatty:00000000 $t
+     /tmp/cciyzdDm.s:124    .text._isatty:00000000 _isatty
+     /tmp/cciyzdDm.s:136    .text._kill:00000000 $t
+     /tmp/cciyzdDm.s:143    .text._kill:00000000 _kill
+     /tmp/cciyzdDm.s:155    .text._lseek:00000000 $t
+     /tmp/cciyzdDm.s:162    .text._lseek:00000000 _lseek
+     /tmp/cciyzdDm.s:174    .text._read:00000000 $t
+     /tmp/cciyzdDm.s:181    .text._read:00000000 _read
+     /tmp/cciyzdDm.s:193    .text._write:00000000 $t
+     /tmp/cciyzdDm.s:200    .text._write:00000000 _write
 
 NO UNDEFINED SYMBOLS

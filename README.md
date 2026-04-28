@@ -46,7 +46,7 @@ sca-2026/
 * Python 3.10+, `chipwhisperer 6.0.0`, `numpy ≥ 1.26`
 * GNU make
 * ChipWhisperer 펌웨어 트리 — 외부 경로 (기본값:
-  `/home/reo/Documents/Repository/chipwhisperer/firmware/mcu`).
+  `/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu`).
   다른 경로면 makefile 의 `CW_FW_PATH` 또는 환경변수로 덮어쓴다.
 
 ### 빌드시 핵심 컴파일러 옵션

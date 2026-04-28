@@ -1,137 +1,137 @@
    1              		.cpu cortex-m4
-   2              		.eabi_attribute 27, 1
-   3              		.eabi_attribute 28, 1
-   4              		.eabi_attribute 20, 1
-   5              		.eabi_attribute 21, 1
-   6              		.eabi_attribute 23, 3
-   7              		.eabi_attribute 24, 1
-   8              		.eabi_attribute 25, 1
-   9              		.eabi_attribute 26, 1
-  10              		.eabi_attribute 30, 4
-  11              		.eabi_attribute 34, 1
-  12              		.eabi_attribute 18, 4
-  13              		.file	"stm32f4_sysmem.c"
-  14              		.text
-  15              	.Ltext0:
-  16              		.cfi_sections	.debug_frame
-  17              		.section	.text._sbrk,"ax",%progbits
-  18              		.align	1
-  19              		.global	_sbrk
-  20              		.arch armv7e-m
-  21              		.syntax unified
-  22              		.thumb
-  23              		.thumb_func
-  24              		.fpu fpv4-sp-d16
-  26              	_sbrk:
-  27              	.LVL0:
-  28              	.LFB3:
-  29              		.file 1 "/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm3
-   1:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** /**
-   2:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** *****************************************************************************
-   3:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **
-   4:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **  File        : sysmem.c
-   5:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **
-   6:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **  Author	    : Ac6
-   7:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **
-   8:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **  Abstract    : System Workbench Minimal System Memory calls file
-   9:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **
-  10:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** ** 		          For more information about which c-functions
-  11:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **                need which of these lowlevel functions
-  12:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **                please consult the Newlib libc-manual
-  13:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **
-  14:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **  Environment : System Workbench for MCU
-  15:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **
-  16:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **  Distribution: The file is distributed �as is,� without any warranty
-  17:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **                of any kind.
-  18:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **
-  19:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** *****************************************************************************
-  20:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **
-  21:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** ** <h2><center>&copy; COPYRIGHT(c) 2014 Ac6</center></h2>
-  22:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **
-  23:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** ** Redistribution and use in source and binary forms, with or without modification,
-  24:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** ** are permitted provided that the following conditions are met:
-  25:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **   1. Redistributions of source code must retain the above copyright notice,
-  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **      this list of conditions and the following disclaimer.
-  27:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **   2. Redistributions in binary form must reproduce the above copyright notice,
-  28:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **      this list of conditions and the following disclaimer in the documentation
-  29:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **      and/or other materials provided with the distribution.
-  30:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **   3. Neither the name of Ac6 nor the names of its contributors
-  31:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **      may be used to endorse or promote products derived from this software
-  32:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **      without specific prior written permission.
-  33:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **
-  34:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** ** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  35:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** ** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  36:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** ** IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  37:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** ** DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-  38:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** ** FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-  39:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** ** DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-  40:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** ** SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-  41:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** ** CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-  42:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** ** OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  43:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** ** OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-  44:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **
-  45:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** *****************************************************************************
-  46:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** */
-  47:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 
-  48:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** /* Includes */
-  49:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** #include <errno.h>
-  50:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** #include <stdio.h>
-  51:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 
-  52:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** /* Variables */
-  53:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** //Uncomment following if needed - commented out for now as not used and causes warning
-  54:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** //extern int errno;
-  55:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** register char * stack_ptr asm("sp");
-  56:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 
-  57:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** /* Functions */
-  58:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 
-  59:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** /**
-  60:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c ****  _sbrk
-  61:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c ****  Increase program data space. Malloc and related functions depend on this
-  62:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **/
-  63:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** char * _sbrk(int incr)
-  64:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** {
+   2              		.arch armv7e-m
+   3              		.fpu fpv4-sp-d16
+   4              		.eabi_attribute 27, 1
+   5              		.eabi_attribute 28, 1
+   6              		.eabi_attribute 20, 1
+   7              		.eabi_attribute 21, 1
+   8              		.eabi_attribute 23, 3
+   9              		.eabi_attribute 24, 1
+  10              		.eabi_attribute 25, 1
+  11              		.eabi_attribute 26, 1
+  12              		.eabi_attribute 30, 4
+  13              		.eabi_attribute 34, 1
+  14              		.eabi_attribute 18, 4
+  15              		.file	"stm32f4_sysmem.c"
+  16              		.text
+  17              	.Ltext0:
+  18              		.cfi_sections	.debug_frame
+  19              		.file 1 "/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm
+  20              		.section	.text._sbrk,"ax",%progbits
+  21              		.align	1
+  22              		.global	_sbrk
+  23              		.syntax unified
+  24              		.thumb
+  25              		.thumb_func
+  27              	_sbrk:
+  28              	.LVL0:
+  29              	.LFB3:
+   1:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** /**
+   2:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** *****************************************************************************
+   3:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **
+   4:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **  File        : sysmem.c
+   5:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **
+   6:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **  Author	    : Ac6
+   7:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **
+   8:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **  Abstract    : System Workbench Minimal System Memory calls file
+   9:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **
+  10:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** ** 		          For more information about which c-functions
+  11:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **                need which of these lowlevel functions
+  12:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **                please consult the Newlib libc-manual
+  13:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **
+  14:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **  Environment : System Workbench for MCU
+  15:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **
+  16:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **  Distribution: The file is distributed �as is,� without any warranty
+  17:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **                of any kind.
+  18:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **
+  19:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** *****************************************************************************
+  20:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **
+  21:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** ** <h2><center>&copy; COPYRIGHT(c) 2014 Ac6</center></h2>
+  22:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **
+  23:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** ** Redistribution and use in source and binary forms, with or without modification,
+  24:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** ** are permitted provided that the following conditions are met:
+  25:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **   1. Redistributions of source code must retain the above copyright notice,
+  26:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **      this list of conditions and the following disclaimer.
+  27:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **   2. Redistributions in binary form must reproduce the above copyright notice,
+  28:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **      this list of conditions and the following disclaimer in the documentation
+  29:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **      and/or other materials provided with the distribution.
+  30:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **   3. Neither the name of Ac6 nor the names of its contributors
+  31:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **      may be used to endorse or promote products derived from this software
+  32:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **      without specific prior written permission.
+  33:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **
+  34:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** ** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  35:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** ** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  36:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** ** IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+  37:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** ** DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+  38:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** ** FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+  39:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** ** DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+  40:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** ** SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+  41:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** ** CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+  42:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** ** OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  43:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** ** OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  44:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **
+  45:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** *****************************************************************************
+  46:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** */
+  47:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 
+  48:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** /* Includes */
+  49:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** #include <errno.h>
+  50:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** #include <stdio.h>
+  51:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 
+  52:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** /* Variables */
+  53:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** //Uncomment following if needed - commented out for now as not used and causes warning
+  54:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** //extern int errno;
+  55:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** register char * stack_ptr asm("sp");
+  56:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 
+  57:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** /* Functions */
+  58:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 
+  59:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** /**
+  60:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c ****  _sbrk
+  61:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c ****  Increase program data space. Malloc and related functions depend on this
+  62:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** **/
+  63:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** char * _sbrk(int incr)
+  64:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** {
   30              		.loc 1 64 1 view -0
   31              		.cfi_startproc
   32              		@ args = 0, pretend = 0, frame = 0
   33              		@ frame_needed = 0, uses_anonymous_args = 0
-  65:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 	extern char end asm("end");
+  65:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 	extern char end asm("end");
   34              		.loc 1 65 2 view .LVU1
-  66:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 	static char *heap_end;
+  66:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 	static char *heap_end;
   35              		.loc 1 66 2 view .LVU2
-  67:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 	char *prev_heap_end;
+  67:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 	char *prev_heap_end;
   36              		.loc 1 67 2 view .LVU3
-  68:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 
-  69:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 	if (heap_end == 0)
+  68:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 
+  69:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 	if (heap_end == 0)
   37              		.loc 1 69 2 view .LVU4
   38              		.loc 1 69 15 is_stmt 0 view .LVU5
   39 0000 0A4A     		ldr	r2, .L5
   40              		.loc 1 69 5 view .LVU6
   41 0002 1168     		ldr	r1, [r2]
-  64:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 	extern char end asm("end");
+  64:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 	extern char end asm("end");
   42              		.loc 1 64 1 view .LVU7
   43 0004 08B5     		push	{r3, lr}
   44              	.LCFI0:
   45              		.cfi_def_cfa_offset 8
   46              		.cfi_offset 3, -8
   47              		.cfi_offset 14, -4
-  64:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 	extern char end asm("end");
+  64:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 	extern char end asm("end");
   48              		.loc 1 64 1 view .LVU8
   49 0006 0346     		mov	r3, r0
   50              		.loc 1 69 5 view .LVU9
   51 0008 09B9     		cbnz	r1, .L2
-  70:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 		heap_end = &end;
+  70:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 		heap_end = &end;
   52              		.loc 1 70 3 is_stmt 1 view .LVU10
   53              		.loc 1 70 12 is_stmt 0 view .LVU11
   54 000a 0949     		ldr	r1, .L5+4
   55 000c 1160     		str	r1, [r2]
   56              	.L2:
-  71:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 
-  72:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 	prev_heap_end = heap_end;
+  71:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 
+  72:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 	prev_heap_end = heap_end;
   57              		.loc 1 72 2 is_stmt 1 view .LVU12
   58              		.loc 1 72 16 is_stmt 0 view .LVU13
   59 000e 1068     		ldr	r0, [r2]
   60              	.LVL1:
-  73:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 	if (heap_end + incr > stack_ptr)
+  73:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 	if (heap_end + incr > stack_ptr)
   61              		.loc 1 73 2 is_stmt 1 view .LVU14
   62              		.loc 1 73 5 is_stmt 0 view .LVU15
   63 0010 6946     		mov	r1, sp
@@ -141,37 +141,37 @@
   67              		.loc 1 73 5 view .LVU17
   68 0014 8B42     		cmp	r3, r1
   69 0016 06D9     		bls	.L3
-  74:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 	{
-  75:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 		errno = ENOMEM;
+  74:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 	{
+  75:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 		errno = ENOMEM;
   70              		.loc 1 75 3 is_stmt 1 view .LVU18
   71 0018 FFF7FEFF 		bl	__errno
   72              	.LVL3:
-  73              		.loc 1 75 9 is_stmt 0 view .LVU19
+  73              		.loc 1 75 9 is_stmt 0 discriminator 1 view .LVU19
   74 001c 0C23     		movs	r3, #12
   75 001e 0360     		str	r3, [r0]
-  76:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 		return (char *) -1;
+  76:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 		return (char *) -1;
   76              		.loc 1 76 3 is_stmt 1 view .LVU20
   77              		.loc 1 76 10 is_stmt 0 view .LVU21
   78 0020 4FF0FF30 		mov	r0, #-1
   79              	.L1:
-  77:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 	}
-  78:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 
-  79:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 	heap_end += incr;
-  80:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 
-  81:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 	return (char *) prev_heap_end;
-  82:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** }
+  77:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 	}
+  78:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 
+  79:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 	heap_end += incr;
+  80:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 
+  81:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 	return (char *) prev_heap_end;
+  82:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** }
   80              		.loc 1 82 1 view .LVU22
   81 0024 08BD     		pop	{r3, pc}
   82              	.LVL4:
   83              	.L3:
-  79:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 
+  79:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 
   84              		.loc 1 79 2 is_stmt 1 view .LVU23
-  79:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 
+  79:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** 
   85              		.loc 1 79 11 is_stmt 0 view .LVU24
   86 0026 1360     		str	r3, [r2]
-  81:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** }
+  81:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** }
   87              		.loc 1 81 2 is_stmt 1 view .LVU25
-  81:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** }
+  81:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_sysmem.c **** }
   88              		.loc 1 81 9 is_stmt 0 view .LVU26
   89 0028 FCE7     		b	.L1
   90              	.L6:
@@ -190,12 +190,12 @@
  106              	.Letext0:
  107              		.file 2 "/usr/include/newlib/sys/errno.h"
 DEFINED SYMBOLS
-                            *ABS*:0000000000000000 stm32f4_sysmem.c
-     /tmp/ccvAMp6X.s:18     .text._sbrk:0000000000000000 $t
-     /tmp/ccvAMp6X.s:26     .text._sbrk:0000000000000000 _sbrk
-     /tmp/ccvAMp6X.s:93     .text._sbrk:000000000000002c $d
-     /tmp/ccvAMp6X.s:99     .bss:0000000000000000 $d
-     /tmp/ccvAMp6X.s:103    .bss:0000000000000000 heap_end.0
+                            *ABS*:00000000 stm32f4_sysmem.c
+     /tmp/ccyUk52m.s:21     .text._sbrk:00000000 $t
+     /tmp/ccyUk52m.s:27     .text._sbrk:00000000 _sbrk
+     /tmp/ccyUk52m.s:93     .text._sbrk:0000002c $d
+     /tmp/ccyUk52m.s:99     .bss:00000000 $d
+     /tmp/ccyUk52m.s:103    .bss:00000000 heap_end.0
 
 UNDEFINED SYMBOLS
 __errno

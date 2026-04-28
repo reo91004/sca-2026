@@ -1,7 +1,8 @@
-   1              	# 1 "/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/s
+   1              	# 0 "/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/
+   2              	# 0 "<built-in>"
+   3              	# 0 "<command-line>"
+   4              	# 1 "/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/
    1              	/**
-   0              	
-   0              	
    2              	  ******************************************************************************
    3              	  * @file      startup_stm32.s
    4              	  * @author    Ac6
@@ -44,43 +45,43 @@
   42              	Reset_Handler:
   43              	
   44              	/* Copy the data segment initializers from flash to SRAM */
-  45:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S ****   movs	r1, #0
-  46:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S ****   b	LoopCopyDataInit
+  45:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S ****   movs	r1, #0
+  46:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S ****   b	LoopCopyDataInit
   47              	
   48              	CopyDataInit:
-  49:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	ldr	r3, =_sidata
-  50:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	ldr	r3, [r3, r1]
-  51:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	str	r3, [r0, r1]
-  52:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	adds	r1, r1, #4
+  49:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	ldr	r3, =_sidata
+  50:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	ldr	r3, [r3, r1]
+  51:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	str	r3, [r0, r1]
+  52:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	adds	r1, r1, #4
   53              	
   54              	LoopCopyDataInit:
-  55:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	ldr	r0, =_sdata
-  56:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	ldr	r3, =_edata
-  57:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	adds	r2, r0, r1
-  58:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	cmp	r2, r3
-  59:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	bcc	CopyDataInit
-  60:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	ldr	r2, =_sbss
-  61:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	b	LoopFillZerobss
+  55:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	ldr	r0, =_sdata
+  56:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	ldr	r3, =_edata
+  57:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	adds	r2, r0, r1
+  58:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	cmp	r2, r3
+  59:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	bcc	CopyDataInit
+  60:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	ldr	r2, =_sbss
+  61:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	b	LoopFillZerobss
   62              	/* Zero fill the bss segment. */
   63              	FillZerobss:
-  64:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	movs r3, #0
-  65:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S ****  	str  r3, [r2]
-  66:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	adds r2, r2, #4
+  64:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	movs r3, #0
+  65:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S ****  	str  r3, [r2]
+  66:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	adds r2, r2, #4
   67              	
   68              	LoopFillZerobss:
-  69:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	ldr	r3, = _ebss
-  70:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	cmp	r2, r3
-  71:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	bcc	FillZerobss
+  69:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	ldr	r3, = _ebss
+  70:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	cmp	r2, r3
+  71:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	bcc	FillZerobss
   72              	
   73              	/* Call the clock system intitialization function.*/
-  74:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S ****     bl  SystemInit
+  74:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S ****     bl  SystemInit
   75              	/* Call static constructors */
-  76:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S ****     bl __libc_init_array
+  76:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S ****     bl __libc_init_array
   77              	/* Call the application's entry point.*/
-  78:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	bl	main
+  78:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	bl	main
   79              	
   80              	LoopForever:
-  81:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S ****     b LoopForever
+  81:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S ****     b LoopForever
   82              	
   84              	
   85              	/**
@@ -94,7 +95,7 @@
   93              	    .section	.text.Default_Handler,"ax",%progbits
   94              	Default_Handler:
   95              	Infinite_Loop:
-  96:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	b	Infinite_Loop
+  96:/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S **** 	b	Infinite_Loop
   98              	/******************************************************************************
   99              	*
  100              	* The minimal vector table for a Cortex-M.  Note that the proper constructs
@@ -241,29 +242,29 @@
  243              	
  244              		.weak	SystemInit
 DEFINED SYMBOLS
-/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:109    .isr_vector:0000000000000000 g_pfnVectors
-/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:94     .text.Default_Handler:0000000000000000 Default_Handler
-/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:29     *ABS*:00000000f1e0f85f BootRAM
-/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:42     .text.Reset_Handler:0000000000000000 Reset_Handler
-/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:45     .text.Reset_Handler:0000000000000000 $t
-/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:54     .text.Reset_Handler:000000000000000c LoopCopyDataInit
-/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:48     .text.Reset_Handler:0000000000000004 CopyDataInit
-/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:68     .text.Reset_Handler:0000000000000020 LoopFillZerobss
-/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:63     .text.Reset_Handler:000000000000001a FillZerobss
-/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:80     .text.Reset_Handler:0000000000000032 LoopForever
-/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:95     .text.Default_Handler:0000000000000000 Infinite_Loop
-/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:96     .text.Default_Handler:0000000000000000 $t
-/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:94     .text.Default_Handler:0000000000000000 NMI_Handler
-/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:94     .text.Default_Handler:0000000000000000 HardFault_Handler
-/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:94     .text.Default_Handler:0000000000000000 MemManage_Handler
-/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:94     .text.Default_Handler:0000000000000000 BusFault_Handler
-/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:94     .text.Default_Handler:0000000000000000 UsageFault_Handler
-/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:94     .text.Default_Handler:0000000000000000 SVC_Handler
-/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:94     .text.Default_Handler:0000000000000000 DebugMon_Handler
-/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:94     .text.Default_Handler:0000000000000000 PendSV_Handler
-/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:94     .text.Default_Handler:0000000000000000 SysTick_Handler
-/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:244    .text.Reset_Handler:0000000000000034 $d
-                            .text:0000000000000000 $d
+/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:109    .isr_vector:00000000 g_pfnVectors
+/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:94     .text.Default_Handler:00000000 Default_Handler
+/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:29     *ABS*:f1e0f85f BootRAM
+/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:42     .text.Reset_Handler:00000000 Reset_Handler
+/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:45     .text.Reset_Handler:00000000 $t
+/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:54     .text.Reset_Handler:0000000c LoopCopyDataInit
+/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:48     .text.Reset_Handler:00000004 CopyDataInit
+/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:68     .text.Reset_Handler:00000020 LoopFillZerobss
+/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:63     .text.Reset_Handler:0000001a FillZerobss
+/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:80     .text.Reset_Handler:00000032 LoopForever
+/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:95     .text.Default_Handler:00000000 Infinite_Loop
+/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:96     .text.Default_Handler:00000000 $t
+/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:94     .text.Default_Handler:00000000 NMI_Handler
+/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:94     .text.Default_Handler:00000000 HardFault_Handler
+/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:94     .text.Default_Handler:00000000 MemManage_Handler
+/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:94     .text.Default_Handler:00000000 BusFault_Handler
+/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:94     .text.Default_Handler:00000000 UsageFault_Handler
+/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:94     .text.Default_Handler:00000000 SVC_Handler
+/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:94     .text.Default_Handler:00000000 DebugMon_Handler
+/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:94     .text.Default_Handler:00000000 PendSV_Handler
+/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:94     .text.Default_Handler:00000000 SysTick_Handler
+/home/pacl/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_startup.S:244    .text.Reset_Handler:00000034 $d
+                            .text:00000000 $d
 
 UNDEFINED SYMBOLS
 _sidata
