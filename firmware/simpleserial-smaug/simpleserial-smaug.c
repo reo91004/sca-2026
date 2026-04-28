@@ -1,6 +1,7 @@
 // SimpleSerial-SMAUG: ChipWhisperer SCA target wrapper around SMAUG-T KEM.
 //
-// Commands (SimpleSerial v2.1):
+// Commands (SimpleSerial v1.1; matches HQC reference firmware so 0x44 ack
+// behavior can be compared apples-to-apples between the two KEMs):
 //   k  - generate fresh (pk, sk) on-chip; reply 'r' carries first 16 B of pk
 //   e  - encapsulate against the resident pk (no trigger); reply 'r' = first 16 B of ct
 //   d  - decapsulate the resident ct with sk; TRIGGER HIGH around the call
@@ -29,25 +30,25 @@ static uint8_t ct[CRYPTO_CIPHERTEXTBYTES];
 static uint8_t ss_enc[CRYPTO_BYTES];
 static uint8_t ss_dec[CRYPTO_BYTES];
 
-static uint8_t cmd_keypair(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+static uint8_t cmd_keypair(uint8_t *buf, uint8_t len)
 {
-    (void)cmd; (void)scmd; (void)len; (void)buf;
+    (void)len; (void)buf;
     crypto_kem_keypair(pk, sk);
     simpleserial_put('r', 16, pk);
     return 0x00;
 }
 
-static uint8_t cmd_encaps(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+static uint8_t cmd_encaps(uint8_t *buf, uint8_t len)
 {
-    (void)cmd; (void)scmd; (void)len; (void)buf;
+    (void)len; (void)buf;
     crypto_kem_enc(ct, ss_enc, pk);
     simpleserial_put('r', 16, ct);
     return 0x00;
 }
 
-static uint8_t cmd_decaps(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+static uint8_t cmd_decaps(uint8_t *buf, uint8_t len)
 {
-    (void)cmd; (void)scmd; (void)len; (void)buf;
+    (void)len; (void)buf;
 
     trigger_high();
     crypto_kem_dec(ss_dec, ct, sk);
@@ -62,9 +63,9 @@ static uint8_t cmd_decaps(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
     return 0x00;
 }
 
-static uint8_t cmd_pipeline(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
+static uint8_t cmd_pipeline(uint8_t *buf, uint8_t len)
 {
-    (void)cmd; (void)scmd; (void)len; (void)buf;
+    (void)len; (void)buf;
 
     crypto_kem_keypair(pk, sk);
     crypto_kem_enc(ct, ss_enc, pk);

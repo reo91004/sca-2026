@@ -382,11 +382,11 @@
  240 0034 0F48     		ldr	r0, .L7+8
  115:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_hal.c ****   #if SS_VER==SS_VER_2_1
  116:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_hal.c ****   UartHandle.Init.BaudRate   = 230400;
- 241              		.loc 1 116 30 view .LVU78
- 242 0036 1049     		ldr	r1, .L7+12
- 243              	.LBB9:
  117:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_hal.c ****   #else
  118:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_hal.c ****   UartHandle.Init.BaudRate   = 38400;
+ 241              		.loc 1 118 30 view .LVU78
+ 242 0036 1049     		ldr	r1, .L7+12
+ 243              	.LBB9:
  119:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_hal.c ****   #endif
  120:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_hal.c **** 	UartHandle.Init.WordLength = UART_WORDLENGTH_8B;
  121:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_hal.c **** 	UartHandle.Init.StopBits   = UART_STOPBITS_1;
@@ -397,9 +397,9 @@
  244              		.loc 1 125 2 view .LVU79
  245 0038 0295     		str	r5, [sp, #8]
  246              	.LBE9:
- 116:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_hal.c ****   #else
- 247              		.loc 1 116 30 view .LVU80
- 248 003a 4FF46133 		mov	r3, #230400
+ 118:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_hal.c ****   #endif
+ 247              		.loc 1 118 30 view .LVU80
+ 248 003a 4FF41643 		mov	r3, #38400
  249 003e C0E90313 		strd	r1, r3, [r0, #12]
  120:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm32f4/stm32f4_hal.c **** 	UartHandle.Init.StopBits   = UART_STOPBITS_1;
  250              		.loc 1 120 2 is_stmt 1 view .LVU81
@@ -1234,52 +1234,52 @@
  932              		.file 13 "/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm
 DEFINED SYMBOLS
                             *ABS*:0000000000000000 stm32f4_hal.c
-     /tmp/ccX3E2Bn.s:18     .text.platform_init:0000000000000000 $t
-     /tmp/ccX3E2Bn.s:26     .text.platform_init:0000000000000000 platform_init
-     /tmp/ccX3E2Bn.s:152    .text.platform_init:0000000000000080 $d
-     /tmp/ccX3E2Bn.s:160    .text.init_uart:0000000000000000 $t
-     /tmp/ccX3E2Bn.s:167    .text.init_uart:0000000000000000 init_uart
-     /tmp/ccX3E2Bn.s:296    .text.init_uart:000000000000006c $d
-     /tmp/ccX3E2Bn.s:304    .text.trigger_setup:0000000000000000 $t
-     /tmp/ccX3E2Bn.s:311    .text.trigger_setup:0000000000000000 trigger_setup
-     /tmp/ccX3E2Bn.s:378    .text.trigger_setup:0000000000000038 $d
-     /tmp/ccX3E2Bn.s:384    .text.trigger_high:0000000000000000 $t
-     /tmp/ccX3E2Bn.s:391    .text.trigger_high:0000000000000000 trigger_high
-     /tmp/ccX3E2Bn.s:407    .text.trigger_high:000000000000000c $d
-     /tmp/ccX3E2Bn.s:412    .text.trigger_low:0000000000000000 $t
-     /tmp/ccX3E2Bn.s:419    .text.trigger_low:0000000000000000 trigger_low
-     /tmp/ccX3E2Bn.s:435    .text.trigger_low:000000000000000c $d
-     /tmp/ccX3E2Bn.s:440    .text.getch:0000000000000000 $t
-     /tmp/ccX3E2Bn.s:447    .text.getch:0000000000000000 getch
-     /tmp/ccX3E2Bn.s:487    .text.getch:0000000000000020 $d
-     /tmp/ccX3E2Bn.s:492    .text.putch:0000000000000000 $t
-     /tmp/ccX3E2Bn.s:499    .text.putch:0000000000000000 putch
-     /tmp/ccX3E2Bn.s:533    .text.putch:000000000000001c $d
-     /tmp/ccX3E2Bn.s:538    .text.get_rand:0000000000000000 $t
-     /tmp/ccX3E2Bn.s:545    .text.get_rand:0000000000000000 get_rand
-     /tmp/ccX3E2Bn.s:596    .text.get_rand:000000000000001c $d
-     /tmp/ccX3E2Bn.s:601    .text.HW_AES128_LoadKey:0000000000000000 $t
-     /tmp/ccX3E2Bn.s:608    .text.HW_AES128_LoadKey:0000000000000000 HW_AES128_LoadKey
-     /tmp/ccX3E2Bn.s:654    .text.HW_AES128_LoadKey:0000000000000014 $d
-     /tmp/ccX3E2Bn.s:659    .text.HW_AES128_Init:0000000000000000 $t
-     /tmp/ccX3E2Bn.s:666    .text.HW_AES128_Init:0000000000000000 HW_AES128_Init
-     /tmp/ccX3E2Bn.s:737    .text.HW_AES128_Init:0000000000000040 $d
-     /tmp/ccX3E2Bn.s:744    .text.HW_AES128_Enc_pretrigger:0000000000000000 $t
-     /tmp/ccX3E2Bn.s:751    .text.HW_AES128_Enc_pretrigger:0000000000000000 HW_AES128_Enc_pretrigger
-     /tmp/ccX3E2Bn.s:768    .text.HW_AES128_Enc_pretrigger:0000000000000008 $d
-     /tmp/ccX3E2Bn.s:773    .text.HW_AES128_Enc:0000000000000000 $t
-     /tmp/ccX3E2Bn.s:780    .text.HW_AES128_Enc:0000000000000000 HW_AES128_Enc
-     /tmp/ccX3E2Bn.s:815    .text.HW_AES128_Enc:000000000000001c $d
-     /tmp/ccX3E2Bn.s:820    .text.HW_AES128_Enc_posttrigger:0000000000000000 $t
-     /tmp/ccX3E2Bn.s:827    .text.HW_AES128_Enc_posttrigger:0000000000000000 HW_AES128_Enc_posttrigger
-     /tmp/ccX3E2Bn.s:842    .text.HW_AES128_Dec:0000000000000000 $t
-     /tmp/ccX3E2Bn.s:849    .text.HW_AES128_Dec:0000000000000000 HW_AES128_Dec
-     /tmp/ccX3E2Bn.s:893    .text.HW_AES128_Dec:0000000000000024 $d
-     /tmp/ccX3E2Bn.s:917    .bss:000000000000008c hw_key
-     /tmp/ccX3E2Bn.s:909    .bss:000000000000000c UartHandle
-     /tmp/ccX3E2Bn.s:905    .bss:0000000000000000 RngHandle
-     /tmp/ccX3E2Bn.s:901    .bss:0000000000000000 $d
-     /tmp/ccX3E2Bn.s:913    .bss:000000000000004c cryp
+     /tmp/ccQfsNas.s:18     .text.platform_init:0000000000000000 $t
+     /tmp/ccQfsNas.s:26     .text.platform_init:0000000000000000 platform_init
+     /tmp/ccQfsNas.s:152    .text.platform_init:0000000000000080 $d
+     /tmp/ccQfsNas.s:160    .text.init_uart:0000000000000000 $t
+     /tmp/ccQfsNas.s:167    .text.init_uart:0000000000000000 init_uart
+     /tmp/ccQfsNas.s:296    .text.init_uart:000000000000006c $d
+     /tmp/ccQfsNas.s:304    .text.trigger_setup:0000000000000000 $t
+     /tmp/ccQfsNas.s:311    .text.trigger_setup:0000000000000000 trigger_setup
+     /tmp/ccQfsNas.s:378    .text.trigger_setup:0000000000000038 $d
+     /tmp/ccQfsNas.s:384    .text.trigger_high:0000000000000000 $t
+     /tmp/ccQfsNas.s:391    .text.trigger_high:0000000000000000 trigger_high
+     /tmp/ccQfsNas.s:407    .text.trigger_high:000000000000000c $d
+     /tmp/ccQfsNas.s:412    .text.trigger_low:0000000000000000 $t
+     /tmp/ccQfsNas.s:419    .text.trigger_low:0000000000000000 trigger_low
+     /tmp/ccQfsNas.s:435    .text.trigger_low:000000000000000c $d
+     /tmp/ccQfsNas.s:440    .text.getch:0000000000000000 $t
+     /tmp/ccQfsNas.s:447    .text.getch:0000000000000000 getch
+     /tmp/ccQfsNas.s:487    .text.getch:0000000000000020 $d
+     /tmp/ccQfsNas.s:492    .text.putch:0000000000000000 $t
+     /tmp/ccQfsNas.s:499    .text.putch:0000000000000000 putch
+     /tmp/ccQfsNas.s:533    .text.putch:000000000000001c $d
+     /tmp/ccQfsNas.s:538    .text.get_rand:0000000000000000 $t
+     /tmp/ccQfsNas.s:545    .text.get_rand:0000000000000000 get_rand
+     /tmp/ccQfsNas.s:596    .text.get_rand:000000000000001c $d
+     /tmp/ccQfsNas.s:601    .text.HW_AES128_LoadKey:0000000000000000 $t
+     /tmp/ccQfsNas.s:608    .text.HW_AES128_LoadKey:0000000000000000 HW_AES128_LoadKey
+     /tmp/ccQfsNas.s:654    .text.HW_AES128_LoadKey:0000000000000014 $d
+     /tmp/ccQfsNas.s:659    .text.HW_AES128_Init:0000000000000000 $t
+     /tmp/ccQfsNas.s:666    .text.HW_AES128_Init:0000000000000000 HW_AES128_Init
+     /tmp/ccQfsNas.s:737    .text.HW_AES128_Init:0000000000000040 $d
+     /tmp/ccQfsNas.s:744    .text.HW_AES128_Enc_pretrigger:0000000000000000 $t
+     /tmp/ccQfsNas.s:751    .text.HW_AES128_Enc_pretrigger:0000000000000000 HW_AES128_Enc_pretrigger
+     /tmp/ccQfsNas.s:768    .text.HW_AES128_Enc_pretrigger:0000000000000008 $d
+     /tmp/ccQfsNas.s:773    .text.HW_AES128_Enc:0000000000000000 $t
+     /tmp/ccQfsNas.s:780    .text.HW_AES128_Enc:0000000000000000 HW_AES128_Enc
+     /tmp/ccQfsNas.s:815    .text.HW_AES128_Enc:000000000000001c $d
+     /tmp/ccQfsNas.s:820    .text.HW_AES128_Enc_posttrigger:0000000000000000 $t
+     /tmp/ccQfsNas.s:827    .text.HW_AES128_Enc_posttrigger:0000000000000000 HW_AES128_Enc_posttrigger
+     /tmp/ccQfsNas.s:842    .text.HW_AES128_Dec:0000000000000000 $t
+     /tmp/ccQfsNas.s:849    .text.HW_AES128_Dec:0000000000000000 HW_AES128_Dec
+     /tmp/ccQfsNas.s:893    .text.HW_AES128_Dec:0000000000000024 $d
+     /tmp/ccQfsNas.s:917    .bss:000000000000008c hw_key
+     /tmp/ccQfsNas.s:909    .bss:000000000000000c UartHandle
+     /tmp/ccQfsNas.s:905    .bss:0000000000000000 RngHandle
+     /tmp/ccQfsNas.s:901    .bss:0000000000000000 $d
+     /tmp/ccQfsNas.s:913    .bss:000000000000004c cryp
 
 UNDEFINED SYMBOLS
 HAL_RCC_OscConfig

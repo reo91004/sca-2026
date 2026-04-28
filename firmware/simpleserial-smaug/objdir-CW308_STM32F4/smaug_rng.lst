@@ -57,8 +57,8 @@
   46              		.file 2 "/usr/lib/gcc/arm-none-eabi/10.3.1/include/stdint.h"
 DEFINED SYMBOLS
                             *ABS*:0000000000000000 smaug_rng.c
-     /tmp/ccQvz4Kl.s:18     .text.rng_get_random_blocking:0000000000000000 $t
-     /tmp/ccQvz4Kl.s:26     .text.rng_get_random_blocking:0000000000000000 rng_get_random_blocking
+     /tmp/ccrEE2jA.s:18     .text.rng_get_random_blocking:0000000000000000 $t
+     /tmp/ccrEE2jA.s:26     .text.rng_get_random_blocking:0000000000000000 rng_get_random_blocking
 
 UNDEFINED SYMBOLS
 get_rand

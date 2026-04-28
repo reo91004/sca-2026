@@ -1,0 +1,1246 @@
+   1              		.cpu cortex-m4
+   2              		.eabi_attribute 20, 1
+   3              		.eabi_attribute 21, 1
+   4              		.eabi_attribute 23, 3
+   5              		.eabi_attribute 24, 1
+   6              		.eabi_attribute 25, 1
+   7              		.eabi_attribute 26, 1
+   8              		.eabi_attribute 30, 2
+   9              		.eabi_attribute 34, 1
+  10              		.eabi_attribute 18, 4
+  11              		.file	"simpleserial-hqc-pqclean.c"
+  12              		.text
+  13              	.Ltext0:
+  14              		.cfi_sections	.debug_frame
+  15              		.section	.text.set_single_byte,"ax",%progbits
+  16              		.align	1
+  17              		.p2align 2,,3
+  18              		.global	set_single_byte
+  19              		.arch armv7e-m
+  20              		.syntax unified
+  21              		.thumb
+  22              		.thumb_func
+  23              		.fpu softvfp
+  25              	set_single_byte:
+  26              	.LVL0:
+  27              	.LFB1:
+  28              		.file 1 "simpleserial-hqc-pqclean.c"
+   1:simpleserial-hqc-pqclean.c **** /*
+   2:simpleserial-hqc-pqclean.c ****     HQC PQClean code_encode for side-channel analysis
+   3:simpleserial-hqc-pqclean.c ****     Uses PQCLEAN_HQC128_CLEAN implementation directly.
+   4:simpleserial-hqc-pqclean.c **** 
+   5:simpleserial-hqc-pqclean.c ****     Commands:
+   6:simpleserial-hqc-pqclean.c ****       'm' + offset + data: Set message chunk (46-byte RM input)
+   7:simpleserial-hqc-pqclean.c ****       'b' + 1 byte: Set single byte message
+   8:simpleserial-hqc-pqclean.c ****       'e' + 1 byte: Encode single byte RM (returns 16 bytes)
+   9:simpleserial-hqc-pqclean.c ****       't' + 1 byte: Encode full message RM with per-byte triggers (46 pulses)
+  10:simpleserial-hqc-pqclean.c ****       'i' + 16 bytes: Set 16-byte original message (RS input)
+  11:simpleserial-hqc-pqclean.c ****       'c' + 1 byte: PQCLEAN_HQC128_CLEAN_code_encode (single trigger)
+  12:simpleserial-hqc-pqclean.c ****       'd' + 1 byte: code_encode with per-byte RM triggers (46 pulses)
+  13:simpleserial-hqc-pqclean.c ****       'p' + data: Encode full message RM (single trigger)
+  14:simpleserial-hqc-pqclean.c ****       'g' + chunk: Get codeword chunk
+  15:simpleserial-hqc-pqclean.c ****       'x' + 1 byte: Reset
+  16:simpleserial-hqc-pqclean.c **** */
+  17:simpleserial-hqc-pqclean.c **** 
+  18:simpleserial-hqc-pqclean.c **** #include "hal.h"
+  19:simpleserial-hqc-pqclean.c **** #include "parameters.h"
+  20:simpleserial-hqc-pqclean.c **** #include "reed_muller.h"
+  21:simpleserial-hqc-pqclean.c **** #include "reed_solomon.h"
+  22:simpleserial-hqc-pqclean.c **** #include "code.h"
+  23:simpleserial-hqc-pqclean.c **** #include "simpleserial.h"
+  24:simpleserial-hqc-pqclean.c **** #include <stdint.h>
+  25:simpleserial-hqc-pqclean.c **** #include <string.h>
+  26:simpleserial-hqc-pqclean.c **** 
+  27:simpleserial-hqc-pqclean.c **** #define MULTIPLICITY 3  /* CEIL_DIVIDE(384, 128) */
+  28:simpleserial-hqc-pqclean.c **** 
+  29:simpleserial-hqc-pqclean.c **** /* Storage */
+  30:simpleserial-hqc-pqclean.c **** static uint8_t msg[PARAM_N1];                      /* 46-byte message (RM input) */
+  31:simpleserial-hqc-pqclean.c **** static uint64_t codeword[PARAM_N1 * MULTIPLICITY * 2]; /* 2208 bytes */
+  32:simpleserial-hqc-pqclean.c **** 
+  33:simpleserial-hqc-pqclean.c **** /* Single byte encode */
+  34:simpleserial-hqc-pqclean.c **** static uint8_t single_msg;
+  35:simpleserial-hqc-pqclean.c **** static uint64_t single_codeword[2];  /* 128 bits = 16 bytes */
+  36:simpleserial-hqc-pqclean.c **** 
+  37:simpleserial-hqc-pqclean.c **** /* code_encode: 16-byte original message (RS input) */
+  38:simpleserial-hqc-pqclean.c **** static uint8_t original_msg[PARAM_K];  /* 16 bytes */
+  39:simpleserial-hqc-pqclean.c **** 
+  40:simpleserial-hqc-pqclean.c **** /*
+  41:simpleserial-hqc-pqclean.c ****  * Set message chunk (46-byte RM input)
+  42:simpleserial-hqc-pqclean.c ****  * Command 'm' + [offset] + [data bytes]
+  43:simpleserial-hqc-pqclean.c ****  */
+  44:simpleserial-hqc-pqclean.c **** uint8_t set_msg(uint8_t *data, uint8_t len) {
+  45:simpleserial-hqc-pqclean.c ****     if (len < 2)
+  46:simpleserial-hqc-pqclean.c ****         return 0x01;
+  47:simpleserial-hqc-pqclean.c ****     uint8_t offset = data[0];
+  48:simpleserial-hqc-pqclean.c ****     uint8_t copy_len = len - 1;
+  49:simpleserial-hqc-pqclean.c ****     if (offset + copy_len > PARAM_N1)
+  50:simpleserial-hqc-pqclean.c ****         copy_len = PARAM_N1 - offset;
+  51:simpleserial-hqc-pqclean.c ****     memcpy(&msg[offset], &data[1], copy_len);
+  52:simpleserial-hqc-pqclean.c ****     return 0x00;
+  53:simpleserial-hqc-pqclean.c **** }
+  54:simpleserial-hqc-pqclean.c **** 
+  55:simpleserial-hqc-pqclean.c **** /*
+  56:simpleserial-hqc-pqclean.c ****  * Set single byte message
+  57:simpleserial-hqc-pqclean.c ****  * Command 'b' + [1 byte]
+  58:simpleserial-hqc-pqclean.c ****  */
+  59:simpleserial-hqc-pqclean.c **** uint8_t set_single_byte(uint8_t *data, uint8_t len) {
+  29              		.loc 1 59 53 view -0
+  30              		.cfi_startproc
+  31              		@ args = 0, pretend = 0, frame = 0
+  32              		@ frame_needed = 0, uses_anonymous_args = 0
+  33              		@ link register save eliminated.
+  60:simpleserial-hqc-pqclean.c ****     single_msg = data[0];
+  34              		.loc 1 60 5 view .LVU1
+  35              		.loc 1 60 16 is_stmt 0 view .LVU2
+  36 0000 024B     		ldr	r3, .L3
+  37 0002 0278     		ldrb	r2, [r0]	@ zero_extendqisi2
+  38 0004 1A70     		strb	r2, [r3]
+  61:simpleserial-hqc-pqclean.c ****     return 0x00;
+  39              		.loc 1 61 5 is_stmt 1 view .LVU3
+  62:simpleserial-hqc-pqclean.c **** }
+  40              		.loc 1 62 1 is_stmt 0 view .LVU4
+  41 0006 0020     		movs	r0, #0
+  42              	.LVL1:
+  43              		.loc 1 62 1 view .LVU5
+  44 0008 7047     		bx	lr
+  45              	.L4:
+  46 000a 00BF     		.align	2
+  47              	.L3:
+  48 000c 00000000 		.word	.LANCHOR0
+  49              		.cfi_endproc
+  50              	.LFE1:
+  52              		.section	.text.set_original_msg,"ax",%progbits
+  53              		.align	1
+  54              		.p2align 2,,3
+  55              		.global	set_original_msg
+  56              		.syntax unified
+  57              		.thumb
+  58              		.thumb_func
+  59              		.fpu softvfp
+  61              	set_original_msg:
+  62              	.LVL2:
+  63              	.LFB5:
+  63:simpleserial-hqc-pqclean.c **** 
+  64:simpleserial-hqc-pqclean.c **** /*
+  65:simpleserial-hqc-pqclean.c ****  * Single byte RM encode with trigger
+  66:simpleserial-hqc-pqclean.c ****  * Command 'e' + [1 dummy byte]
+  67:simpleserial-hqc-pqclean.c ****  */
+  68:simpleserial-hqc-pqclean.c **** uint8_t encode_single(uint8_t *data, uint8_t len) {
+  69:simpleserial-hqc-pqclean.c ****     trigger_high();
+  70:simpleserial-hqc-pqclean.c ****     encode(single_codeword, single_msg);
+  71:simpleserial-hqc-pqclean.c ****     trigger_low();
+  72:simpleserial-hqc-pqclean.c ****     simpleserial_put('r', 16, (uint8_t *)single_codeword);
+  73:simpleserial-hqc-pqclean.c ****     return 0x00;
+  74:simpleserial-hqc-pqclean.c **** }
+  75:simpleserial-hqc-pqclean.c **** 
+  76:simpleserial-hqc-pqclean.c **** /*
+  77:simpleserial-hqc-pqclean.c ****  * Full 46-byte RM encode with single trigger
+  78:simpleserial-hqc-pqclean.c ****  * Command 'p' + [optional first byte]
+  79:simpleserial-hqc-pqclean.c ****  */
+  80:simpleserial-hqc-pqclean.c **** uint8_t encode_full(uint8_t *data, uint8_t len) {
+  81:simpleserial-hqc-pqclean.c ****     if (len > 0)
+  82:simpleserial-hqc-pqclean.c ****         msg[0] = data[0];
+  83:simpleserial-hqc-pqclean.c ****     trigger_high();
+  84:simpleserial-hqc-pqclean.c ****     PQCLEAN_HQC128_CLEAN_reed_muller_encode(codeword, msg);
+  85:simpleserial-hqc-pqclean.c ****     trigger_low();
+  86:simpleserial-hqc-pqclean.c ****     simpleserial_put('r', 16, (uint8_t *)codeword);
+  87:simpleserial-hqc-pqclean.c ****     return 0x00;
+  88:simpleserial-hqc-pqclean.c **** }
+  89:simpleserial-hqc-pqclean.c **** 
+  90:simpleserial-hqc-pqclean.c **** /*
+  91:simpleserial-hqc-pqclean.c ****  * Full 46-byte RM encode with per-byte triggers (46 pulses)
+  92:simpleserial-hqc-pqclean.c ****  * Command 't' + [1 dummy byte]
+  93:simpleserial-hqc-pqclean.c ****  */
+  94:simpleserial-hqc-pqclean.c **** uint8_t encode_full_triggered(uint8_t *data, uint8_t len) {
+  95:simpleserial-hqc-pqclean.c ****     for (size_t i = 0; i < PARAM_N1; i++) {
+  96:simpleserial-hqc-pqclean.c ****         trigger_high();
+  97:simpleserial-hqc-pqclean.c ****         encode(&codeword[2 * i * MULTIPLICITY], msg[i]);
+  98:simpleserial-hqc-pqclean.c ****         trigger_low();
+  99:simpleserial-hqc-pqclean.c ****         for (size_t copy = 1; copy < MULTIPLICITY; copy++) {
+ 100:simpleserial-hqc-pqclean.c ****             memcpy(&codeword[2 * i * MULTIPLICITY + 2 * copy],
+ 101:simpleserial-hqc-pqclean.c ****                    &codeword[2 * i * MULTIPLICITY], 16);
+ 102:simpleserial-hqc-pqclean.c ****         }
+ 103:simpleserial-hqc-pqclean.c ****     }
+ 104:simpleserial-hqc-pqclean.c ****     simpleserial_put('r', 16, (uint8_t *)codeword);
+ 105:simpleserial-hqc-pqclean.c ****     return 0x00;
+ 106:simpleserial-hqc-pqclean.c **** }
+ 107:simpleserial-hqc-pqclean.c **** 
+ 108:simpleserial-hqc-pqclean.c **** /*
+ 109:simpleserial-hqc-pqclean.c ****  * Set 16-byte original message for code_encode (RS input)
+ 110:simpleserial-hqc-pqclean.c ****  * Command 'i' + [16 bytes]
+ 111:simpleserial-hqc-pqclean.c ****  */
+ 112:simpleserial-hqc-pqclean.c **** uint8_t set_original_msg(uint8_t *data, uint8_t len) {
+  64              		.loc 1 112 54 is_stmt 1 view -0
+  65              		.cfi_startproc
+  66              		@ args = 0, pretend = 0, frame = 0
+  67              		@ frame_needed = 0, uses_anonymous_args = 0
+  68              		@ link register save eliminated.
+ 113:simpleserial-hqc-pqclean.c ****     memcpy(original_msg, data, PARAM_K);
+  69              		.loc 1 113 5 view .LVU7
+ 112:simpleserial-hqc-pqclean.c ****     memcpy(original_msg, data, PARAM_K);
+  70              		.loc 1 112 54 is_stmt 0 view .LVU8
+  71 0000 10B4     		push	{r4}
+  72              	.LCFI0:
+  73              		.cfi_def_cfa_offset 4
+  74              		.cfi_offset 4, -4
+ 112:simpleserial-hqc-pqclean.c ****     memcpy(original_msg, data, PARAM_K);
+  75              		.loc 1 112 54 view .LVU9
+  76 0002 0346     		mov	r3, r0
+  77              		.loc 1 113 5 view .LVU10
+  78 0004 044C     		ldr	r4, .L7
+  79 0006 0068     		ldr	r0, [r0]	@ unaligned
+  80              	.LVL3:
+  81              		.loc 1 113 5 view .LVU11
+  82 0008 5968     		ldr	r1, [r3, #4]	@ unaligned
+  83              	.LVL4:
+  84              		.loc 1 113 5 view .LVU12
+  85 000a 9A68     		ldr	r2, [r3, #8]	@ unaligned
+  86 000c DB68     		ldr	r3, [r3, #12]	@ unaligned
+  87              	.LVL5:
+  88              		.loc 1 113 5 view .LVU13
+  89 000e 0FC4     		stmia	r4!, {r0, r1, r2, r3}
+ 114:simpleserial-hqc-pqclean.c ****     return 0x00;
+  90              		.loc 1 114 5 is_stmt 1 view .LVU14
+ 115:simpleserial-hqc-pqclean.c **** }
+  91              		.loc 1 115 1 is_stmt 0 view .LVU15
+  92 0010 0020     		movs	r0, #0
+  93 0012 10BC     		pop	{r4}
+  94              	.LCFI1:
+  95              		.cfi_restore 4
+  96              		.cfi_def_cfa_offset 0
+  97 0014 7047     		bx	lr
+  98              	.L8:
+  99 0016 00BF     		.align	2
+ 100              	.L7:
+ 101 0018 04000000 		.word	.LANCHOR0+4
+ 102              		.cfi_endproc
+ 103              	.LFE5:
+ 105              		.section	.text.set_msg,"ax",%progbits
+ 106              		.align	1
+ 107              		.p2align 2,,3
+ 108              		.global	set_msg
+ 109              		.syntax unified
+ 110              		.thumb
+ 111              		.thumb_func
+ 112              		.fpu softvfp
+ 114              	set_msg:
+ 115              	.LVL6:
+ 116              	.LFB0:
+  44:simpleserial-hqc-pqclean.c ****     if (len < 2)
+ 117              		.loc 1 44 45 is_stmt 1 view -0
+ 118              		.cfi_startproc
+ 119              		@ args = 0, pretend = 0, frame = 0
+ 120              		@ frame_needed = 0, uses_anonymous_args = 0
+  45:simpleserial-hqc-pqclean.c ****         return 0x01;
+ 121              		.loc 1 45 5 view .LVU17
+  45:simpleserial-hqc-pqclean.c ****         return 0x01;
+ 122              		.loc 1 45 8 is_stmt 0 view .LVU18
+ 123 0000 0129     		cmp	r1, #1
+ 124 0002 12D9     		bls	.L12
+  47:simpleserial-hqc-pqclean.c ****     uint8_t copy_len = len - 1;
+ 125              		.loc 1 47 5 is_stmt 1 view .LVU19
+  44:simpleserial-hqc-pqclean.c ****     if (len < 2)
+ 126              		.loc 1 44 45 is_stmt 0 view .LVU20
+ 127 0004 10B5     		push	{r4, lr}
+ 128              	.LCFI2:
+ 129              		.cfi_def_cfa_offset 8
+ 130              		.cfi_offset 4, -8
+ 131              		.cfi_offset 14, -4
+  48:simpleserial-hqc-pqclean.c ****     if (offset + copy_len > PARAM_N1)
+ 132              		.loc 1 48 13 view .LVU21
+ 133 0006 4A1E     		subs	r2, r1, #1
+  47:simpleserial-hqc-pqclean.c ****     uint8_t copy_len = len - 1;
+ 134              		.loc 1 47 13 view .LVU22
+ 135 0008 0378     		ldrb	r3, [r0]	@ zero_extendqisi2
+ 136              	.LVL7:
+  48:simpleserial-hqc-pqclean.c ****     if (offset + copy_len > PARAM_N1)
+ 137              		.loc 1 48 5 is_stmt 1 view .LVU23
+  51:simpleserial-hqc-pqclean.c ****     return 0x00;
+ 138              		.loc 1 51 12 is_stmt 0 view .LVU24
+ 139 000a 094C     		ldr	r4, .L17
+  48:simpleserial-hqc-pqclean.c ****     if (offset + copy_len > PARAM_N1)
+ 140              		.loc 1 48 13 view .LVU25
+ 141 000c D2B2     		uxtb	r2, r2
+ 142              	.LVL8:
+  49:simpleserial-hqc-pqclean.c ****         copy_len = PARAM_N1 - offset;
+ 143              		.loc 1 49 5 is_stmt 1 view .LVU26
+  49:simpleserial-hqc-pqclean.c ****         copy_len = PARAM_N1 - offset;
+ 144              		.loc 1 49 16 is_stmt 0 view .LVU27
+ 145 000e 9918     		adds	r1, r3, r2
+ 146              	.LVL9:
+  49:simpleserial-hqc-pqclean.c ****         copy_len = PARAM_N1 - offset;
+ 147              		.loc 1 49 8 view .LVU28
+ 148 0010 2E29     		cmp	r1, #46
+  50:simpleserial-hqc-pqclean.c ****     memcpy(&msg[offset], &data[1], copy_len);
+ 149              		.loc 1 50 9 is_stmt 1 view .LVU29
+  50:simpleserial-hqc-pqclean.c ****     memcpy(&msg[offset], &data[1], copy_len);
+ 150              		.loc 1 50 18 is_stmt 0 view .LVU30
+ 151 0012 C8BF     		it	gt
+ 152 0014 C3F12E02 		rsbgt	r2, r3, #46
+ 153              	.LVL10:
+  51:simpleserial-hqc-pqclean.c ****     return 0x00;
+ 154              		.loc 1 51 5 view .LVU31
+ 155 0018 00F10101 		add	r1, r0, #1
+  50:simpleserial-hqc-pqclean.c ****     memcpy(&msg[offset], &data[1], copy_len);
+ 156              		.loc 1 50 18 view .LVU32
+ 157 001c C8BF     		it	gt
+ 158 001e D2B2     		uxtbgt	r2, r2
+ 159              	.LVL11:
+  51:simpleserial-hqc-pqclean.c ****     return 0x00;
+ 160              		.loc 1 51 5 is_stmt 1 view .LVU33
+ 161 0020 E018     		adds	r0, r4, r3
+ 162              	.LVL12:
+  51:simpleserial-hqc-pqclean.c ****     return 0x00;
+ 163              		.loc 1 51 5 is_stmt 0 view .LVU34
+ 164 0022 FFF7FEFF 		bl	memcpy
+ 165              	.LVL13:
+  52:simpleserial-hqc-pqclean.c **** }
+ 166              		.loc 1 52 5 is_stmt 1 view .LVU35
+  52:simpleserial-hqc-pqclean.c **** }
+ 167              		.loc 1 52 12 is_stmt 0 view .LVU36
+ 168 0026 0020     		movs	r0, #0
+  53:simpleserial-hqc-pqclean.c **** 
+ 169              		.loc 1 53 1 view .LVU37
+ 170 0028 10BD     		pop	{r4, pc}
+ 171              	.LVL14:
+ 172              	.L12:
+ 173              	.LCFI3:
+ 174              		.cfi_def_cfa_offset 0
+ 175              		.cfi_restore 4
+ 176              		.cfi_restore 14
+  46:simpleserial-hqc-pqclean.c ****     uint8_t offset = data[0];
+ 177              		.loc 1 46 16 view .LVU38
+ 178 002a 0120     		movs	r0, #1
+ 179              	.LVL15:
+  53:simpleserial-hqc-pqclean.c **** 
+ 180              		.loc 1 53 1 view .LVU39
+ 181 002c 7047     		bx	lr
+ 182              	.L18:
+ 183 002e 00BF     		.align	2
+ 184              	.L17:
+ 185 0030 14000000 		.word	.LANCHOR0+20
+ 186              		.cfi_endproc
+ 187              	.LFE0:
+ 189              		.section	.text.encode_single,"ax",%progbits
+ 190              		.align	1
+ 191              		.p2align 2,,3
+ 192              		.global	encode_single
+ 193              		.syntax unified
+ 194              		.thumb
+ 195              		.thumb_func
+ 196              		.fpu softvfp
+ 198              	encode_single:
+ 199              	.LVL16:
+ 200              	.LFB2:
+  68:simpleserial-hqc-pqclean.c ****     trigger_high();
+ 201              		.loc 1 68 51 is_stmt 1 view -0
+ 202              		.cfi_startproc
+ 203              		@ args = 0, pretend = 0, frame = 0
+ 204              		@ frame_needed = 0, uses_anonymous_args = 0
+  69:simpleserial-hqc-pqclean.c ****     encode(single_codeword, single_msg);
+ 205              		.loc 1 69 5 view .LVU41
+  68:simpleserial-hqc-pqclean.c ****     trigger_high();
+ 206              		.loc 1 68 51 is_stmt 0 view .LVU42
+ 207 0000 10B5     		push	{r4, lr}
+ 208              	.LCFI4:
+ 209              		.cfi_def_cfa_offset 8
+ 210              		.cfi_offset 4, -8
+ 211              		.cfi_offset 14, -4
+  70:simpleserial-hqc-pqclean.c ****     trigger_low();
+ 212              		.loc 1 70 5 view .LVU43
+ 213 0002 084C     		ldr	r4, .L21
+  69:simpleserial-hqc-pqclean.c ****     encode(single_codeword, single_msg);
+ 214              		.loc 1 69 5 view .LVU44
+ 215 0004 FFF7FEFF 		bl	trigger_high
+ 216              	.LVL17:
+  70:simpleserial-hqc-pqclean.c ****     trigger_low();
+ 217              		.loc 1 70 5 is_stmt 1 view .LVU45
+ 218 0008 14F8481B 		ldrb	r1, [r4], #72	@ zero_extendqisi2
+ 219 000c 2046     		mov	r0, r4
+ 220 000e FFF7FEFF 		bl	encode
+ 221              	.LVL18:
+  71:simpleserial-hqc-pqclean.c ****     simpleserial_put('r', 16, (uint8_t *)single_codeword);
+ 222              		.loc 1 71 5 view .LVU46
+ 223 0012 FFF7FEFF 		bl	trigger_low
+ 224              	.LVL19:
+  72:simpleserial-hqc-pqclean.c ****     return 0x00;
+ 225              		.loc 1 72 5 view .LVU47
+ 226 0016 2246     		mov	r2, r4
+ 227 0018 7220     		movs	r0, #114
+ 228 001a 1021     		movs	r1, #16
+ 229 001c FFF7FEFF 		bl	simpleserial_put
+ 230              	.LVL20:
+  73:simpleserial-hqc-pqclean.c **** }
+ 231              		.loc 1 73 5 view .LVU48
+  74:simpleserial-hqc-pqclean.c **** 
+ 232              		.loc 1 74 1 is_stmt 0 view .LVU49
+ 233 0020 0020     		movs	r0, #0
+ 234 0022 10BD     		pop	{r4, pc}
+ 235              	.L22:
+ 236              		.align	2
+ 237              	.L21:
+ 238 0024 00000000 		.word	.LANCHOR0
+ 239              		.cfi_endproc
+ 240              	.LFE2:
+ 242              		.section	.text.encode_full_triggered,"ax",%progbits
+ 243              		.align	1
+ 244              		.p2align 2,,3
+ 245              		.global	encode_full_triggered
+ 246              		.syntax unified
+ 247              		.thumb
+ 248              		.thumb_func
+ 249              		.fpu softvfp
+ 251              	encode_full_triggered:
+ 252              	.LVL21:
+ 253              	.LFB4:
+  94:simpleserial-hqc-pqclean.c ****     for (size_t i = 0; i < PARAM_N1; i++) {
+ 254              		.loc 1 94 59 is_stmt 1 view -0
+ 255              		.cfi_startproc
+ 256              		@ args = 0, pretend = 0, frame = 0
+ 257              		@ frame_needed = 0, uses_anonymous_args = 0
+  95:simpleserial-hqc-pqclean.c ****         trigger_high();
+ 258              		.loc 1 95 5 view .LVU51
+ 259              	.LBB2:
+  95:simpleserial-hqc-pqclean.c ****         trigger_high();
+ 260              		.loc 1 95 10 view .LVU52
+  95:simpleserial-hqc-pqclean.c ****         trigger_high();
+ 261              		.loc 1 95 24 view .LVU53
+ 262              	.LBE2:
+  94:simpleserial-hqc-pqclean.c ****     for (size_t i = 0; i < PARAM_N1; i++) {
+ 263              		.loc 1 94 59 is_stmt 0 view .LVU54
+ 264 0000 70B5     		push	{r4, r5, r6, lr}
+ 265              	.LCFI5:
+ 266              		.cfi_def_cfa_offset 16
+ 267              		.cfi_offset 4, -16
+ 268              		.cfi_offset 5, -12
+ 269              		.cfi_offset 6, -8
+ 270              		.cfi_offset 14, -4
+ 271 0002 154D     		ldr	r5, .L27
+ 272 0004 05F14504 		add	r4, r5, #69
+ 273 0008 05F6E506 		addw	r6, r5, #2277
+ 274              	.LVL22:
+ 275              	.L24:
+ 276              	.LBB5:
+  96:simpleserial-hqc-pqclean.c ****         encode(&codeword[2 * i * MULTIPLICITY], msg[i]);
+ 277              		.loc 1 96 9 is_stmt 1 view .LVU55
+ 278 000c FFF7FEFF 		bl	trigger_high
+ 279              	.LVL23:
+  97:simpleserial-hqc-pqclean.c ****         trigger_low();
+ 280              		.loc 1 97 9 view .LVU56
+ 281 0010 2046     		mov	r0, r4
+ 282 0012 15F8011F 		ldrb	r1, [r5, #1]!	@ zero_extendqisi2
+ 283              	.LVL24:
+  97:simpleserial-hqc-pqclean.c ****         trigger_low();
+ 284              		.loc 1 97 9 is_stmt 0 view .LVU57
+ 285 0016 FFF7FEFF 		bl	encode
+ 286              	.LVL25:
+  98:simpleserial-hqc-pqclean.c ****         for (size_t copy = 1; copy < MULTIPLICITY; copy++) {
+ 287              		.loc 1 98 9 is_stmt 1 view .LVU58
+ 288 001a FFF7FEFF 		bl	trigger_low
+ 289              	.LVL26:
+  99:simpleserial-hqc-pqclean.c ****             memcpy(&codeword[2 * i * MULTIPLICITY + 2 * copy],
+ 290              		.loc 1 99 9 view .LVU59
+ 291              	.LBB3:
+  99:simpleserial-hqc-pqclean.c ****             memcpy(&codeword[2 * i * MULTIPLICITY + 2 * copy],
+ 292              		.loc 1 99 14 view .LVU60
+  99:simpleserial-hqc-pqclean.c ****             memcpy(&codeword[2 * i * MULTIPLICITY + 2 * copy],
+ 293              		.loc 1 99 31 view .LVU61
+ 100:simpleserial-hqc-pqclean.c ****                    &codeword[2 * i * MULTIPLICITY], 16);
+ 294              		.loc 1 100 13 view .LVU62
+ 295 001e A446     		mov	ip, r4
+ 296 0020 BCE80F00 		ldmia	ip!, {r0, r1, r2, r3}
+ 297 0024 A446     		mov	ip, r4
+ 298 0026 2061     		str	r0, [r4, #16]	@ unaligned
+ 299 0028 6161     		str	r1, [r4, #20]	@ unaligned
+ 300 002a A261     		str	r2, [r4, #24]	@ unaligned
+ 301 002c E361     		str	r3, [r4, #28]	@ unaligned
+  99:simpleserial-hqc-pqclean.c ****             memcpy(&codeword[2 * i * MULTIPLICITY + 2 * copy],
+ 302              		.loc 1 99 52 view .LVU63
+ 303              	.LVL27:
+  99:simpleserial-hqc-pqclean.c ****             memcpy(&codeword[2 * i * MULTIPLICITY + 2 * copy],
+ 304              		.loc 1 99 31 view .LVU64
+ 100:simpleserial-hqc-pqclean.c ****                    &codeword[2 * i * MULTIPLICITY], 16);
+ 305              		.loc 1 100 13 view .LVU65
+ 306 002e BCE80F00 		ldmia	ip!, {r0, r1, r2, r3}
+ 307              	.LBE3:
+  95:simpleserial-hqc-pqclean.c ****         trigger_high();
+ 308              		.loc 1 95 5 is_stmt 0 view .LVU66
+ 309 0032 3034     		adds	r4, r4, #48
+ 310 0034 B442     		cmp	r4, r6
+ 311              	.LBB4:
+ 100:simpleserial-hqc-pqclean.c ****                    &codeword[2 * i * MULTIPLICITY], 16);
+ 312              		.loc 1 100 13 view .LVU67
+ 313 0036 44F8100C 		str	r0, [r4, #-16]	@ unaligned
+ 314 003a 44F80C1C 		str	r1, [r4, #-12]	@ unaligned
+ 315 003e 44F8082C 		str	r2, [r4, #-8]	@ unaligned
+ 316 0042 44F8043C 		str	r3, [r4, #-4]	@ unaligned
+  99:simpleserial-hqc-pqclean.c ****             memcpy(&codeword[2 * i * MULTIPLICITY + 2 * copy],
+ 317              		.loc 1 99 52 is_stmt 1 view .LVU68
+ 318              	.LVL28:
+  99:simpleserial-hqc-pqclean.c ****             memcpy(&codeword[2 * i * MULTIPLICITY + 2 * copy],
+ 319              		.loc 1 99 31 view .LVU69
+ 320              	.LBE4:
+  95:simpleserial-hqc-pqclean.c ****         trigger_high();
+ 321              		.loc 1 95 38 view .LVU70
+  95:simpleserial-hqc-pqclean.c ****         trigger_high();
+ 322              		.loc 1 95 24 view .LVU71
+  95:simpleserial-hqc-pqclean.c ****         trigger_high();
+ 323              		.loc 1 95 5 is_stmt 0 view .LVU72
+ 324 0046 E1D1     		bne	.L24
+ 325              	.LBE5:
+ 104:simpleserial-hqc-pqclean.c ****     return 0x00;
+ 326              		.loc 1 104 5 is_stmt 1 view .LVU73
+ 327 0048 044A     		ldr	r2, .L27+4
+ 328 004a 7220     		movs	r0, #114
+ 329 004c 1021     		movs	r1, #16
+ 330 004e FFF7FEFF 		bl	simpleserial_put
+ 331              	.LVL29:
+ 105:simpleserial-hqc-pqclean.c **** }
+ 332              		.loc 1 105 5 view .LVU74
+ 106:simpleserial-hqc-pqclean.c **** 
+ 333              		.loc 1 106 1 is_stmt 0 view .LVU75
+ 334 0052 0020     		movs	r0, #0
+ 335 0054 70BD     		pop	{r4, r5, r6, pc}
+ 336              	.LVL30:
+ 337              	.L28:
+ 106:simpleserial-hqc-pqclean.c **** 
+ 338              		.loc 1 106 1 view .LVU76
+ 339 0056 00BF     		.align	2
+ 340              	.L27:
+ 341 0058 13000000 		.word	.LANCHOR0+19
+ 342 005c 58000000 		.word	.LANCHOR0+88
+ 343              		.cfi_endproc
+ 344              	.LFE4:
+ 346              		.section	.text.get_codeword,"ax",%progbits
+ 347              		.align	1
+ 348              		.p2align 2,,3
+ 349              		.global	get_codeword
+ 350              		.syntax unified
+ 351              		.thumb
+ 352              		.thumb_func
+ 353              		.fpu softvfp
+ 355              	get_codeword:
+ 356              	.LVL31:
+ 357              	.LFB8:
+ 116:simpleserial-hqc-pqclean.c **** 
+ 117:simpleserial-hqc-pqclean.c **** /*
+ 118:simpleserial-hqc-pqclean.c ****  * PQCLEAN_HQC128_CLEAN_code_encode: RS+RM with single trigger
+ 119:simpleserial-hqc-pqclean.c ****  * Command 'c' + [1 dummy byte]
+ 120:simpleserial-hqc-pqclean.c ****  * This calls the exact PQClean code_encode() inside the trigger.
+ 121:simpleserial-hqc-pqclean.c ****  */
+ 122:simpleserial-hqc-pqclean.c **** uint8_t encode_code(uint8_t *data, uint8_t len) {
+ 123:simpleserial-hqc-pqclean.c ****     trigger_high();
+ 124:simpleserial-hqc-pqclean.c ****     PQCLEAN_HQC128_CLEAN_code_encode(codeword, original_msg);
+ 125:simpleserial-hqc-pqclean.c ****     trigger_low();
+ 126:simpleserial-hqc-pqclean.c ****     simpleserial_put('r', 16, (uint8_t *)codeword);
+ 127:simpleserial-hqc-pqclean.c ****     return 0x00;
+ 128:simpleserial-hqc-pqclean.c **** }
+ 129:simpleserial-hqc-pqclean.c **** 
+ 130:simpleserial-hqc-pqclean.c **** /*
+ 131:simpleserial-hqc-pqclean.c ****  * code_encode with per-byte RM triggers (46 pulses)
+ 132:simpleserial-hqc-pqclean.c ****  * Command 'd' + [1 dummy byte]
+ 133:simpleserial-hqc-pqclean.c ****  * RS encode outside trigger, RM encode with per-byte triggers.
+ 134:simpleserial-hqc-pqclean.c ****  */
+ 135:simpleserial-hqc-pqclean.c **** uint8_t encode_code_triggered(uint8_t *data, uint8_t len) {
+ 136:simpleserial-hqc-pqclean.c ****     /* RS encode: 16B -> 46B (outside trigger) */
+ 137:simpleserial-hqc-pqclean.c ****     memset(msg, 0, PARAM_N1);
+ 138:simpleserial-hqc-pqclean.c ****     PQCLEAN_HQC128_CLEAN_reed_solomon_encode(msg, original_msg);
+ 139:simpleserial-hqc-pqclean.c **** 
+ 140:simpleserial-hqc-pqclean.c ****     /* RM encode with per-byte triggers (46 pulses) */
+ 141:simpleserial-hqc-pqclean.c ****     for (size_t i = 0; i < PARAM_N1; i++) {
+ 142:simpleserial-hqc-pqclean.c ****         trigger_high();
+ 143:simpleserial-hqc-pqclean.c ****         encode(&codeword[2 * i * MULTIPLICITY], msg[i]);
+ 144:simpleserial-hqc-pqclean.c ****         trigger_low();
+ 145:simpleserial-hqc-pqclean.c ****         for (size_t copy = 1; copy < MULTIPLICITY; copy++) {
+ 146:simpleserial-hqc-pqclean.c ****             memcpy(&codeword[2 * i * MULTIPLICITY + 2 * copy],
+ 147:simpleserial-hqc-pqclean.c ****                    &codeword[2 * i * MULTIPLICITY], 16);
+ 148:simpleserial-hqc-pqclean.c ****         }
+ 149:simpleserial-hqc-pqclean.c ****     }
+ 150:simpleserial-hqc-pqclean.c ****     simpleserial_put('r', 16, (uint8_t *)codeword);
+ 151:simpleserial-hqc-pqclean.c ****     return 0x00;
+ 152:simpleserial-hqc-pqclean.c **** }
+ 153:simpleserial-hqc-pqclean.c **** 
+ 154:simpleserial-hqc-pqclean.c **** /*
+ 155:simpleserial-hqc-pqclean.c ****  * Get codeword chunk
+ 156:simpleserial-hqc-pqclean.c ****  * Command 'g' + [chunk_index]
+ 157:simpleserial-hqc-pqclean.c ****  */
+ 158:simpleserial-hqc-pqclean.c **** uint8_t get_codeword(uint8_t *data, uint8_t len) {
+ 358              		.loc 1 158 50 is_stmt 1 view -0
+ 359              		.cfi_startproc
+ 360              		@ args = 0, pretend = 0, frame = 0
+ 361              		@ frame_needed = 0, uses_anonymous_args = 0
+ 159:simpleserial-hqc-pqclean.c ****     uint8_t chunk = data[0];
+ 362              		.loc 1 159 5 view .LVU78
+ 160:simpleserial-hqc-pqclean.c ****     uint16_t offset = chunk * 16;
+ 363              		.loc 1 160 5 view .LVU79
+ 158:simpleserial-hqc-pqclean.c ****     uint8_t chunk = data[0];
+ 364              		.loc 1 158 50 is_stmt 0 view .LVU80
+ 365 0000 08B5     		push	{r3, lr}
+ 366              	.LCFI6:
+ 367              		.cfi_def_cfa_offset 8
+ 368              		.cfi_offset 3, -8
+ 369              		.cfi_offset 14, -4
+ 370              		.loc 1 160 14 view .LVU81
+ 371 0002 0378     		ldrb	r3, [r0]	@ zero_extendqisi2
+ 372 0004 1B01     		lsls	r3, r3, #4
+ 373              	.LVL32:
+ 161:simpleserial-hqc-pqclean.c ****     if (offset + 16 > sizeof(codeword))
+ 374              		.loc 1 161 5 is_stmt 1 view .LVU82
+ 375              		.loc 1 161 8 is_stmt 0 view .LVU83
+ 376 0006 03F11002 		add	r2, r3, #16
+ 377 000a B2F50A6F 		cmp	r2, #2208
+ 378 000e 01D9     		bls	.L33
+ 162:simpleserial-hqc-pqclean.c ****         return 0x01;
+ 379              		.loc 1 162 16 view .LVU84
+ 380 0010 0120     		movs	r0, #1
+ 381              	.LVL33:
+ 163:simpleserial-hqc-pqclean.c ****     simpleserial_put('r', 16, ((uint8_t *)codeword) + offset);
+ 164:simpleserial-hqc-pqclean.c ****     return 0x00;
+ 165:simpleserial-hqc-pqclean.c **** }
+ 382              		.loc 1 165 1 view .LVU85
+ 383 0012 08BD     		pop	{r3, pc}
+ 384              	.LVL34:
+ 385              	.L33:
+ 163:simpleserial-hqc-pqclean.c ****     simpleserial_put('r', 16, ((uint8_t *)codeword) + offset);
+ 386              		.loc 1 163 5 is_stmt 1 view .LVU86
+ 387 0014 034A     		ldr	r2, .L34
+ 388 0016 1021     		movs	r1, #16
+ 389              	.LVL35:
+ 163:simpleserial-hqc-pqclean.c ****     simpleserial_put('r', 16, ((uint8_t *)codeword) + offset);
+ 390              		.loc 1 163 5 is_stmt 0 view .LVU87
+ 391 0018 1A44     		add	r2, r2, r3
+ 392 001a 7220     		movs	r0, #114
+ 393              	.LVL36:
+ 163:simpleserial-hqc-pqclean.c ****     simpleserial_put('r', 16, ((uint8_t *)codeword) + offset);
+ 394              		.loc 1 163 5 view .LVU88
+ 395 001c FFF7FEFF 		bl	simpleserial_put
+ 396              	.LVL37:
+ 164:simpleserial-hqc-pqclean.c **** }
+ 397              		.loc 1 164 5 is_stmt 1 view .LVU89
+ 164:simpleserial-hqc-pqclean.c **** }
+ 398              		.loc 1 164 12 is_stmt 0 view .LVU90
+ 399 0020 0020     		movs	r0, #0
+ 400              		.loc 1 165 1 view .LVU91
+ 401 0022 08BD     		pop	{r3, pc}
+ 402              	.L35:
+ 403              		.align	2
+ 404              	.L34:
+ 405 0024 58000000 		.word	.LANCHOR0+88
+ 406              		.cfi_endproc
+ 407              	.LFE8:
+ 409              		.section	.text.encode_full,"ax",%progbits
+ 410              		.align	1
+ 411              		.p2align 2,,3
+ 412              		.global	encode_full
+ 413              		.syntax unified
+ 414              		.thumb
+ 415              		.thumb_func
+ 416              		.fpu softvfp
+ 418              	encode_full:
+ 419              	.LVL38:
+ 420              	.LFB3:
+  80:simpleserial-hqc-pqclean.c ****     if (len > 0)
+ 421              		.loc 1 80 49 is_stmt 1 view -0
+ 422              		.cfi_startproc
+ 423              		@ args = 0, pretend = 0, frame = 0
+ 424              		@ frame_needed = 0, uses_anonymous_args = 0
+  81:simpleserial-hqc-pqclean.c ****         msg[0] = data[0];
+ 425              		.loc 1 81 5 view .LVU93
+  80:simpleserial-hqc-pqclean.c ****     if (len > 0)
+ 426              		.loc 1 80 49 is_stmt 0 view .LVU94
+ 427 0000 08B5     		push	{r3, lr}
+ 428              	.LCFI7:
+ 429              		.cfi_def_cfa_offset 8
+ 430              		.cfi_offset 3, -8
+ 431              		.cfi_offset 14, -4
+  81:simpleserial-hqc-pqclean.c ****         msg[0] = data[0];
+ 432              		.loc 1 81 8 view .LVU95
+ 433 0002 11B1     		cbz	r1, .L37
+  82:simpleserial-hqc-pqclean.c ****     trigger_high();
+ 434              		.loc 1 82 9 is_stmt 1 view .LVU96
+  82:simpleserial-hqc-pqclean.c ****     trigger_high();
+ 435              		.loc 1 82 16 is_stmt 0 view .LVU97
+ 436 0004 094B     		ldr	r3, .L42
+  82:simpleserial-hqc-pqclean.c ****     trigger_high();
+ 437              		.loc 1 82 22 view .LVU98
+ 438 0006 0278     		ldrb	r2, [r0]	@ zero_extendqisi2
+  82:simpleserial-hqc-pqclean.c ****     trigger_high();
+ 439              		.loc 1 82 16 view .LVU99
+ 440 0008 1A75     		strb	r2, [r3, #20]
+ 441              	.L37:
+  83:simpleserial-hqc-pqclean.c ****     PQCLEAN_HQC128_CLEAN_reed_muller_encode(codeword, msg);
+ 442              		.loc 1 83 5 is_stmt 1 view .LVU100
+ 443 000a FFF7FEFF 		bl	trigger_high
+ 444              	.LVL39:
+  84:simpleserial-hqc-pqclean.c ****     trigger_low();
+ 445              		.loc 1 84 5 view .LVU101
+ 446 000e 0849     		ldr	r1, .L42+4
+ 447 0010 01F14400 		add	r0, r1, #68
+ 448 0014 FFF7FEFF 		bl	PQCLEAN_HQC128_CLEAN_reed_muller_encode
+ 449              	.LVL40:
+  85:simpleserial-hqc-pqclean.c ****     simpleserial_put('r', 16, (uint8_t *)codeword);
+ 450              		.loc 1 85 5 view .LVU102
+ 451 0018 FFF7FEFF 		bl	trigger_low
+ 452              	.LVL41:
+  86:simpleserial-hqc-pqclean.c ****     return 0x00;
+ 453              		.loc 1 86 5 view .LVU103
+ 454 001c 054A     		ldr	r2, .L42+8
+ 455 001e 7220     		movs	r0, #114
+ 456 0020 1021     		movs	r1, #16
+ 457 0022 FFF7FEFF 		bl	simpleserial_put
+ 458              	.LVL42:
+  87:simpleserial-hqc-pqclean.c **** }
+ 459              		.loc 1 87 5 view .LVU104
+  88:simpleserial-hqc-pqclean.c **** 
+ 460              		.loc 1 88 1 is_stmt 0 view .LVU105
+ 461 0026 0020     		movs	r0, #0
+ 462 0028 08BD     		pop	{r3, pc}
+ 463              	.L43:
+ 464 002a 00BF     		.align	2
+ 465              	.L42:
+ 466 002c 00000000 		.word	.LANCHOR0
+ 467 0030 14000000 		.word	.LANCHOR0+20
+ 468 0034 58000000 		.word	.LANCHOR0+88
+ 469              		.cfi_endproc
+ 470              	.LFE3:
+ 472              		.section	.text.encode_code,"ax",%progbits
+ 473              		.align	1
+ 474              		.p2align 2,,3
+ 475              		.global	encode_code
+ 476              		.syntax unified
+ 477              		.thumb
+ 478              		.thumb_func
+ 479              		.fpu softvfp
+ 481              	encode_code:
+ 482              	.LVL43:
+ 483              	.LFB6:
+ 122:simpleserial-hqc-pqclean.c ****     trigger_high();
+ 484              		.loc 1 122 49 is_stmt 1 view -0
+ 485              		.cfi_startproc
+ 486              		@ args = 0, pretend = 0, frame = 0
+ 487              		@ frame_needed = 0, uses_anonymous_args = 0
+ 123:simpleserial-hqc-pqclean.c ****     PQCLEAN_HQC128_CLEAN_code_encode(codeword, original_msg);
+ 488              		.loc 1 123 5 view .LVU107
+ 122:simpleserial-hqc-pqclean.c ****     trigger_high();
+ 489              		.loc 1 122 49 is_stmt 0 view .LVU108
+ 490 0000 10B5     		push	{r4, lr}
+ 491              	.LCFI8:
+ 492              		.cfi_def_cfa_offset 8
+ 493              		.cfi_offset 4, -8
+ 494              		.cfi_offset 14, -4
+ 123:simpleserial-hqc-pqclean.c ****     PQCLEAN_HQC128_CLEAN_code_encode(codeword, original_msg);
+ 495              		.loc 1 123 5 view .LVU109
+ 496 0002 FFF7FEFF 		bl	trigger_high
+ 497              	.LVL44:
+ 124:simpleserial-hqc-pqclean.c ****     trigger_low();
+ 498              		.loc 1 124 5 is_stmt 1 view .LVU110
+ 499 0006 0849     		ldr	r1, .L46
+ 500 0008 01F15804 		add	r4, r1, #88
+ 501 000c 2046     		mov	r0, r4
+ 502 000e 0431     		adds	r1, r1, #4
+ 503 0010 FFF7FEFF 		bl	PQCLEAN_HQC128_CLEAN_code_encode
+ 504              	.LVL45:
+ 125:simpleserial-hqc-pqclean.c ****     simpleserial_put('r', 16, (uint8_t *)codeword);
+ 505              		.loc 1 125 5 view .LVU111
+ 506 0014 FFF7FEFF 		bl	trigger_low
+ 507              	.LVL46:
+ 126:simpleserial-hqc-pqclean.c ****     return 0x00;
+ 508              		.loc 1 126 5 view .LVU112
+ 509 0018 2246     		mov	r2, r4
+ 510 001a 7220     		movs	r0, #114
+ 511 001c 1021     		movs	r1, #16
+ 512 001e FFF7FEFF 		bl	simpleserial_put
+ 513              	.LVL47:
+ 127:simpleserial-hqc-pqclean.c **** }
+ 514              		.loc 1 127 5 view .LVU113
+ 128:simpleserial-hqc-pqclean.c **** 
+ 515              		.loc 1 128 1 is_stmt 0 view .LVU114
+ 516 0022 0020     		movs	r0, #0
+ 517 0024 10BD     		pop	{r4, pc}
+ 518              	.L47:
+ 519 0026 00BF     		.align	2
+ 520              	.L46:
+ 521 0028 00000000 		.word	.LANCHOR0
+ 522              		.cfi_endproc
+ 523              	.LFE6:
+ 525              		.section	.text.reset,"ax",%progbits
+ 526              		.align	1
+ 527              		.p2align 2,,3
+ 528              		.global	reset
+ 529              		.syntax unified
+ 530              		.thumb
+ 531              		.thumb_func
+ 532              		.fpu softvfp
+ 534              	reset:
+ 535              	.LVL48:
+ 536              	.LFB9:
+ 166:simpleserial-hqc-pqclean.c **** 
+ 167:simpleserial-hqc-pqclean.c **** /*
+ 168:simpleserial-hqc-pqclean.c ****  * Reset all buffers
+ 169:simpleserial-hqc-pqclean.c ****  * Command 'x' + [1 dummy byte]
+ 170:simpleserial-hqc-pqclean.c ****  */
+ 171:simpleserial-hqc-pqclean.c **** uint8_t reset(uint8_t *data, uint8_t len) {
+ 537              		.loc 1 171 43 is_stmt 1 view -0
+ 538              		.cfi_startproc
+ 539              		@ args = 0, pretend = 0, frame = 0
+ 540              		@ frame_needed = 0, uses_anonymous_args = 0
+ 172:simpleserial-hqc-pqclean.c ****     memset(msg, 0, PARAM_N1);
+ 541              		.loc 1 172 5 view .LVU116
+ 171:simpleserial-hqc-pqclean.c ****     memset(msg, 0, PARAM_N1);
+ 542              		.loc 1 171 43 is_stmt 0 view .LVU117
+ 543 0000 10B5     		push	{r4, lr}
+ 544              	.LCFI9:
+ 545              		.cfi_def_cfa_offset 8
+ 546              		.cfi_offset 4, -8
+ 547              		.cfi_offset 14, -4
+ 548              		.loc 1 172 5 view .LVU118
+ 549 0002 0D4C     		ldr	r4, .L50
+ 550 0004 2E22     		movs	r2, #46
+ 551 0006 0021     		movs	r1, #0
+ 552              	.LVL49:
+ 553              		.loc 1 172 5 view .LVU119
+ 554 0008 04F11400 		add	r0, r4, #20
+ 555              	.LVL50:
+ 556              		.loc 1 172 5 view .LVU120
+ 557 000c FFF7FEFF 		bl	memset
+ 558              	.LVL51:
+ 173:simpleserial-hqc-pqclean.c ****     memset(codeword, 0, sizeof(codeword));
+ 559              		.loc 1 173 5 is_stmt 1 view .LVU121
+ 560 0010 4FF40A62 		mov	r2, #2208
+ 561 0014 0021     		movs	r1, #0
+ 562 0016 04F15800 		add	r0, r4, #88
+ 563 001a FFF7FEFF 		bl	memset
+ 564              	.LVL52:
+ 174:simpleserial-hqc-pqclean.c ****     single_msg = 0;
+ 565              		.loc 1 174 5 view .LVU122
+ 566              		.loc 1 174 16 is_stmt 0 view .LVU123
+ 567 001e 2346     		mov	r3, r4
+ 568 0020 0020     		movs	r0, #0
+ 569 0022 03F8480B 		strb	r0, [r3], #72
+ 175:simpleserial-hqc-pqclean.c ****     memset(single_codeword, 0, sizeof(single_codeword));
+ 570              		.loc 1 175 5 is_stmt 1 view .LVU124
+ 571 0026 A064     		str	r0, [r4, #72]
+ 572 0028 C3E90100 		strd	r0, r0, [r3, #4]
+ 573 002c D860     		str	r0, [r3, #12]
+ 176:simpleserial-hqc-pqclean.c ****     memset(original_msg, 0, PARAM_K);
+ 574              		.loc 1 176 5 view .LVU125
+ 575 002e C4E90100 		strd	r0, r0, [r4, #4]
+ 576 0032 C4E90300 		strd	r0, r0, [r4, #12]
+ 177:simpleserial-hqc-pqclean.c ****     return 0x00;
+ 577              		.loc 1 177 5 view .LVU126
+ 178:simpleserial-hqc-pqclean.c **** }
+ 578              		.loc 1 178 1 is_stmt 0 view .LVU127
+ 579 0036 10BD     		pop	{r4, pc}
+ 580              	.L51:
+ 581              		.align	2
+ 582              	.L50:
+ 583 0038 00000000 		.word	.LANCHOR0
+ 584              		.cfi_endproc
+ 585              	.LFE9:
+ 587              		.section	.text.encode_code_triggered,"ax",%progbits
+ 588              		.align	1
+ 589              		.p2align 2,,3
+ 590              		.global	encode_code_triggered
+ 591              		.syntax unified
+ 592              		.thumb
+ 593              		.thumb_func
+ 594              		.fpu softvfp
+ 596              	encode_code_triggered:
+ 597              	.LVL53:
+ 598              	.LFB7:
+ 135:simpleserial-hqc-pqclean.c ****     /* RS encode: 16B -> 46B (outside trigger) */
+ 599              		.loc 1 135 59 is_stmt 1 view -0
+ 600              		.cfi_startproc
+ 601              		@ args = 0, pretend = 0, frame = 0
+ 602              		@ frame_needed = 0, uses_anonymous_args = 0
+ 137:simpleserial-hqc-pqclean.c ****     PQCLEAN_HQC128_CLEAN_reed_solomon_encode(msg, original_msg);
+ 603              		.loc 1 137 5 view .LVU129
+ 135:simpleserial-hqc-pqclean.c ****     /* RS encode: 16B -> 46B (outside trigger) */
+ 604              		.loc 1 135 59 is_stmt 0 view .LVU130
+ 605 0000 70B5     		push	{r4, r5, r6, lr}
+ 606              	.LCFI10:
+ 607              		.cfi_def_cfa_offset 16
+ 608              		.cfi_offset 4, -16
+ 609              		.cfi_offset 5, -12
+ 610              		.cfi_offset 6, -8
+ 611              		.cfi_offset 14, -4
+ 137:simpleserial-hqc-pqclean.c ****     PQCLEAN_HQC128_CLEAN_reed_solomon_encode(msg, original_msg);
+ 612              		.loc 1 137 5 view .LVU131
+ 613 0002 2E22     		movs	r2, #46
+ 614 0004 0021     		movs	r1, #0
+ 615              	.LVL54:
+ 137:simpleserial-hqc-pqclean.c ****     PQCLEAN_HQC128_CLEAN_reed_solomon_encode(msg, original_msg);
+ 616              		.loc 1 137 5 view .LVU132
+ 617 0006 1948     		ldr	r0, .L56
+ 618              	.LVL55:
+ 137:simpleserial-hqc-pqclean.c ****     PQCLEAN_HQC128_CLEAN_reed_solomon_encode(msg, original_msg);
+ 619              		.loc 1 137 5 view .LVU133
+ 620 0008 FFF7FEFF 		bl	memset
+ 621              	.LVL56:
+ 138:simpleserial-hqc-pqclean.c **** 
+ 622              		.loc 1 138 5 is_stmt 1 view .LVU134
+ 623 000c 1849     		ldr	r1, .L56+4
+ 624 000e 01F11000 		add	r0, r1, #16
+ 625 0012 01F10F05 		add	r5, r1, #15
+ 626 0016 FFF7FEFF 		bl	PQCLEAN_HQC128_CLEAN_reed_solomon_encode
+ 627              	.LVL57:
+ 141:simpleserial-hqc-pqclean.c ****         trigger_high();
+ 628              		.loc 1 141 5 view .LVU135
+ 629              	.LBB6:
+ 141:simpleserial-hqc-pqclean.c ****         trigger_high();
+ 630              		.loc 1 141 10 view .LVU136
+ 141:simpleserial-hqc-pqclean.c ****         trigger_high();
+ 631              		.loc 1 141 24 view .LVU137
+ 632 001a 05F14504 		add	r4, r5, #69
+ 633 001e 05F6E506 		addw	r6, r5, #2277
+ 634              	.LVL58:
+ 635              	.L53:
+ 142:simpleserial-hqc-pqclean.c ****         encode(&codeword[2 * i * MULTIPLICITY], msg[i]);
+ 636              		.loc 1 142 9 view .LVU138
+ 637 0022 FFF7FEFF 		bl	trigger_high
+ 638              	.LVL59:
+ 143:simpleserial-hqc-pqclean.c ****         trigger_low();
+ 639              		.loc 1 143 9 view .LVU139
+ 640 0026 2046     		mov	r0, r4
+ 641 0028 15F8011F 		ldrb	r1, [r5, #1]!	@ zero_extendqisi2
+ 642              	.LVL60:
+ 143:simpleserial-hqc-pqclean.c ****         trigger_low();
+ 643              		.loc 1 143 9 is_stmt 0 view .LVU140
+ 644 002c FFF7FEFF 		bl	encode
+ 645              	.LVL61:
+ 144:simpleserial-hqc-pqclean.c ****         for (size_t copy = 1; copy < MULTIPLICITY; copy++) {
+ 646              		.loc 1 144 9 is_stmt 1 view .LVU141
+ 647 0030 FFF7FEFF 		bl	trigger_low
+ 648              	.LVL62:
+ 145:simpleserial-hqc-pqclean.c ****             memcpy(&codeword[2 * i * MULTIPLICITY + 2 * copy],
+ 649              		.loc 1 145 9 view .LVU142
+ 650              	.LBB7:
+ 145:simpleserial-hqc-pqclean.c ****             memcpy(&codeword[2 * i * MULTIPLICITY + 2 * copy],
+ 651              		.loc 1 145 14 view .LVU143
+ 145:simpleserial-hqc-pqclean.c ****             memcpy(&codeword[2 * i * MULTIPLICITY + 2 * copy],
+ 652              		.loc 1 145 31 view .LVU144
+ 146:simpleserial-hqc-pqclean.c ****                    &codeword[2 * i * MULTIPLICITY], 16);
+ 653              		.loc 1 146 13 view .LVU145
+ 654 0034 A446     		mov	ip, r4
+ 655 0036 BCE80F00 		ldmia	ip!, {r0, r1, r2, r3}
+ 656 003a A446     		mov	ip, r4
+ 657 003c 2061     		str	r0, [r4, #16]	@ unaligned
+ 658 003e 6161     		str	r1, [r4, #20]	@ unaligned
+ 659 0040 A261     		str	r2, [r4, #24]	@ unaligned
+ 660 0042 E361     		str	r3, [r4, #28]	@ unaligned
+ 145:simpleserial-hqc-pqclean.c ****             memcpy(&codeword[2 * i * MULTIPLICITY + 2 * copy],
+ 661              		.loc 1 145 52 view .LVU146
+ 662              	.LVL63:
+ 145:simpleserial-hqc-pqclean.c ****             memcpy(&codeword[2 * i * MULTIPLICITY + 2 * copy],
+ 663              		.loc 1 145 31 view .LVU147
+ 146:simpleserial-hqc-pqclean.c ****                    &codeword[2 * i * MULTIPLICITY], 16);
+ 664              		.loc 1 146 13 view .LVU148
+ 665 0044 BCE80F00 		ldmia	ip!, {r0, r1, r2, r3}
+ 666              	.LBE7:
+ 141:simpleserial-hqc-pqclean.c ****         trigger_high();
+ 667              		.loc 1 141 5 is_stmt 0 view .LVU149
+ 668 0048 3034     		adds	r4, r4, #48
+ 669 004a B442     		cmp	r4, r6
+ 670              	.LBB8:
+ 146:simpleserial-hqc-pqclean.c ****                    &codeword[2 * i * MULTIPLICITY], 16);
+ 671              		.loc 1 146 13 view .LVU150
+ 672 004c 44F8100C 		str	r0, [r4, #-16]	@ unaligned
+ 673 0050 44F80C1C 		str	r1, [r4, #-12]	@ unaligned
+ 674 0054 44F8082C 		str	r2, [r4, #-8]	@ unaligned
+ 675 0058 44F8043C 		str	r3, [r4, #-4]	@ unaligned
+ 145:simpleserial-hqc-pqclean.c ****             memcpy(&codeword[2 * i * MULTIPLICITY + 2 * copy],
+ 676              		.loc 1 145 52 is_stmt 1 view .LVU151
+ 677              	.LVL64:
+ 145:simpleserial-hqc-pqclean.c ****             memcpy(&codeword[2 * i * MULTIPLICITY + 2 * copy],
+ 678              		.loc 1 145 31 view .LVU152
+ 679              	.LBE8:
+ 141:simpleserial-hqc-pqclean.c ****         trigger_high();
+ 680              		.loc 1 141 38 view .LVU153
+ 141:simpleserial-hqc-pqclean.c ****         trigger_high();
+ 681              		.loc 1 141 24 view .LVU154
+ 141:simpleserial-hqc-pqclean.c ****         trigger_high();
+ 682              		.loc 1 141 5 is_stmt 0 view .LVU155
+ 683 005c E1D1     		bne	.L53
+ 684              	.LBE6:
+ 150:simpleserial-hqc-pqclean.c ****     return 0x00;
+ 685              		.loc 1 150 5 is_stmt 1 view .LVU156
+ 686 005e 054A     		ldr	r2, .L56+8
+ 687 0060 7220     		movs	r0, #114
+ 688 0062 1021     		movs	r1, #16
+ 689 0064 FFF7FEFF 		bl	simpleserial_put
+ 690              	.LVL65:
+ 151:simpleserial-hqc-pqclean.c **** }
+ 691              		.loc 1 151 5 view .LVU157
+ 152:simpleserial-hqc-pqclean.c **** 
+ 692              		.loc 1 152 1 is_stmt 0 view .LVU158
+ 693 0068 0020     		movs	r0, #0
+ 694 006a 70BD     		pop	{r4, r5, r6, pc}
+ 695              	.LVL66:
+ 696              	.L57:
+ 152:simpleserial-hqc-pqclean.c **** 
+ 697              		.loc 1 152 1 view .LVU159
+ 698              		.align	2
+ 699              	.L56:
+ 700 006c 14000000 		.word	.LANCHOR0+20
+ 701 0070 04000000 		.word	.LANCHOR0+4
+ 702 0074 58000000 		.word	.LANCHOR0+88
+ 703              		.cfi_endproc
+ 704              	.LFE7:
+ 706              		.section	.text.startup.main,"ax",%progbits
+ 707              		.align	1
+ 708              		.p2align 2,,3
+ 709              		.global	main
+ 710              		.syntax unified
+ 711              		.thumb
+ 712              		.thumb_func
+ 713              		.fpu softvfp
+ 715              	main:
+ 716              	.LFB10:
+ 179:simpleserial-hqc-pqclean.c **** 
+ 180:simpleserial-hqc-pqclean.c **** int main(void) {
+ 717              		.loc 1 180 16 is_stmt 1 view -0
+ 718              		.cfi_startproc
+ 719              		@ Volatile: function does not return.
+ 720              		@ args = 0, pretend = 0, frame = 0
+ 721              		@ frame_needed = 0, uses_anonymous_args = 0
+ 181:simpleserial-hqc-pqclean.c ****     platform_init();
+ 722              		.loc 1 181 5 view .LVU161
+ 180:simpleserial-hqc-pqclean.c ****     platform_init();
+ 723              		.loc 1 180 16 is_stmt 0 view .LVU162
+ 724 0000 08B5     		push	{r3, lr}
+ 725              	.LCFI11:
+ 726              		.cfi_def_cfa_offset 8
+ 727              		.cfi_offset 3, -8
+ 728              		.cfi_offset 14, -4
+ 729              		.loc 1 181 5 view .LVU163
+ 730 0002 FFF7FEFF 		bl	platform_init
+ 731              	.LVL67:
+ 182:simpleserial-hqc-pqclean.c ****     init_uart();
+ 732              		.loc 1 182 5 is_stmt 1 view .LVU164
+ 733 0006 FFF7FEFF 		bl	init_uart
+ 734              	.LVL68:
+ 183:simpleserial-hqc-pqclean.c ****     trigger_setup();
+ 735              		.loc 1 183 5 view .LVU165
+ 736 000a FFF7FEFF 		bl	trigger_setup
+ 737              	.LVL69:
+ 184:simpleserial-hqc-pqclean.c **** 
+ 185:simpleserial-hqc-pqclean.c ****     memset(msg, 0, PARAM_N1);
+ 738              		.loc 1 185 5 view .LVU166
+ 739 000e 2E22     		movs	r2, #46
+ 740 0010 0021     		movs	r1, #0
+ 741 0012 2048     		ldr	r0, .L61
+ 742 0014 FFF7FEFF 		bl	memset
+ 743              	.LVL70:
+ 186:simpleserial-hqc-pqclean.c ****     memset(codeword, 0, sizeof(codeword));
+ 744              		.loc 1 186 5 view .LVU167
+ 745 0018 4FF40A62 		mov	r2, #2208
+ 746 001c 0021     		movs	r1, #0
+ 747 001e 1E48     		ldr	r0, .L61+4
+ 748 0020 FFF7FEFF 		bl	memset
+ 749              	.LVL71:
+ 187:simpleserial-hqc-pqclean.c **** 
+ 188:simpleserial-hqc-pqclean.c ****     simpleserial_init();
+ 750              		.loc 1 188 5 view .LVU168
+ 751 0024 FFF7FEFF 		bl	simpleserial_init
+ 752              	.LVL72:
+ 189:simpleserial-hqc-pqclean.c **** 
+ 190:simpleserial-hqc-pqclean.c ****     /* RM encode commands (compatible with custom firmware) */
+ 191:simpleserial-hqc-pqclean.c ****     simpleserial_addcmd('m', 16, set_msg);
+ 753              		.loc 1 191 5 view .LVU169
+ 754 0028 1C4A     		ldr	r2, .L61+8
+ 755 002a 1021     		movs	r1, #16
+ 756 002c 6D20     		movs	r0, #109
+ 757 002e FFF7FEFF 		bl	simpleserial_addcmd
+ 758              	.LVL73:
+ 192:simpleserial-hqc-pqclean.c ****     simpleserial_addcmd('b', 1, set_single_byte);
+ 759              		.loc 1 192 5 view .LVU170
+ 760 0032 1B4A     		ldr	r2, .L61+12
+ 761 0034 0121     		movs	r1, #1
+ 762 0036 6220     		movs	r0, #98
+ 763 0038 FFF7FEFF 		bl	simpleserial_addcmd
+ 764              	.LVL74:
+ 193:simpleserial-hqc-pqclean.c ****     simpleserial_addcmd('e', 1, encode_single);
+ 765              		.loc 1 193 5 view .LVU171
+ 766 003c 194A     		ldr	r2, .L61+16
+ 767 003e 0121     		movs	r1, #1
+ 768 0040 6520     		movs	r0, #101
+ 769 0042 FFF7FEFF 		bl	simpleserial_addcmd
+ 770              	.LVL75:
+ 194:simpleserial-hqc-pqclean.c ****     simpleserial_addcmd('p', 16, encode_full);
+ 771              		.loc 1 194 5 view .LVU172
+ 772 0046 184A     		ldr	r2, .L61+20
+ 773 0048 1021     		movs	r1, #16
+ 774 004a 7020     		movs	r0, #112
+ 775 004c FFF7FEFF 		bl	simpleserial_addcmd
+ 776              	.LVL76:
+ 195:simpleserial-hqc-pqclean.c ****     simpleserial_addcmd('t', 1, encode_full_triggered);
+ 777              		.loc 1 195 5 view .LVU173
+ 778 0050 164A     		ldr	r2, .L61+24
+ 779 0052 0121     		movs	r1, #1
+ 780 0054 7420     		movs	r0, #116
+ 781 0056 FFF7FEFF 		bl	simpleserial_addcmd
+ 782              	.LVL77:
+ 196:simpleserial-hqc-pqclean.c ****     simpleserial_addcmd('g', 1, get_codeword);
+ 783              		.loc 1 196 5 view .LVU174
+ 784 005a 154A     		ldr	r2, .L61+28
+ 785 005c 0121     		movs	r1, #1
+ 786 005e 6720     		movs	r0, #103
+ 787 0060 FFF7FEFF 		bl	simpleserial_addcmd
+ 788              	.LVL78:
+ 197:simpleserial-hqc-pqclean.c ****     simpleserial_addcmd('x', 1, reset);
+ 789              		.loc 1 197 5 view .LVU175
+ 790 0064 134A     		ldr	r2, .L61+32
+ 791 0066 0121     		movs	r1, #1
+ 792 0068 7820     		movs	r0, #120
+ 793 006a FFF7FEFF 		bl	simpleserial_addcmd
+ 794              	.LVL79:
+ 198:simpleserial-hqc-pqclean.c **** 
+ 199:simpleserial-hqc-pqclean.c ****     /* code_encode commands (PQClean-specific) */
+ 200:simpleserial-hqc-pqclean.c ****     simpleserial_addcmd('i', 16, set_original_msg);
+ 795              		.loc 1 200 5 view .LVU176
+ 796 006e 124A     		ldr	r2, .L61+36
+ 797 0070 1021     		movs	r1, #16
+ 798 0072 6920     		movs	r0, #105
+ 799 0074 FFF7FEFF 		bl	simpleserial_addcmd
+ 800              	.LVL80:
+ 201:simpleserial-hqc-pqclean.c ****     simpleserial_addcmd('c', 1, encode_code);
+ 801              		.loc 1 201 5 view .LVU177
+ 802 0078 104A     		ldr	r2, .L61+40
+ 803 007a 0121     		movs	r1, #1
+ 804 007c 6320     		movs	r0, #99
+ 805 007e FFF7FEFF 		bl	simpleserial_addcmd
+ 806              	.LVL81:
+ 202:simpleserial-hqc-pqclean.c ****     simpleserial_addcmd('d', 1, encode_code_triggered);
+ 807              		.loc 1 202 5 view .LVU178
+ 808 0082 0F4A     		ldr	r2, .L61+44
+ 809 0084 0121     		movs	r1, #1
+ 810 0086 6420     		movs	r0, #100
+ 811 0088 FFF7FEFF 		bl	simpleserial_addcmd
+ 812              	.LVL82:
+ 813              	.L59:
+ 203:simpleserial-hqc-pqclean.c **** 
+ 204:simpleserial-hqc-pqclean.c ****     while (1)
+ 814              		.loc 1 204 5 discriminator 1 view .LVU179
+ 205:simpleserial-hqc-pqclean.c ****         simpleserial_get();
+ 815              		.loc 1 205 9 discriminator 1 view .LVU180
+ 816 008c FFF7FEFF 		bl	simpleserial_get
+ 817              	.LVL83:
+ 204:simpleserial-hqc-pqclean.c ****         simpleserial_get();
+ 818              		.loc 1 204 11 discriminator 1 view .LVU181
+ 819 0090 FCE7     		b	.L59
+ 820              	.L62:
+ 821 0092 00BF     		.align	2
+ 822              	.L61:
+ 823 0094 14000000 		.word	.LANCHOR0+20
+ 824 0098 58000000 		.word	.LANCHOR0+88
+ 825 009c 00000000 		.word	set_msg
+ 826 00a0 00000000 		.word	set_single_byte
+ 827 00a4 00000000 		.word	encode_single
+ 828 00a8 00000000 		.word	encode_full
+ 829 00ac 00000000 		.word	encode_full_triggered
+ 830 00b0 00000000 		.word	get_codeword
+ 831 00b4 00000000 		.word	reset
+ 832 00b8 00000000 		.word	set_original_msg
+ 833 00bc 00000000 		.word	encode_code
+ 834 00c0 00000000 		.word	encode_code_triggered
+ 835              		.cfi_endproc
+ 836              	.LFE10:
+ 838              		.bss
+ 839              		.align	3
+ 840              		.set	.LANCHOR0,. + 0
+ 843              	single_msg:
+ 844 0000 00       		.space	1
+ 845 0001 000000   		.space	3
+ 848              	original_msg:
+ 849 0004 00000000 		.space	16
+ 849      00000000 
+ 849      00000000 
+ 849      00000000 
+ 852              	msg:
+ 853 0014 00000000 		.space	46
+ 853      00000000 
+ 853      00000000 
+ 853      00000000 
+ 853      00000000 
+ 854 0042 00000000 		.space	6
+ 854      0000
+ 857              	single_codeword:
+ 858 0048 00000000 		.space	16
+ 858      00000000 
+ 858      00000000 
+ 858      00000000 
+ 861              	codeword:
+ 862 0058 00000000 		.space	2208
+ 862      00000000 
+ 862      00000000 
+ 862      00000000 
+ 862      00000000 
+ 863              		.text
+ 864              	.Letext0:
+ 865              		.file 2 "/usr/lib/gcc/arm-none-eabi/10.3.1/include/stdint.h"
+ 866              		.file 3 "/usr/lib/gcc/arm-none-eabi/10.3.1/include/stddef.h"
+ 867              		.file 4 "/home/reo/Documents/Repository/sca-2026/include/crypto_kem/hqc128/pqclean/reed_solomon.h"
+ 868              		.file 5 "/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.h"
+ 869              		.file 6 "/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm3
+ 870              		.file 7 "/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.h"
+ 871              		.file 8 "/home/reo/Documents/Repository/sca-2026/include/crypto_kem/hqc128/pqclean/reed_muller.h"
+ 872              		.file 9 "/home/reo/Documents/Repository/sca-2026/include/crypto_kem/hqc128/pqclean/code.h"
+ 873              		.file 10 "<built-in>"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 simpleserial-hqc-pqclean.c
+     /tmp/ccpJIF0O.s:16     .text.set_single_byte:0000000000000000 $t
+     /tmp/ccpJIF0O.s:25     .text.set_single_byte:0000000000000000 set_single_byte
+     /tmp/ccpJIF0O.s:48     .text.set_single_byte:000000000000000c $d
+     /tmp/ccpJIF0O.s:53     .text.set_original_msg:0000000000000000 $t
+     /tmp/ccpJIF0O.s:61     .text.set_original_msg:0000000000000000 set_original_msg
+     /tmp/ccpJIF0O.s:101    .text.set_original_msg:0000000000000018 $d
+     /tmp/ccpJIF0O.s:106    .text.set_msg:0000000000000000 $t
+     /tmp/ccpJIF0O.s:114    .text.set_msg:0000000000000000 set_msg
+     /tmp/ccpJIF0O.s:185    .text.set_msg:0000000000000030 $d
+     /tmp/ccpJIF0O.s:190    .text.encode_single:0000000000000000 $t
+     /tmp/ccpJIF0O.s:198    .text.encode_single:0000000000000000 encode_single
+     /tmp/ccpJIF0O.s:238    .text.encode_single:0000000000000024 $d
+     /tmp/ccpJIF0O.s:243    .text.encode_full_triggered:0000000000000000 $t
+     /tmp/ccpJIF0O.s:251    .text.encode_full_triggered:0000000000000000 encode_full_triggered
+     /tmp/ccpJIF0O.s:341    .text.encode_full_triggered:0000000000000058 $d
+     /tmp/ccpJIF0O.s:347    .text.get_codeword:0000000000000000 $t
+     /tmp/ccpJIF0O.s:355    .text.get_codeword:0000000000000000 get_codeword
+     /tmp/ccpJIF0O.s:405    .text.get_codeword:0000000000000024 $d
+     /tmp/ccpJIF0O.s:410    .text.encode_full:0000000000000000 $t
+     /tmp/ccpJIF0O.s:418    .text.encode_full:0000000000000000 encode_full
+     /tmp/ccpJIF0O.s:466    .text.encode_full:000000000000002c $d
+     /tmp/ccpJIF0O.s:473    .text.encode_code:0000000000000000 $t
+     /tmp/ccpJIF0O.s:481    .text.encode_code:0000000000000000 encode_code
+     /tmp/ccpJIF0O.s:521    .text.encode_code:0000000000000028 $d
+     /tmp/ccpJIF0O.s:526    .text.reset:0000000000000000 $t
+     /tmp/ccpJIF0O.s:534    .text.reset:0000000000000000 reset
+     /tmp/ccpJIF0O.s:583    .text.reset:0000000000000038 $d
+     /tmp/ccpJIF0O.s:588    .text.encode_code_triggered:0000000000000000 $t
+     /tmp/ccpJIF0O.s:596    .text.encode_code_triggered:0000000000000000 encode_code_triggered
+     /tmp/ccpJIF0O.s:700    .text.encode_code_triggered:000000000000006c $d
+     /tmp/ccpJIF0O.s:707    .text.startup.main:0000000000000000 $t
+     /tmp/ccpJIF0O.s:715    .text.startup.main:0000000000000000 main
+     /tmp/ccpJIF0O.s:823    .text.startup.main:0000000000000094 $d
+     /tmp/ccpJIF0O.s:839    .bss:0000000000000000 $d
+     /tmp/ccpJIF0O.s:843    .bss:0000000000000000 single_msg
+     /tmp/ccpJIF0O.s:848    .bss:0000000000000004 original_msg
+     /tmp/ccpJIF0O.s:852    .bss:0000000000000014 msg
+     /tmp/ccpJIF0O.s:857    .bss:0000000000000048 single_codeword
+     /tmp/ccpJIF0O.s:861    .bss:0000000000000058 codeword
+
+UNDEFINED SYMBOLS
+memcpy
+trigger_high
+encode
+trigger_low
+simpleserial_put
+PQCLEAN_HQC128_CLEAN_reed_muller_encode
+PQCLEAN_HQC128_CLEAN_code_encode
+memset
+PQCLEAN_HQC128_CLEAN_reed_solomon_encode
+platform_init
+init_uart
+trigger_setup
+simpleserial_init
+simpleserial_addcmd
+simpleserial_get

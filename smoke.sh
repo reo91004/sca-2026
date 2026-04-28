@@ -3,24 +3,28 @@
 #   preflight -> build -> flash -> capture -> validate -> visualize
 #
 # Usage:
-#   ./smoke.sh                      # level 1, 50 traces, 24400 samples
-#   LEVEL=3 ./smoke.sh              # level 3
+#   ./smoke.sh                                    # SMAUG-T level 1 (기본)
+#   TARGET=hqc-custom ./smoke.sh                  # HQC custom RM (encode_single)
+#   TARGET=hqc-pqclean ./smoke.sh                 # HQC PQClean code_encode (RS+RM)
+#   LEVEL=3 ./smoke.sh                            # SMAUG level 3
 #   NUM_TRACES=200 SAMPLES=8000 ./smoke.sh
-#   SKIP_BUILD=1 SKIP_FLASH=1 ./smoke.sh        # capture + viz only
+#   SKIP_BUILD=1 SKIP_FLASH=1 ./smoke.sh          # capture + viz only
 #   SKIP_CAPTURE=1 NPZ=traces/foo.npz ./smoke.sh  # re-visualize a saved file
 #
 # Env overrides:
-#   LEVEL          SMAUG-T 보안 레벨 (1|3|5, 기본 1)
+#   TARGET         smaug | hqc-custom | hqc-pqclean (기본 smaug)
+#   LEVEL          SMAUG-T 보안 레벨 (1|3|5, 기본 1; TARGET=smaug 일 때만 사용)
 #   NUM_TRACES     캡처 트레이스 수 (기본 50)
 #   SAMPLES        트레이스당 ADC 샘플 (기본 24400)
 #   GAIN_DB        LNA 게인 dB (기본 25.0)
 #   SERIAL         CW1173 시리얼 명시 (기본 자동 선택)
 #   CW_FW_PATH     ChipWhisperer 펌웨어 트리 (기본 makefile 값)
-#   NPZ            캡처 출력 .npz (기본 traces/smoke_smaug<LEVEL>.npz)
+#   NPZ            캡처 출력 .npz (기본 traces/smoke_<target>.npz)
 #   PNG            시각화 출력 .png (기본 NPZ 와 같은 stem + .png)
 
 set -euo pipefail
 
+TARGET="${TARGET:-smaug}"
 LEVEL="${LEVEL:-1}"
 NUM_TRACES="${NUM_TRACES:-50}"
 SAMPLES="${SAMPLES:-24400}"
@@ -31,14 +35,62 @@ SKIP_FLASH="${SKIP_FLASH:-0}"
 SKIP_CAPTURE="${SKIP_CAPTURE:-0}"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-FW_DIR="$REPO_ROOT/firmware/simpleserial-smaug"
 HOST_DIR="$REPO_ROOT/host"
-LIB_ARCHIVE="$REPO_ROOT/lib/crypto_kem/smaug${LEVEL}.a"
-BIN_PATH="$FW_DIR/simpleserial-smaug-CW308_STM32F4.bin"
-HEX_PATH="$FW_DIR/simpleserial-smaug-CW308_STM32F4.hex"
-ELF_PATH="$FW_DIR/simpleserial-smaug-CW308_STM32F4.elf"
 
-NPZ="${NPZ:-$REPO_ROOT/traces/smoke_smaug${LEVEL}.npz}"
+# ---- TARGET dispatch ---------------------------------------------------------
+# Each TARGET sets:
+#   FW_DIR, HEX_PATH, ELF_PATH, MAKE_ARGS  : build/flash inputs
+#   CAP_TARGET, CAP_CMD, CAP_SEND, CAP_RESP : capture.py args
+#   DO_MATCH_CHECK                          : 1 → SMAUG mismatch flag check
+#   NPZ_DEFAULT                             : default output path
+#   LIB_ARCHIVE                             : optional preflight check
+case "$TARGET" in
+  smaug)
+    FW_DIR="$REPO_ROOT/firmware/simpleserial-smaug"
+    HEX_PATH="$FW_DIR/simpleserial-smaug-CW308_STM32F4.hex"
+    ELF_PATH="$FW_DIR/simpleserial-smaug-CW308_STM32F4.elf"
+    MAKE_ARGS=(PLATFORM=CW308_STM32F4 "SMAUG_LEVEL=$LEVEL")
+    LIB_ARCHIVE="$REPO_ROOT/lib/crypto_kem/smaug${LEVEL}.a"
+    CAP_TARGET="smaug"
+    CAP_CMD="p"        # full pipeline (keypair + enc + dec)
+    CAP_SEND=0
+    CAP_RESP=1         # 1-byte mismatch flag
+    DO_MATCH_CHECK=1
+    NPZ_DEFAULT="$REPO_ROOT/traces/smoke_smaug${LEVEL}.npz"
+    ;;
+  hqc-custom)
+    FW_DIR="$REPO_ROOT/firmware/simpleserial-hqc"
+    HEX_PATH="$FW_DIR/simpleserial-hqc-CW308_STM32F4.hex"
+    ELF_PATH="$FW_DIR/simpleserial-hqc-CW308_STM32F4.elf"
+    MAKE_ARGS=(PLATFORM=CW308_STM32F4 HQC_IMPL=custom)
+    LIB_ARCHIVE=""     # HQC has no .a archive; sources compiled in firmware build
+    CAP_TARGET="hqc"
+    CAP_CMD="e"        # encode_single (single-byte RM encode)
+    CAP_SEND=1         # 1-byte dummy
+    CAP_RESP=16        # 16-byte codeword
+    DO_MATCH_CHECK=0
+    NPZ_DEFAULT="$REPO_ROOT/traces/smoke_hqc_custom.npz"
+    ;;
+  hqc-pqclean)
+    FW_DIR="$REPO_ROOT/firmware/simpleserial-hqc"
+    HEX_PATH="$FW_DIR/simpleserial-hqc-CW308_STM32F4.hex"
+    ELF_PATH="$FW_DIR/simpleserial-hqc-CW308_STM32F4.elf"
+    MAKE_ARGS=(PLATFORM=CW308_STM32F4 HQC_IMPL=pqclean)
+    LIB_ARCHIVE=""
+    CAP_TARGET="hqc"
+    CAP_CMD="e"        # encode_single — same shape as custom for clean comparison
+    CAP_SEND=1
+    CAP_RESP=16
+    DO_MATCH_CHECK=0
+    NPZ_DEFAULT="$REPO_ROOT/traces/smoke_hqc_pqclean.npz"
+    ;;
+  *)
+    echo "[FAIL] Unknown TARGET=$TARGET (smaug | hqc-custom | hqc-pqclean)" >&2
+    exit 1
+    ;;
+esac
+
+NPZ="${NPZ:-$NPZ_DEFAULT}"
 PNG="${PNG:-${NPZ%.npz}.png}"
 
 c_red()  { printf '\033[31m%s\033[0m' "$*"; }
@@ -52,9 +104,11 @@ warn()   { printf '%s %s\n'   "$(c_yel "[WARN]")" "$*"; }
 fail()   { printf '%s %s\n'   "$(c_red "[FAIL]")" "$*"; exit 1; }
 
 # ---------------------------------------------------------------- A. preflight
-hdr "[A] preflight  (LEVEL=$LEVEL  N=$NUM_TRACES  S=$SAMPLES)"
+hdr "[A] preflight  (TARGET=$TARGET  LEVEL=$LEVEL  N=$NUM_TRACES  S=$SAMPLES)"
 
-[[ -f "$LIB_ARCHIVE" ]] || fail "정적 아카이브 없음: $LIB_ARCHIVE  (LEVEL=1|3|5 인지 확인)"
+if [[ -n "$LIB_ARCHIVE" ]]; then
+    [[ -f "$LIB_ARCHIVE" ]] || fail "정적 아카이브 없음: $LIB_ARCHIVE  (LEVEL=1|3|5 인지 확인)"
+fi
 [[ -f "$FW_DIR/makefile" ]] || fail "firmware makefile 없음: $FW_DIR/makefile"
 [[ -d "$HOST_DIR" ]] || fail "host 디렉토리 없음: $HOST_DIR"
 
@@ -104,8 +158,8 @@ if [[ "$SKIP_BUILD" == "1" ]]; then
     info "SKIP_BUILD=1 → 빌드 건너뜀"
     [[ -f "$HEX_PATH" ]] || fail "빌드 산출물 없음: $HEX_PATH  (SKIP_BUILD 해제 권장)"
 else
-    hdr "[B] build firmware  (SMAUG_LEVEL=$LEVEL)"
-    make_args=(PLATFORM=CW308_STM32F4 "SMAUG_LEVEL=$LEVEL")
+    hdr "[B] build firmware  (TARGET=$TARGET  args=${MAKE_ARGS[*]})"
+    make_args=("${MAKE_ARGS[@]}")
     [[ -n "${CW_FW_PATH:-}" ]] && make_args+=("CW_FW_PATH=$CW_FW_PATH")
     ( cd "$FW_DIR" && make "${make_args[@]}" clean >/dev/null && make "${make_args[@]}" )
     [[ -f "$HEX_PATH" && -f "$ELF_PATH" ]] || fail "빌드 산출물 없음: $HEX_PATH"
@@ -132,9 +186,14 @@ if [[ "$SKIP_CAPTURE" == "1" ]]; then
     info "SKIP_CAPTURE=1 → 캡처 건너뜀 (검증/시각화는 기존 $NPZ 사용)"
     [[ -f "$NPZ" ]] || fail "기존 .npz 없음: $NPZ"
 else
-    hdr "[D] capture traces  (-> $NPZ)"
+    hdr "[D] capture traces  (target=$CAP_TARGET cmd='$CAP_CMD' send=$CAP_SEND resp=$CAP_RESP -> $NPZ)"
     mkdir -p "$(dirname "$NPZ")"
-    cap_args=(-n "$NUM_TRACES" -s "$SAMPLES" -g "$GAIN_DB" -c p -o "$NPZ")
+    cap_args=(
+        --target "$CAP_TARGET"
+        -n "$NUM_TRACES" -s "$SAMPLES" -g "$GAIN_DB"
+        -c "$CAP_CMD" --send-len "$CAP_SEND" --resp-len "$CAP_RESP"
+        -o "$NPZ"
+    )
     [[ -n "$SERIAL" ]] && cap_args+=(--serial "$SERIAL")
     # capture.py 는 timeouts > 0 이면 exit 2, 정상이면 0. 명시적으로 분기.
     set +e
@@ -151,7 +210,8 @@ fi
 # --------------------------------------------------------- E. validate + F. viz
 hdr "[E/F] validate + visualize  ($NPZ -> $PNG)"
 NPZ="$NPZ" PNG="$PNG" EXPECTED_N="$NUM_TRACES" EXPECTED_S="$SAMPLES" \
-SKIPPED_CAPTURE="$SKIP_CAPTURE" python3 - <<'PY'
+SKIPPED_CAPTURE="$SKIP_CAPTURE" DO_MATCH_CHECK="$DO_MATCH_CHECK" \
+TARGET="$TARGET" python3 - <<'PY'
 import os, sys
 import numpy as np
 import matplotlib
@@ -163,12 +223,15 @@ png_path = os.environ["PNG"]
 expected_n = int(os.environ["EXPECTED_N"])
 expected_s = int(os.environ["EXPECTED_S"])
 skipped_capture = os.environ["SKIPPED_CAPTURE"] == "1"
+do_match_check = os.environ["DO_MATCH_CHECK"] == "1"
+target_name = os.environ["TARGET"]
 
 d = np.load(npz_path, allow_pickle=True)
 traces = d["traces"]
 responses = d["responses"]
 meta = d["meta"].item()
 
+print(f"[VAL] target     : {target_name}")
 print(f"[VAL] file       : {npz_path}")
 print(f"[VAL] traces     : shape={traces.shape} dtype={traces.dtype}")
 print(f"[VAL] responses  : shape={responses.shape} dtype={responses.dtype}")
@@ -190,11 +253,16 @@ if responses.dtype != np.uint8:
 n_timeouts = int(meta.get("n_timeouts", 0))
 if n_timeouts != 0:
     errs.append(f"meta.n_timeouts={n_timeouts} (expected 0)")
-else:
-    # 타임아웃이 0이면 모든 행이 유효하므로 mismatch 0 확인 가능.
+elif do_match_check:
+    # SMAUG only: 1바이트 mismatch flag → 0 이 정상. HQC 응답은 codeword 데이터라 무의미.
     bad = int((responses != 0).sum())
     if bad:
         errs.append(f"mismatch != 0 인 trace {bad}개 (KEM dec 결과가 enc 와 불일치)")
+else:
+    # HQC: 응답이 codeword 페이로드. 응답 분포만 간단 요약.
+    nonzero_rows = int((responses.any(axis=1) if responses.ndim == 2 else responses != 0).sum())
+    print(f"[VAL] HQC ack    : nonzero rows = {nonzero_rows}/{responses.shape[0]} "
+          f"(round-trip 확인용; mismatch flag 검사는 SMAUG 전용)")
 
 # 트레이스 자체의 sanity: NaN/Inf, 전부 0, 분산 거의 0 등.
 finite = np.isfinite(traces).all()
@@ -225,7 +293,7 @@ ax1.plot(x, mean, color="C0", lw=0.8, label=r"$\mu$")
 for i in sample_idx:
     ax1.plot(x, traces[i], lw=0.4, alpha=0.6, label=f"trace {i}")
 ax1.set_ylabel("ADC (norm.)")
-ax1.set_title(f"SMAUG-T smoke trace  N={traces.shape[0]}  S={traces.shape[1]}  "
+ax1.set_title(f"{target_name} smoke trace  N={traces.shape[0]}  S={traces.shape[1]}  "
               f"cmd={meta.get('cmd','?')}  gain={meta.get('gain_db','?')}dB")
 ax1.legend(loc="upper right", fontsize=8, ncols=2)
 ax1.grid(alpha=0.3)

@@ -27,633 +27,614 @@
   28              		.file 1 "simpleserial-smaug.c"
    1:simpleserial-smaug.c **** // SimpleSerial-SMAUG: ChipWhisperer SCA target wrapper around SMAUG-T KEM.
    2:simpleserial-smaug.c **** //
-   3:simpleserial-smaug.c **** // Commands (SimpleSerial v2.1):
-   4:simpleserial-smaug.c **** //   k  - generate fresh (pk, sk) on-chip; reply 'r' carries first 16 B of pk
-   5:simpleserial-smaug.c **** //   e  - encapsulate against the resident pk (no trigger); reply 'r' = first 16 B of ct
-   6:simpleserial-smaug.c **** //   d  - decapsulate the resident ct with sk; TRIGGER HIGH around the call
-   7:simpleserial-smaug.c **** //        reply 'r' = 1-byte mismatch flag (0 = ss_dec == ss_enc)
-   8:simpleserial-smaug.c **** //   p  - full pipeline: keypair -> enc -> (trigger high) dec (trigger low)
-   9:simpleserial-smaug.c **** //        single-shot capture helper; reply 'r' = 1-byte mismatch flag
-  10:simpleserial-smaug.c **** //
-  11:simpleserial-smaug.c **** // All key/ct buffers stay resident on the MCU; the host never sees the full
-  12:simpleserial-smaug.c **** // 672 B pk/ct (would exceed SimpleSerial's 64 B-per-frame limit).
-  13:simpleserial-smaug.c **** 
-  14:simpleserial-smaug.c **** #include <stdint.h>
-  15:simpleserial-smaug.c **** 
-  16:simpleserial-smaug.c **** #include "hal.h"
-  17:simpleserial-smaug.c **** #include "simpleserial.h"
-  18:simpleserial-smaug.c **** 
-  19:simpleserial-smaug.c **** #include "api.h"          // CRYPTO_{PUBLICKEY,SECRETKEY,CIPHERTEXT}BYTES
-  20:simpleserial-smaug.c **** #include "parameters.h"   // CRYPTO_BYTES (= 32, shared-secret size)
-  21:simpleserial-smaug.c **** 
-  22:simpleserial-smaug.c **** extern int crypto_kem_keypair(uint8_t *pk, uint8_t *sk);
-  23:simpleserial-smaug.c **** extern int crypto_kem_enc(uint8_t *ct, uint8_t *ss, const uint8_t *pk);
-  24:simpleserial-smaug.c **** extern int crypto_kem_dec(uint8_t *ss, const uint8_t *ct, const uint8_t *sk);
-  25:simpleserial-smaug.c **** 
-  26:simpleserial-smaug.c **** static uint8_t pk[CRYPTO_PUBLICKEYBYTES];
-  27:simpleserial-smaug.c **** static uint8_t sk[CRYPTO_SECRETKEYBYTES];
-  28:simpleserial-smaug.c **** static uint8_t ct[CRYPTO_CIPHERTEXTBYTES];
-  29:simpleserial-smaug.c **** static uint8_t ss_enc[CRYPTO_BYTES];
-  30:simpleserial-smaug.c **** static uint8_t ss_dec[CRYPTO_BYTES];
-  31:simpleserial-smaug.c **** 
-  32:simpleserial-smaug.c **** static uint8_t cmd_keypair(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
-  33:simpleserial-smaug.c **** {
-  34:simpleserial-smaug.c ****     (void)cmd; (void)scmd; (void)len; (void)buf;
-  35:simpleserial-smaug.c ****     crypto_kem_keypair(pk, sk);
-  36:simpleserial-smaug.c ****     simpleserial_put('r', 16, pk);
-  37:simpleserial-smaug.c ****     return 0x00;
-  38:simpleserial-smaug.c **** }
-  39:simpleserial-smaug.c **** 
-  40:simpleserial-smaug.c **** static uint8_t cmd_encaps(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
-  41:simpleserial-smaug.c **** {
-  42:simpleserial-smaug.c ****     (void)cmd; (void)scmd; (void)len; (void)buf;
-  43:simpleserial-smaug.c ****     crypto_kem_enc(ct, ss_enc, pk);
-  44:simpleserial-smaug.c ****     simpleserial_put('r', 16, ct);
-  45:simpleserial-smaug.c ****     return 0x00;
-  46:simpleserial-smaug.c **** }
-  47:simpleserial-smaug.c **** 
-  48:simpleserial-smaug.c **** static uint8_t cmd_decaps(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
-  49:simpleserial-smaug.c **** {
-  50:simpleserial-smaug.c ****     (void)cmd; (void)scmd; (void)len; (void)buf;
-  51:simpleserial-smaug.c **** 
-  52:simpleserial-smaug.c ****     trigger_high();
-  53:simpleserial-smaug.c ****     crypto_kem_dec(ss_dec, ct, sk);
-  54:simpleserial-smaug.c ****     trigger_low();
-  55:simpleserial-smaug.c **** 
-  56:simpleserial-smaug.c ****     uint8_t mismatch = 0;
-  57:simpleserial-smaug.c ****     for (unsigned i = 0; i < CRYPTO_BYTES; i++) {
-  58:simpleserial-smaug.c ****         mismatch |= (uint8_t)(ss_dec[i] ^ ss_enc[i]);
-  59:simpleserial-smaug.c ****     }
-  60:simpleserial-smaug.c ****     uint8_t status = (mismatch != 0);
-  61:simpleserial-smaug.c ****     simpleserial_put('r', 1, &status);
-  62:simpleserial-smaug.c ****     return 0x00;
-  63:simpleserial-smaug.c **** }
-  64:simpleserial-smaug.c **** 
-  65:simpleserial-smaug.c **** static uint8_t cmd_pipeline(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *buf)
-  66:simpleserial-smaug.c **** {
-  29              		.loc 1 66 1 view -0
+   3:simpleserial-smaug.c **** // Commands (SimpleSerial v1.1; matches HQC reference firmware so 0x44 ack
+   4:simpleserial-smaug.c **** // behavior can be compared apples-to-apples between the two KEMs):
+   5:simpleserial-smaug.c **** //   k  - generate fresh (pk, sk) on-chip; reply 'r' carries first 16 B of pk
+   6:simpleserial-smaug.c **** //   e  - encapsulate against the resident pk (no trigger); reply 'r' = first 16 B of ct
+   7:simpleserial-smaug.c **** //   d  - decapsulate the resident ct with sk; TRIGGER HIGH around the call
+   8:simpleserial-smaug.c **** //        reply 'r' = 1-byte mismatch flag (0 = ss_dec == ss_enc)
+   9:simpleserial-smaug.c **** //   p  - full pipeline: keypair -> enc -> (trigger high) dec (trigger low)
+  10:simpleserial-smaug.c **** //        single-shot capture helper; reply 'r' = 1-byte mismatch flag
+  11:simpleserial-smaug.c **** //
+  12:simpleserial-smaug.c **** // All key/ct buffers stay resident on the MCU; the host never sees the full
+  13:simpleserial-smaug.c **** // 672 B pk/ct (would exceed SimpleSerial's 64 B-per-frame limit).
+  14:simpleserial-smaug.c **** 
+  15:simpleserial-smaug.c **** #include <stdint.h>
+  16:simpleserial-smaug.c **** 
+  17:simpleserial-smaug.c **** #include "hal.h"
+  18:simpleserial-smaug.c **** #include "simpleserial.h"
+  19:simpleserial-smaug.c **** 
+  20:simpleserial-smaug.c **** #include "api.h"          // CRYPTO_{PUBLICKEY,SECRETKEY,CIPHERTEXT}BYTES
+  21:simpleserial-smaug.c **** #include "parameters.h"   // CRYPTO_BYTES (= 32, shared-secret size)
+  22:simpleserial-smaug.c **** 
+  23:simpleserial-smaug.c **** extern int crypto_kem_keypair(uint8_t *pk, uint8_t *sk);
+  24:simpleserial-smaug.c **** extern int crypto_kem_enc(uint8_t *ct, uint8_t *ss, const uint8_t *pk);
+  25:simpleserial-smaug.c **** extern int crypto_kem_dec(uint8_t *ss, const uint8_t *ct, const uint8_t *sk);
+  26:simpleserial-smaug.c **** 
+  27:simpleserial-smaug.c **** static uint8_t pk[CRYPTO_PUBLICKEYBYTES];
+  28:simpleserial-smaug.c **** static uint8_t sk[CRYPTO_SECRETKEYBYTES];
+  29:simpleserial-smaug.c **** static uint8_t ct[CRYPTO_CIPHERTEXTBYTES];
+  30:simpleserial-smaug.c **** static uint8_t ss_enc[CRYPTO_BYTES];
+  31:simpleserial-smaug.c **** static uint8_t ss_dec[CRYPTO_BYTES];
+  32:simpleserial-smaug.c **** 
+  33:simpleserial-smaug.c **** static uint8_t cmd_keypair(uint8_t *buf, uint8_t len)
+  34:simpleserial-smaug.c **** {
+  35:simpleserial-smaug.c ****     (void)len; (void)buf;
+  36:simpleserial-smaug.c ****     crypto_kem_keypair(pk, sk);
+  37:simpleserial-smaug.c ****     simpleserial_put('r', 16, pk);
+  38:simpleserial-smaug.c ****     return 0x00;
+  39:simpleserial-smaug.c **** }
+  40:simpleserial-smaug.c **** 
+  41:simpleserial-smaug.c **** static uint8_t cmd_encaps(uint8_t *buf, uint8_t len)
+  42:simpleserial-smaug.c **** {
+  43:simpleserial-smaug.c ****     (void)len; (void)buf;
+  44:simpleserial-smaug.c ****     crypto_kem_enc(ct, ss_enc, pk);
+  45:simpleserial-smaug.c ****     simpleserial_put('r', 16, ct);
+  46:simpleserial-smaug.c ****     return 0x00;
+  47:simpleserial-smaug.c **** }
+  48:simpleserial-smaug.c **** 
+  49:simpleserial-smaug.c **** static uint8_t cmd_decaps(uint8_t *buf, uint8_t len)
+  50:simpleserial-smaug.c **** {
+  51:simpleserial-smaug.c ****     (void)len; (void)buf;
+  52:simpleserial-smaug.c **** 
+  53:simpleserial-smaug.c ****     trigger_high();
+  54:simpleserial-smaug.c ****     crypto_kem_dec(ss_dec, ct, sk);
+  55:simpleserial-smaug.c ****     trigger_low();
+  56:simpleserial-smaug.c **** 
+  57:simpleserial-smaug.c ****     uint8_t mismatch = 0;
+  58:simpleserial-smaug.c ****     for (unsigned i = 0; i < CRYPTO_BYTES; i++) {
+  59:simpleserial-smaug.c ****         mismatch |= (uint8_t)(ss_dec[i] ^ ss_enc[i]);
+  60:simpleserial-smaug.c ****     }
+  61:simpleserial-smaug.c ****     uint8_t status = (mismatch != 0);
+  62:simpleserial-smaug.c ****     simpleserial_put('r', 1, &status);
+  63:simpleserial-smaug.c ****     return 0x00;
+  64:simpleserial-smaug.c **** }
+  65:simpleserial-smaug.c **** 
+  66:simpleserial-smaug.c **** static uint8_t cmd_pipeline(uint8_t *buf, uint8_t len)
+  67:simpleserial-smaug.c **** {
+  29              		.loc 1 67 1 view -0
   30              		.cfi_startproc
   31              		@ args = 0, pretend = 0, frame = 8
   32              		@ frame_needed = 0, uses_anonymous_args = 0
-  67:simpleserial-smaug.c ****     (void)cmd; (void)scmd; (void)len; (void)buf;
-  33              		.loc 1 67 5 view .LVU1
-  34              		.loc 1 67 16 view .LVU2
-  35              		.loc 1 67 28 view .LVU3
-  36              		.loc 1 67 39 view .LVU4
-  68:simpleserial-smaug.c **** 
-  69:simpleserial-smaug.c ****     crypto_kem_keypair(pk, sk);
-  37              		.loc 1 69 5 view .LVU5
-  66:simpleserial-smaug.c ****     (void)cmd; (void)scmd; (void)len; (void)buf;
-  38              		.loc 1 66 1 is_stmt 0 view .LVU6
-  39 0000 37B5     		push	{r0, r1, r2, r4, r5, lr}
-  40              	.LCFI0:
-  41              		.cfi_def_cfa_offset 24
-  42              		.cfi_offset 4, -12
-  43              		.cfi_offset 5, -8
-  44              		.cfi_offset 14, -4
-  45              		.loc 1 69 5 view .LVU7
-  46 0002 1A49     		ldr	r1, .L4
-  47              	.LVL1:
-  48              		.loc 1 69 5 view .LVU8
-  49 0004 01F55070 		add	r0, r1, #832
-  50              	.LVL2:
-  51              		.loc 1 69 5 view .LVU9
-  52 0008 FFF7FEFF 		bl	crypto_kem_keypair
-  53              	.LVL3:
-  70:simpleserial-smaug.c ****     crypto_kem_enc(ct, ss_enc, pk);
-  54              		.loc 1 70 5 is_stmt 1 view .LVU10
-  55 000c 184A     		ldr	r2, .L4+4
-  56 000e 02F52871 		add	r1, r2, #672
-  57 0012 02F53070 		add	r0, r2, #704
-  58 0016 FFF7FEFF 		bl	crypto_kem_enc
-  59              	.LVL4:
-  71:simpleserial-smaug.c **** 
-  72:simpleserial-smaug.c ****     trigger_high();
-  60              		.loc 1 72 5 view .LVU11
-  61 001a FFF7FEFF 		bl	trigger_high
-  62              	.LVL5:
-  73:simpleserial-smaug.c ****     crypto_kem_dec(ss_dec, ct, sk);
-  63              		.loc 1 73 5 view .LVU12
-  64 001e 134A     		ldr	r2, .L4
-  65 0020 02F5C061 		add	r1, r2, #1536
-  66 0024 02F50A60 		add	r0, r2, #2208
-  67 0028 FFF7FEFF 		bl	crypto_kem_dec
-  68              	.LVL6:
-  74:simpleserial-smaug.c ****     trigger_low();
-  69              		.loc 1 74 5 view .LVU13
-  70 002c FFF7FEFF 		bl	trigger_low
-  71              	.LVL7:
-  75:simpleserial-smaug.c **** 
-  76:simpleserial-smaug.c ****     uint8_t mismatch = 0;
-  72              		.loc 1 76 5 view .LVU14
+  68:simpleserial-smaug.c ****     (void)len; (void)buf;
+  33              		.loc 1 68 5 view .LVU1
+  34              		.loc 1 68 16 view .LVU2
+  69:simpleserial-smaug.c **** 
+  70:simpleserial-smaug.c ****     crypto_kem_keypair(pk, sk);
+  35              		.loc 1 70 5 view .LVU3
+  67:simpleserial-smaug.c ****     (void)len; (void)buf;
+  36              		.loc 1 67 1 is_stmt 0 view .LVU4
+  37 0000 37B5     		push	{r0, r1, r2, r4, r5, lr}
+  38              	.LCFI0:
+  39              		.cfi_def_cfa_offset 24
+  40              		.cfi_offset 4, -12
+  41              		.cfi_offset 5, -8
+  42              		.cfi_offset 14, -4
+  43              		.loc 1 70 5 view .LVU5
+  44 0002 1A49     		ldr	r1, .L4
+  45              	.LVL1:
+  46              		.loc 1 70 5 view .LVU6
+  47 0004 01F55070 		add	r0, r1, #832
+  48              	.LVL2:
+  49              		.loc 1 70 5 view .LVU7
+  50 0008 FFF7FEFF 		bl	crypto_kem_keypair
+  51              	.LVL3:
+  71:simpleserial-smaug.c ****     crypto_kem_enc(ct, ss_enc, pk);
+  52              		.loc 1 71 5 is_stmt 1 view .LVU8
+  53 000c 184A     		ldr	r2, .L4+4
+  54 000e 02F52871 		add	r1, r2, #672
+  55 0012 02F53070 		add	r0, r2, #704
+  56 0016 FFF7FEFF 		bl	crypto_kem_enc
+  57              	.LVL4:
+  72:simpleserial-smaug.c **** 
+  73:simpleserial-smaug.c ****     trigger_high();
+  58              		.loc 1 73 5 view .LVU9
+  59 001a FFF7FEFF 		bl	trigger_high
+  60              	.LVL5:
+  74:simpleserial-smaug.c ****     crypto_kem_dec(ss_dec, ct, sk);
+  61              		.loc 1 74 5 view .LVU10
+  62 001e 134A     		ldr	r2, .L4
+  63 0020 02F5C061 		add	r1, r2, #1536
+  64 0024 02F50A60 		add	r0, r2, #2208
+  65 0028 FFF7FEFF 		bl	crypto_kem_dec
+  66              	.LVL6:
+  75:simpleserial-smaug.c ****     trigger_low();
+  67              		.loc 1 75 5 view .LVU11
+  68 002c FFF7FEFF 		bl	trigger_low
+  69              	.LVL7:
+  76:simpleserial-smaug.c **** 
+  77:simpleserial-smaug.c ****     uint8_t mismatch = 0;
+  70              		.loc 1 77 5 view .LVU12
+  78:simpleserial-smaug.c ****     for (unsigned i = 0; i < CRYPTO_BYTES; i++) {
+  71              		.loc 1 78 5 view .LVU13
+  72              	.LBB2:
+  73              		.loc 1 78 10 view .LVU14
+  74              		.loc 1 78 26 view .LVU15
+  75 0030 1048     		ldr	r0, .L4+8
+  76              		.loc 1 78 19 is_stmt 0 view .LVU16
+  77 0032 0022     		movs	r2, #0
+  78 0034 A0F53074 		sub	r4, r0, #704
+  79              	.LBE2:
   77:simpleserial-smaug.c ****     for (unsigned i = 0; i < CRYPTO_BYTES; i++) {
-  73              		.loc 1 77 5 view .LVU15
-  74              	.LBB2:
-  75              		.loc 1 77 10 view .LVU16
-  76              		.loc 1 77 26 view .LVU17
-  77 0030 1048     		ldr	r0, .L4+8
-  78              		.loc 1 77 19 is_stmt 0 view .LVU18
-  79 0032 0022     		movs	r2, #0
-  80 0034 A0F53074 		sub	r4, r0, #704
-  81              	.LBE2:
-  76:simpleserial-smaug.c ****     for (unsigned i = 0; i < CRYPTO_BYTES; i++) {
-  82              		.loc 1 76 13 view .LVU19
-  83 0038 1346     		mov	r3, r2
-  84              	.LVL8:
-  85              	.L2:
-  86              	.LBB3:
-  78:simpleserial-smaug.c ****         mismatch |= (uint8_t)(ss_dec[i] ^ ss_enc[i]);
-  87              		.loc 1 78 9 is_stmt 1 discriminator 3 view .LVU20
-  88              		.loc 1 78 37 is_stmt 0 discriminator 3 view .LVU21
-  89 003a 10F8011B 		ldrb	r1, [r0], #1	@ zero_extendqisi2
-  90              		.loc 1 78 49 discriminator 3 view .LVU22
-  91 003e 14F8015B 		ldrb	r5, [r4], #1	@ zero_extendqisi2
-  77:simpleserial-smaug.c ****     for (unsigned i = 0; i < CRYPTO_BYTES; i++) {
-  92              		.loc 1 77 45 discriminator 3 view .LVU23
-  93 0042 0132     		adds	r2, r2, #1
-  94              	.LVL9:
-  95              		.loc 1 78 21 discriminator 3 view .LVU24
-  96 0044 6940     		eors	r1, r1, r5
-  77:simpleserial-smaug.c ****     for (unsigned i = 0; i < CRYPTO_BYTES; i++) {
-  97              		.loc 1 77 5 discriminator 3 view .LVU25
-  98 0046 202A     		cmp	r2, #32
-  99              		.loc 1 78 18 discriminator 3 view .LVU26
- 100 0048 43EA0103 		orr	r3, r3, r1
- 101              	.LVL10:
-  77:simpleserial-smaug.c ****     for (unsigned i = 0; i < CRYPTO_BYTES; i++) {
- 102              		.loc 1 77 44 is_stmt 1 discriminator 3 view .LVU27
-  77:simpleserial-smaug.c ****     for (unsigned i = 0; i < CRYPTO_BYTES; i++) {
- 103              		.loc 1 77 26 discriminator 3 view .LVU28
-  77:simpleserial-smaug.c ****     for (unsigned i = 0; i < CRYPTO_BYTES; i++) {
- 104              		.loc 1 77 5 is_stmt 0 discriminator 3 view .LVU29
- 105 004c F5D1     		bne	.L2
- 106              	.LBE3:
-  79:simpleserial-smaug.c ****     }
-  80:simpleserial-smaug.c ****     uint8_t status = (mismatch != 0);
- 107              		.loc 1 80 5 is_stmt 1 view .LVU30
- 108              		.loc 1 80 32 is_stmt 0 view .LVU31
- 109 004e 003B     		subs	r3, r3, #0
- 110              		.loc 1 80 32 view .LVU32
- 111 0050 18BF     		it	ne
- 112 0052 0123     		movne	r3, #1
- 113              	.LVL11:
+  80              		.loc 1 77 13 view .LVU17
+  81 0038 1346     		mov	r3, r2
+  82              	.LVL8:
+  83              	.L2:
+  84              	.LBB3:
+  79:simpleserial-smaug.c ****         mismatch |= (uint8_t)(ss_dec[i] ^ ss_enc[i]);
+  85              		.loc 1 79 9 is_stmt 1 discriminator 3 view .LVU18
+  86              		.loc 1 79 37 is_stmt 0 discriminator 3 view .LVU19
+  87 003a 10F8011B 		ldrb	r1, [r0], #1	@ zero_extendqisi2
+  88              		.loc 1 79 49 discriminator 3 view .LVU20
+  89 003e 14F8015B 		ldrb	r5, [r4], #1	@ zero_extendqisi2
+  78:simpleserial-smaug.c ****     for (unsigned i = 0; i < CRYPTO_BYTES; i++) {
+  90              		.loc 1 78 45 discriminator 3 view .LVU21
+  91 0042 0132     		adds	r2, r2, #1
+  92              	.LVL9:
+  93              		.loc 1 79 21 discriminator 3 view .LVU22
+  94 0044 6940     		eors	r1, r1, r5
+  78:simpleserial-smaug.c ****     for (unsigned i = 0; i < CRYPTO_BYTES; i++) {
+  95              		.loc 1 78 5 discriminator 3 view .LVU23
+  96 0046 202A     		cmp	r2, #32
+  97              		.loc 1 79 18 discriminator 3 view .LVU24
+  98 0048 43EA0103 		orr	r3, r3, r1
+  99              	.LVL10:
+  78:simpleserial-smaug.c ****     for (unsigned i = 0; i < CRYPTO_BYTES; i++) {
+ 100              		.loc 1 78 44 is_stmt 1 discriminator 3 view .LVU25
+  78:simpleserial-smaug.c ****     for (unsigned i = 0; i < CRYPTO_BYTES; i++) {
+ 101              		.loc 1 78 26 discriminator 3 view .LVU26
+  78:simpleserial-smaug.c ****     for (unsigned i = 0; i < CRYPTO_BYTES; i++) {
+ 102              		.loc 1 78 5 is_stmt 0 discriminator 3 view .LVU27
+ 103 004c F5D1     		bne	.L2
+ 104              	.LBE3:
+  80:simpleserial-smaug.c ****     }
+  81:simpleserial-smaug.c ****     uint8_t status = (mismatch != 0);
+ 105              		.loc 1 81 5 is_stmt 1 view .LVU28
+ 106              		.loc 1 81 32 is_stmt 0 view .LVU29
+ 107 004e 003B     		subs	r3, r3, #0
+ 108              		.loc 1 81 32 view .LVU30
+ 109 0050 18BF     		it	ne
+ 110 0052 0123     		movne	r3, #1
+ 111              	.LVL11:
+  82:simpleserial-smaug.c ****     simpleserial_put('r', 1, &status);
+ 112              		.loc 1 82 5 view .LVU31
+ 113 0054 0DF10702 		add	r2, sp, #7
+ 114              	.LVL12:
+ 115              		.loc 1 82 5 view .LVU32
+ 116 0058 0121     		movs	r1, #1
+ 117 005a 7220     		movs	r0, #114
   81:simpleserial-smaug.c ****     simpleserial_put('r', 1, &status);
- 114              		.loc 1 81 5 view .LVU33
- 115 0054 0DF10702 		add	r2, sp, #7
- 116              	.LVL12:
- 117              		.loc 1 81 5 view .LVU34
- 118 0058 0121     		movs	r1, #1
- 119 005a 7220     		movs	r0, #114
-  80:simpleserial-smaug.c ****     simpleserial_put('r', 1, &status);
- 120              		.loc 1 80 32 view .LVU35
- 121 005c 8DF80730 		strb	r3, [sp, #7]
- 122              		.loc 1 81 5 is_stmt 1 view .LVU36
- 123 0060 FFF7FEFF 		bl	simpleserial_put
- 124              	.LVL13:
-  82:simpleserial-smaug.c ****     return 0x00;
- 125              		.loc 1 82 5 view .LVU37
-  83:simpleserial-smaug.c **** }
- 126              		.loc 1 83 1 is_stmt 0 view .LVU38
- 127 0064 0020     		movs	r0, #0
- 128 0066 03B0     		add	sp, sp, #12
- 129              	.LCFI1:
- 130              		.cfi_def_cfa_offset 12
- 131              		@ sp needed
- 132 0068 30BD     		pop	{r4, r5, pc}
- 133              	.L5:
- 134 006a 00BF     		.align	2
- 135              	.L4:
- 136 006c 00000000 		.word	.LANCHOR0
- 137 0070 40030000 		.word	.LANCHOR0+832
- 138 0074 A0080000 		.word	.LANCHOR0+2208
- 139              		.cfi_endproc
- 140              	.LFE6:
- 142              		.section	.text.cmd_decaps,"ax",%progbits
- 143              		.align	1
- 144              		.syntax unified
- 145              		.thumb
- 146              		.thumb_func
- 147              		.fpu fpv4-sp-d16
- 149              	cmd_decaps:
- 150              	.LVL14:
- 151              	.LFB5:
-  49:simpleserial-smaug.c ****     (void)cmd; (void)scmd; (void)len; (void)buf;
- 152              		.loc 1 49 1 is_stmt 1 view -0
- 153              		.cfi_startproc
- 154              		@ args = 0, pretend = 0, frame = 8
- 155              		@ frame_needed = 0, uses_anonymous_args = 0
-  50:simpleserial-smaug.c **** 
- 156              		.loc 1 50 5 view .LVU40
-  50:simpleserial-smaug.c **** 
- 157              		.loc 1 50 16 view .LVU41
-  50:simpleserial-smaug.c **** 
- 158              		.loc 1 50 28 view .LVU42
-  50:simpleserial-smaug.c **** 
- 159              		.loc 1 50 39 view .LVU43
-  52:simpleserial-smaug.c ****     crypto_kem_dec(ss_dec, ct, sk);
- 160              		.loc 1 52 5 view .LVU44
-  49:simpleserial-smaug.c ****     (void)cmd; (void)scmd; (void)len; (void)buf;
- 161              		.loc 1 49 1 is_stmt 0 view .LVU45
- 162 0000 37B5     		push	{r0, r1, r2, r4, r5, lr}
- 163              	.LCFI2:
- 164              		.cfi_def_cfa_offset 24
- 165              		.cfi_offset 4, -12
- 166              		.cfi_offset 5, -8
- 167              		.cfi_offset 14, -4
-  52:simpleserial-smaug.c ****     crypto_kem_dec(ss_dec, ct, sk);
- 168              		.loc 1 52 5 view .LVU46
- 169 0002 FFF7FEFF 		bl	trigger_high
- 170              	.LVL15:
-  53:simpleserial-smaug.c ****     trigger_low();
- 171              		.loc 1 53 5 is_stmt 1 view .LVU47
- 172 0006 134A     		ldr	r2, .L9
- 173 0008 02F5C061 		add	r1, r2, #1536
- 174 000c 02F50A60 		add	r0, r2, #2208
- 175 0010 FFF7FEFF 		bl	crypto_kem_dec
- 176              	.LVL16:
-  54:simpleserial-smaug.c **** 
- 177              		.loc 1 54 5 view .LVU48
- 178 0014 FFF7FEFF 		bl	trigger_low
- 179              	.LVL17:
-  56:simpleserial-smaug.c ****     for (unsigned i = 0; i < CRYPTO_BYTES; i++) {
- 180              		.loc 1 56 5 view .LVU49
-  57:simpleserial-smaug.c ****         mismatch |= (uint8_t)(ss_dec[i] ^ ss_enc[i]);
- 181              		.loc 1 57 5 view .LVU50
- 182              	.LBB4:
-  57:simpleserial-smaug.c ****         mismatch |= (uint8_t)(ss_dec[i] ^ ss_enc[i]);
- 183              		.loc 1 57 10 view .LVU51
-  57:simpleserial-smaug.c ****         mismatch |= (uint8_t)(ss_dec[i] ^ ss_enc[i]);
- 184              		.loc 1 57 26 view .LVU52
- 185 0018 0F48     		ldr	r0, .L9+4
-  57:simpleserial-smaug.c ****         mismatch |= (uint8_t)(ss_dec[i] ^ ss_enc[i]);
- 186              		.loc 1 57 19 is_stmt 0 view .LVU53
- 187 001a 0022     		movs	r2, #0
- 188 001c A0F53074 		sub	r4, r0, #704
- 189              	.LBE4:
-  56:simpleserial-smaug.c ****     for (unsigned i = 0; i < CRYPTO_BYTES; i++) {
- 190              		.loc 1 56 13 view .LVU54
- 191 0020 1346     		mov	r3, r2
- 192              	.LVL18:
- 193              	.L7:
- 194              	.LBB5:
-  58:simpleserial-smaug.c ****     }
- 195              		.loc 1 58 9 is_stmt 1 discriminator 3 view .LVU55
-  58:simpleserial-smaug.c ****     }
- 196              		.loc 1 58 37 is_stmt 0 discriminator 3 view .LVU56
- 197 0022 10F8011B 		ldrb	r1, [r0], #1	@ zero_extendqisi2
-  58:simpleserial-smaug.c ****     }
- 198              		.loc 1 58 49 discriminator 3 view .LVU57
- 199 0026 14F8015B 		ldrb	r5, [r4], #1	@ zero_extendqisi2
-  57:simpleserial-smaug.c ****         mismatch |= (uint8_t)(ss_dec[i] ^ ss_enc[i]);
- 200              		.loc 1 57 45 discriminator 3 view .LVU58
- 201 002a 0132     		adds	r2, r2, #1
- 202              	.LVL19:
-  58:simpleserial-smaug.c ****     }
- 203              		.loc 1 58 21 discriminator 3 view .LVU59
- 204 002c 6940     		eors	r1, r1, r5
-  57:simpleserial-smaug.c ****         mismatch |= (uint8_t)(ss_dec[i] ^ ss_enc[i]);
- 205              		.loc 1 57 5 discriminator 3 view .LVU60
- 206 002e 202A     		cmp	r2, #32
-  58:simpleserial-smaug.c ****     }
- 207              		.loc 1 58 18 discriminator 3 view .LVU61
- 208 0030 43EA0103 		orr	r3, r3, r1
- 209              	.LVL20:
-  57:simpleserial-smaug.c ****         mismatch |= (uint8_t)(ss_dec[i] ^ ss_enc[i]);
- 210              		.loc 1 57 44 is_stmt 1 discriminator 3 view .LVU62
-  57:simpleserial-smaug.c ****         mismatch |= (uint8_t)(ss_dec[i] ^ ss_enc[i]);
- 211              		.loc 1 57 26 discriminator 3 view .LVU63
-  57:simpleserial-smaug.c ****         mismatch |= (uint8_t)(ss_dec[i] ^ ss_enc[i]);
- 212              		.loc 1 57 5 is_stmt 0 discriminator 3 view .LVU64
- 213 0034 F5D1     		bne	.L7
- 214              	.LBE5:
-  60:simpleserial-smaug.c ****     simpleserial_put('r', 1, &status);
- 215              		.loc 1 60 5 is_stmt 1 view .LVU65
-  60:simpleserial-smaug.c ****     simpleserial_put('r', 1, &status);
- 216              		.loc 1 60 32 is_stmt 0 view .LVU66
- 217 0036 003B     		subs	r3, r3, #0
-  60:simpleserial-smaug.c ****     simpleserial_put('r', 1, &status);
- 218              		.loc 1 60 32 view .LVU67
- 219 0038 18BF     		it	ne
- 220 003a 0123     		movne	r3, #1
- 221              	.LVL21:
-  61:simpleserial-smaug.c ****     return 0x00;
- 222              		.loc 1 61 5 view .LVU68
- 223 003c 0DF10702 		add	r2, sp, #7
- 224              	.LVL22:
-  61:simpleserial-smaug.c ****     return 0x00;
- 225              		.loc 1 61 5 view .LVU69
- 226 0040 0121     		movs	r1, #1
- 227 0042 7220     		movs	r0, #114
-  60:simpleserial-smaug.c ****     simpleserial_put('r', 1, &status);
- 228              		.loc 1 60 32 view .LVU70
- 229 0044 8DF80730 		strb	r3, [sp, #7]
-  61:simpleserial-smaug.c ****     return 0x00;
- 230              		.loc 1 61 5 is_stmt 1 view .LVU71
- 231 0048 FFF7FEFF 		bl	simpleserial_put
- 232              	.LVL23:
-  62:simpleserial-smaug.c **** }
- 233              		.loc 1 62 5 view .LVU72
-  63:simpleserial-smaug.c **** 
- 234              		.loc 1 63 1 is_stmt 0 view .LVU73
- 235 004c 0020     		movs	r0, #0
- 236 004e 03B0     		add	sp, sp, #12
- 237              	.LCFI3:
- 238              		.cfi_def_cfa_offset 12
- 239              		@ sp needed
- 240 0050 30BD     		pop	{r4, r5, pc}
- 241              	.L10:
- 242 0052 00BF     		.align	2
- 243              	.L9:
- 244 0054 00000000 		.word	.LANCHOR0
- 245 0058 A0080000 		.word	.LANCHOR0+2208
- 246              		.cfi_endproc
- 247              	.LFE5:
- 249              		.section	.text.cmd_encaps,"ax",%progbits
- 250              		.align	1
- 251              		.syntax unified
- 252              		.thumb
- 253              		.thumb_func
- 254              		.fpu fpv4-sp-d16
- 256              	cmd_encaps:
- 257              	.LVL24:
- 258              	.LFB4:
-  41:simpleserial-smaug.c ****     (void)cmd; (void)scmd; (void)len; (void)buf;
- 259              		.loc 1 41 1 is_stmt 1 view -0
- 260              		.cfi_startproc
- 261              		@ args = 0, pretend = 0, frame = 0
- 262              		@ frame_needed = 0, uses_anonymous_args = 0
-  42:simpleserial-smaug.c ****     crypto_kem_enc(ct, ss_enc, pk);
- 263              		.loc 1 42 5 view .LVU75
-  42:simpleserial-smaug.c ****     crypto_kem_enc(ct, ss_enc, pk);
- 264              		.loc 1 42 16 view .LVU76
-  42:simpleserial-smaug.c ****     crypto_kem_enc(ct, ss_enc, pk);
- 265              		.loc 1 42 28 view .LVU77
-  42:simpleserial-smaug.c ****     crypto_kem_enc(ct, ss_enc, pk);
- 266              		.loc 1 42 39 view .LVU78
-  43:simpleserial-smaug.c ****     simpleserial_put('r', 16, ct);
- 267              		.loc 1 43 5 view .LVU79
-  41:simpleserial-smaug.c ****     (void)cmd; (void)scmd; (void)len; (void)buf;
- 268              		.loc 1 41 1 is_stmt 0 view .LVU80
- 269 0000 10B5     		push	{r4, lr}
- 270              	.LCFI4:
- 271              		.cfi_def_cfa_offset 8
- 272              		.cfi_offset 4, -8
- 273              		.cfi_offset 14, -4
-  43:simpleserial-smaug.c ****     simpleserial_put('r', 16, ct);
- 274              		.loc 1 43 5 view .LVU81
- 275 0002 0849     		ldr	r1, .L12
- 276              	.LVL25:
-  43:simpleserial-smaug.c ****     simpleserial_put('r', 16, ct);
- 277              		.loc 1 43 5 view .LVU82
- 278 0004 01F5C064 		add	r4, r1, #1536
- 279 0008 01F55072 		add	r2, r1, #832
- 280              	.LVL26:
-  43:simpleserial-smaug.c ****     simpleserial_put('r', 16, ct);
- 281              		.loc 1 43 5 view .LVU83
- 282 000c 2046     		mov	r0, r4
- 283              	.LVL27:
-  43:simpleserial-smaug.c ****     simpleserial_put('r', 16, ct);
- 284              		.loc 1 43 5 view .LVU84
- 285 000e 01F5BC61 		add	r1, r1, #1504
- 286 0012 FFF7FEFF 		bl	crypto_kem_enc
- 287              	.LVL28:
-  44:simpleserial-smaug.c ****     return 0x00;
- 288              		.loc 1 44 5 is_stmt 1 view .LVU85
- 289 0016 2246     		mov	r2, r4
- 290 0018 1021     		movs	r1, #16
- 291 001a 7220     		movs	r0, #114
- 292 001c FFF7FEFF 		bl	simpleserial_put
- 293              	.LVL29:
-  45:simpleserial-smaug.c **** }
- 294              		.loc 1 45 5 view .LVU86
-  46:simpleserial-smaug.c **** 
- 295              		.loc 1 46 1 is_stmt 0 view .LVU87
- 296 0020 0020     		movs	r0, #0
- 297 0022 10BD     		pop	{r4, pc}
- 298              	.L13:
- 299              		.align	2
- 300              	.L12:
- 301 0024 00000000 		.word	.LANCHOR0
- 302              		.cfi_endproc
- 303              	.LFE4:
- 305              		.section	.text.cmd_keypair,"ax",%progbits
- 306              		.align	1
- 307              		.syntax unified
- 308              		.thumb
- 309              		.thumb_func
- 310              		.fpu fpv4-sp-d16
- 312              	cmd_keypair:
- 313              	.LVL30:
- 314              	.LFB3:
-  33:simpleserial-smaug.c ****     (void)cmd; (void)scmd; (void)len; (void)buf;
- 315              		.loc 1 33 1 is_stmt 1 view -0
- 316              		.cfi_startproc
- 317              		@ args = 0, pretend = 0, frame = 0
- 318              		@ frame_needed = 0, uses_anonymous_args = 0
-  34:simpleserial-smaug.c ****     crypto_kem_keypair(pk, sk);
- 319              		.loc 1 34 5 view .LVU89
-  34:simpleserial-smaug.c ****     crypto_kem_keypair(pk, sk);
- 320              		.loc 1 34 16 view .LVU90
-  34:simpleserial-smaug.c ****     crypto_kem_keypair(pk, sk);
- 321              		.loc 1 34 28 view .LVU91
-  34:simpleserial-smaug.c ****     crypto_kem_keypair(pk, sk);
- 322              		.loc 1 34 39 view .LVU92
-  35:simpleserial-smaug.c ****     simpleserial_put('r', 16, pk);
- 323              		.loc 1 35 5 view .LVU93
-  33:simpleserial-smaug.c ****     (void)cmd; (void)scmd; (void)len; (void)buf;
- 324              		.loc 1 33 1 is_stmt 0 view .LVU94
- 325 0000 08B5     		push	{r3, lr}
- 326              	.LCFI5:
- 327              		.cfi_def_cfa_offset 8
- 328              		.cfi_offset 3, -8
- 329              		.cfi_offset 14, -4
-  35:simpleserial-smaug.c ****     simpleserial_put('r', 16, pk);
- 330              		.loc 1 35 5 view .LVU95
- 331 0002 0649     		ldr	r1, .L15
- 332              	.LVL31:
-  35:simpleserial-smaug.c ****     simpleserial_put('r', 16, pk);
- 333              		.loc 1 35 5 view .LVU96
- 334 0004 01F55072 		add	r2, r1, #832
- 335              	.LVL32:
-  35:simpleserial-smaug.c ****     simpleserial_put('r', 16, pk);
- 336              		.loc 1 35 5 view .LVU97
- 337 0008 1046     		mov	r0, r2
- 338              	.LVL33:
-  35:simpleserial-smaug.c ****     simpleserial_put('r', 16, pk);
- 339              		.loc 1 35 5 view .LVU98
- 340 000a FFF7FEFF 		bl	crypto_kem_keypair
- 341              	.LVL34:
-  36:simpleserial-smaug.c ****     return 0x00;
- 342              		.loc 1 36 5 is_stmt 1 view .LVU99
- 343 000e 044A     		ldr	r2, .L15+4
- 344 0010 1021     		movs	r1, #16
- 345 0012 7220     		movs	r0, #114
- 346 0014 FFF7FEFF 		bl	simpleserial_put
- 347              	.LVL35:
-  37:simpleserial-smaug.c **** }
- 348              		.loc 1 37 5 view .LVU100
-  38:simpleserial-smaug.c **** 
- 349              		.loc 1 38 1 is_stmt 0 view .LVU101
- 350 0018 0020     		movs	r0, #0
- 351 001a 08BD     		pop	{r3, pc}
- 352              	.L16:
- 353              		.align	2
- 354              	.L15:
- 355 001c 00000000 		.word	.LANCHOR0
- 356 0020 40030000 		.word	.LANCHOR0+832
- 357              		.cfi_endproc
- 358              	.LFE3:
- 360              		.section	.text.startup.main,"ax",%progbits
- 361              		.align	1
- 362              		.global	main
- 363              		.syntax unified
- 364              		.thumb
- 365              		.thumb_func
- 366              		.fpu fpv4-sp-d16
- 368              	main:
- 369              	.LFB7:
-  84:simpleserial-smaug.c **** 
-  85:simpleserial-smaug.c **** int main(void)
-  86:simpleserial-smaug.c **** {
- 370              		.loc 1 86 1 is_stmt 1 view -0
- 371              		.cfi_startproc
- 372              		@ Volatile: function does not return.
- 373              		@ args = 0, pretend = 0, frame = 0
- 374              		@ frame_needed = 0, uses_anonymous_args = 0
+ 118              		.loc 1 81 32 view .LVU33
+ 119 005c 8DF80730 		strb	r3, [sp, #7]
+ 120              		.loc 1 82 5 is_stmt 1 view .LVU34
+ 121 0060 FFF7FEFF 		bl	simpleserial_put
+ 122              	.LVL13:
+  83:simpleserial-smaug.c ****     return 0x00;
+ 123              		.loc 1 83 5 view .LVU35
+  84:simpleserial-smaug.c **** }
+ 124              		.loc 1 84 1 is_stmt 0 view .LVU36
+ 125 0064 0020     		movs	r0, #0
+ 126 0066 03B0     		add	sp, sp, #12
+ 127              	.LCFI1:
+ 128              		.cfi_def_cfa_offset 12
+ 129              		@ sp needed
+ 130 0068 30BD     		pop	{r4, r5, pc}
+ 131              	.L5:
+ 132 006a 00BF     		.align	2
+ 133              	.L4:
+ 134 006c 00000000 		.word	.LANCHOR0
+ 135 0070 40030000 		.word	.LANCHOR0+832
+ 136 0074 A0080000 		.word	.LANCHOR0+2208
+ 137              		.cfi_endproc
+ 138              	.LFE6:
+ 140              		.section	.text.cmd_decaps,"ax",%progbits
+ 141              		.align	1
+ 142              		.syntax unified
+ 143              		.thumb
+ 144              		.thumb_func
+ 145              		.fpu fpv4-sp-d16
+ 147              	cmd_decaps:
+ 148              	.LVL14:
+ 149              	.LFB5:
+  50:simpleserial-smaug.c ****     (void)len; (void)buf;
+ 150              		.loc 1 50 1 is_stmt 1 view -0
+ 151              		.cfi_startproc
+ 152              		@ args = 0, pretend = 0, frame = 8
+ 153              		@ frame_needed = 0, uses_anonymous_args = 0
+  51:simpleserial-smaug.c **** 
+ 154              		.loc 1 51 5 view .LVU38
+  51:simpleserial-smaug.c **** 
+ 155              		.loc 1 51 16 view .LVU39
+  53:simpleserial-smaug.c ****     crypto_kem_dec(ss_dec, ct, sk);
+ 156              		.loc 1 53 5 view .LVU40
+  50:simpleserial-smaug.c ****     (void)len; (void)buf;
+ 157              		.loc 1 50 1 is_stmt 0 view .LVU41
+ 158 0000 37B5     		push	{r0, r1, r2, r4, r5, lr}
+ 159              	.LCFI2:
+ 160              		.cfi_def_cfa_offset 24
+ 161              		.cfi_offset 4, -12
+ 162              		.cfi_offset 5, -8
+ 163              		.cfi_offset 14, -4
+  53:simpleserial-smaug.c ****     crypto_kem_dec(ss_dec, ct, sk);
+ 164              		.loc 1 53 5 view .LVU42
+ 165 0002 FFF7FEFF 		bl	trigger_high
+ 166              	.LVL15:
+  54:simpleserial-smaug.c ****     trigger_low();
+ 167              		.loc 1 54 5 is_stmt 1 view .LVU43
+ 168 0006 134A     		ldr	r2, .L9
+ 169 0008 02F5C061 		add	r1, r2, #1536
+ 170 000c 02F50A60 		add	r0, r2, #2208
+ 171 0010 FFF7FEFF 		bl	crypto_kem_dec
+ 172              	.LVL16:
+  55:simpleserial-smaug.c **** 
+ 173              		.loc 1 55 5 view .LVU44
+ 174 0014 FFF7FEFF 		bl	trigger_low
+ 175              	.LVL17:
+  57:simpleserial-smaug.c ****     for (unsigned i = 0; i < CRYPTO_BYTES; i++) {
+ 176              		.loc 1 57 5 view .LVU45
+  58:simpleserial-smaug.c ****         mismatch |= (uint8_t)(ss_dec[i] ^ ss_enc[i]);
+ 177              		.loc 1 58 5 view .LVU46
+ 178              	.LBB4:
+  58:simpleserial-smaug.c ****         mismatch |= (uint8_t)(ss_dec[i] ^ ss_enc[i]);
+ 179              		.loc 1 58 10 view .LVU47
+  58:simpleserial-smaug.c ****         mismatch |= (uint8_t)(ss_dec[i] ^ ss_enc[i]);
+ 180              		.loc 1 58 26 view .LVU48
+ 181 0018 0F48     		ldr	r0, .L9+4
+  58:simpleserial-smaug.c ****         mismatch |= (uint8_t)(ss_dec[i] ^ ss_enc[i]);
+ 182              		.loc 1 58 19 is_stmt 0 view .LVU49
+ 183 001a 0022     		movs	r2, #0
+ 184 001c A0F53074 		sub	r4, r0, #704
+ 185              	.LBE4:
+  57:simpleserial-smaug.c ****     for (unsigned i = 0; i < CRYPTO_BYTES; i++) {
+ 186              		.loc 1 57 13 view .LVU50
+ 187 0020 1346     		mov	r3, r2
+ 188              	.LVL18:
+ 189              	.L7:
+ 190              	.LBB5:
+  59:simpleserial-smaug.c ****     }
+ 191              		.loc 1 59 9 is_stmt 1 discriminator 3 view .LVU51
+  59:simpleserial-smaug.c ****     }
+ 192              		.loc 1 59 37 is_stmt 0 discriminator 3 view .LVU52
+ 193 0022 10F8011B 		ldrb	r1, [r0], #1	@ zero_extendqisi2
+  59:simpleserial-smaug.c ****     }
+ 194              		.loc 1 59 49 discriminator 3 view .LVU53
+ 195 0026 14F8015B 		ldrb	r5, [r4], #1	@ zero_extendqisi2
+  58:simpleserial-smaug.c ****         mismatch |= (uint8_t)(ss_dec[i] ^ ss_enc[i]);
+ 196              		.loc 1 58 45 discriminator 3 view .LVU54
+ 197 002a 0132     		adds	r2, r2, #1
+ 198              	.LVL19:
+  59:simpleserial-smaug.c ****     }
+ 199              		.loc 1 59 21 discriminator 3 view .LVU55
+ 200 002c 6940     		eors	r1, r1, r5
+  58:simpleserial-smaug.c ****         mismatch |= (uint8_t)(ss_dec[i] ^ ss_enc[i]);
+ 201              		.loc 1 58 5 discriminator 3 view .LVU56
+ 202 002e 202A     		cmp	r2, #32
+  59:simpleserial-smaug.c ****     }
+ 203              		.loc 1 59 18 discriminator 3 view .LVU57
+ 204 0030 43EA0103 		orr	r3, r3, r1
+ 205              	.LVL20:
+  58:simpleserial-smaug.c ****         mismatch |= (uint8_t)(ss_dec[i] ^ ss_enc[i]);
+ 206              		.loc 1 58 44 is_stmt 1 discriminator 3 view .LVU58
+  58:simpleserial-smaug.c ****         mismatch |= (uint8_t)(ss_dec[i] ^ ss_enc[i]);
+ 207              		.loc 1 58 26 discriminator 3 view .LVU59
+  58:simpleserial-smaug.c ****         mismatch |= (uint8_t)(ss_dec[i] ^ ss_enc[i]);
+ 208              		.loc 1 58 5 is_stmt 0 discriminator 3 view .LVU60
+ 209 0034 F5D1     		bne	.L7
+ 210              	.LBE5:
+  61:simpleserial-smaug.c ****     simpleserial_put('r', 1, &status);
+ 211              		.loc 1 61 5 is_stmt 1 view .LVU61
+  61:simpleserial-smaug.c ****     simpleserial_put('r', 1, &status);
+ 212              		.loc 1 61 32 is_stmt 0 view .LVU62
+ 213 0036 003B     		subs	r3, r3, #0
+  61:simpleserial-smaug.c ****     simpleserial_put('r', 1, &status);
+ 214              		.loc 1 61 32 view .LVU63
+ 215 0038 18BF     		it	ne
+ 216 003a 0123     		movne	r3, #1
+ 217              	.LVL21:
+  62:simpleserial-smaug.c ****     return 0x00;
+ 218              		.loc 1 62 5 view .LVU64
+ 219 003c 0DF10702 		add	r2, sp, #7
+ 220              	.LVL22:
+  62:simpleserial-smaug.c ****     return 0x00;
+ 221              		.loc 1 62 5 view .LVU65
+ 222 0040 0121     		movs	r1, #1
+ 223 0042 7220     		movs	r0, #114
+  61:simpleserial-smaug.c ****     simpleserial_put('r', 1, &status);
+ 224              		.loc 1 61 32 view .LVU66
+ 225 0044 8DF80730 		strb	r3, [sp, #7]
+  62:simpleserial-smaug.c ****     return 0x00;
+ 226              		.loc 1 62 5 is_stmt 1 view .LVU67
+ 227 0048 FFF7FEFF 		bl	simpleserial_put
+ 228              	.LVL23:
+  63:simpleserial-smaug.c **** }
+ 229              		.loc 1 63 5 view .LVU68
+  64:simpleserial-smaug.c **** 
+ 230              		.loc 1 64 1 is_stmt 0 view .LVU69
+ 231 004c 0020     		movs	r0, #0
+ 232 004e 03B0     		add	sp, sp, #12
+ 233              	.LCFI3:
+ 234              		.cfi_def_cfa_offset 12
+ 235              		@ sp needed
+ 236 0050 30BD     		pop	{r4, r5, pc}
+ 237              	.L10:
+ 238 0052 00BF     		.align	2
+ 239              	.L9:
+ 240 0054 00000000 		.word	.LANCHOR0
+ 241 0058 A0080000 		.word	.LANCHOR0+2208
+ 242              		.cfi_endproc
+ 243              	.LFE5:
+ 245              		.section	.text.cmd_encaps,"ax",%progbits
+ 246              		.align	1
+ 247              		.syntax unified
+ 248              		.thumb
+ 249              		.thumb_func
+ 250              		.fpu fpv4-sp-d16
+ 252              	cmd_encaps:
+ 253              	.LVL24:
+ 254              	.LFB4:
+  42:simpleserial-smaug.c ****     (void)len; (void)buf;
+ 255              		.loc 1 42 1 is_stmt 1 view -0
+ 256              		.cfi_startproc
+ 257              		@ args = 0, pretend = 0, frame = 0
+ 258              		@ frame_needed = 0, uses_anonymous_args = 0
+  43:simpleserial-smaug.c ****     crypto_kem_enc(ct, ss_enc, pk);
+ 259              		.loc 1 43 5 view .LVU71
+  43:simpleserial-smaug.c ****     crypto_kem_enc(ct, ss_enc, pk);
+ 260              		.loc 1 43 16 view .LVU72
+  44:simpleserial-smaug.c ****     simpleserial_put('r', 16, ct);
+ 261              		.loc 1 44 5 view .LVU73
+  42:simpleserial-smaug.c ****     (void)len; (void)buf;
+ 262              		.loc 1 42 1 is_stmt 0 view .LVU74
+ 263 0000 10B5     		push	{r4, lr}
+ 264              	.LCFI4:
+ 265              		.cfi_def_cfa_offset 8
+ 266              		.cfi_offset 4, -8
+ 267              		.cfi_offset 14, -4
+  44:simpleserial-smaug.c ****     simpleserial_put('r', 16, ct);
+ 268              		.loc 1 44 5 view .LVU75
+ 269 0002 0849     		ldr	r1, .L12
+ 270              	.LVL25:
+  44:simpleserial-smaug.c ****     simpleserial_put('r', 16, ct);
+ 271              		.loc 1 44 5 view .LVU76
+ 272 0004 01F5C064 		add	r4, r1, #1536
+ 273 0008 01F55072 		add	r2, r1, #832
+ 274 000c 2046     		mov	r0, r4
+ 275              	.LVL26:
+  44:simpleserial-smaug.c ****     simpleserial_put('r', 16, ct);
+ 276              		.loc 1 44 5 view .LVU77
+ 277 000e 01F5BC61 		add	r1, r1, #1504
+ 278 0012 FFF7FEFF 		bl	crypto_kem_enc
+ 279              	.LVL27:
+  45:simpleserial-smaug.c ****     return 0x00;
+ 280              		.loc 1 45 5 is_stmt 1 view .LVU78
+ 281 0016 2246     		mov	r2, r4
+ 282 0018 1021     		movs	r1, #16
+ 283 001a 7220     		movs	r0, #114
+ 284 001c FFF7FEFF 		bl	simpleserial_put
+ 285              	.LVL28:
+  46:simpleserial-smaug.c **** }
+ 286              		.loc 1 46 5 view .LVU79
+  47:simpleserial-smaug.c **** 
+ 287              		.loc 1 47 1 is_stmt 0 view .LVU80
+ 288 0020 0020     		movs	r0, #0
+ 289 0022 10BD     		pop	{r4, pc}
+ 290              	.L13:
+ 291              		.align	2
+ 292              	.L12:
+ 293 0024 00000000 		.word	.LANCHOR0
+ 294              		.cfi_endproc
+ 295              	.LFE4:
+ 297              		.section	.text.cmd_keypair,"ax",%progbits
+ 298              		.align	1
+ 299              		.syntax unified
+ 300              		.thumb
+ 301              		.thumb_func
+ 302              		.fpu fpv4-sp-d16
+ 304              	cmd_keypair:
+ 305              	.LVL29:
+ 306              	.LFB3:
+  34:simpleserial-smaug.c ****     (void)len; (void)buf;
+ 307              		.loc 1 34 1 is_stmt 1 view -0
+ 308              		.cfi_startproc
+ 309              		@ args = 0, pretend = 0, frame = 0
+ 310              		@ frame_needed = 0, uses_anonymous_args = 0
+  35:simpleserial-smaug.c ****     crypto_kem_keypair(pk, sk);
+ 311              		.loc 1 35 5 view .LVU82
+  35:simpleserial-smaug.c ****     crypto_kem_keypair(pk, sk);
+ 312              		.loc 1 35 16 view .LVU83
+  36:simpleserial-smaug.c ****     simpleserial_put('r', 16, pk);
+ 313              		.loc 1 36 5 view .LVU84
+  34:simpleserial-smaug.c ****     (void)len; (void)buf;
+ 314              		.loc 1 34 1 is_stmt 0 view .LVU85
+ 315 0000 08B5     		push	{r3, lr}
+ 316              	.LCFI5:
+ 317              		.cfi_def_cfa_offset 8
+ 318              		.cfi_offset 3, -8
+ 319              		.cfi_offset 14, -4
+  36:simpleserial-smaug.c ****     simpleserial_put('r', 16, pk);
+ 320              		.loc 1 36 5 view .LVU86
+ 321 0002 0649     		ldr	r1, .L15
+ 322              	.LVL30:
+  36:simpleserial-smaug.c ****     simpleserial_put('r', 16, pk);
+ 323              		.loc 1 36 5 view .LVU87
+ 324 0004 01F55072 		add	r2, r1, #832
+ 325 0008 1046     		mov	r0, r2
+ 326              	.LVL31:
+  36:simpleserial-smaug.c ****     simpleserial_put('r', 16, pk);
+ 327              		.loc 1 36 5 view .LVU88
+ 328 000a FFF7FEFF 		bl	crypto_kem_keypair
+ 329              	.LVL32:
+  37:simpleserial-smaug.c ****     return 0x00;
+ 330              		.loc 1 37 5 is_stmt 1 view .LVU89
+ 331 000e 044A     		ldr	r2, .L15+4
+ 332 0010 1021     		movs	r1, #16
+ 333 0012 7220     		movs	r0, #114
+ 334 0014 FFF7FEFF 		bl	simpleserial_put
+ 335              	.LVL33:
+  38:simpleserial-smaug.c **** }
+ 336              		.loc 1 38 5 view .LVU90
+  39:simpleserial-smaug.c **** 
+ 337              		.loc 1 39 1 is_stmt 0 view .LVU91
+ 338 0018 0020     		movs	r0, #0
+ 339 001a 08BD     		pop	{r3, pc}
+ 340              	.L16:
+ 341              		.align	2
+ 342              	.L15:
+ 343 001c 00000000 		.word	.LANCHOR0
+ 344 0020 40030000 		.word	.LANCHOR0+832
+ 345              		.cfi_endproc
+ 346              	.LFE3:
+ 348              		.section	.text.startup.main,"ax",%progbits
+ 349              		.align	1
+ 350              		.global	main
+ 351              		.syntax unified
+ 352              		.thumb
+ 353              		.thumb_func
+ 354              		.fpu fpv4-sp-d16
+ 356              	main:
+ 357              	.LFB7:
+  85:simpleserial-smaug.c **** 
+  86:simpleserial-smaug.c **** int main(void)
+  87:simpleserial-smaug.c **** {
+ 358              		.loc 1 87 1 is_stmt 1 view -0
+ 359              		.cfi_startproc
+ 360              		@ Volatile: function does not return.
+ 361              		@ args = 0, pretend = 0, frame = 0
+ 362              		@ frame_needed = 0, uses_anonymous_args = 0
+  88:simpleserial-smaug.c ****     platform_init();
+ 363              		.loc 1 88 5 view .LVU93
   87:simpleserial-smaug.c ****     platform_init();
- 375              		.loc 1 87 5 view .LVU103
-  86:simpleserial-smaug.c ****     platform_init();
- 376              		.loc 1 86 1 is_stmt 0 view .LVU104
- 377 0000 08B5     		push	{r3, lr}
- 378              	.LCFI6:
- 379              		.cfi_def_cfa_offset 8
- 380              		.cfi_offset 3, -8
- 381              		.cfi_offset 14, -4
- 382              		.loc 1 87 5 view .LVU105
- 383 0002 FFF7FEFF 		bl	platform_init
- 384              	.LVL36:
-  88:simpleserial-smaug.c ****     init_uart();
- 385              		.loc 1 88 5 is_stmt 1 view .LVU106
- 386 0006 FFF7FEFF 		bl	init_uart
- 387              	.LVL37:
-  89:simpleserial-smaug.c ****     trigger_setup();
- 388              		.loc 1 89 5 view .LVU107
- 389 000a FFF7FEFF 		bl	trigger_setup
- 390              	.LVL38:
-  90:simpleserial-smaug.c **** 
-  91:simpleserial-smaug.c ****     simpleserial_init();
- 391              		.loc 1 91 5 view .LVU108
- 392 000e FFF7FEFF 		bl	simpleserial_init
+ 364              		.loc 1 87 1 is_stmt 0 view .LVU94
+ 365 0000 08B5     		push	{r3, lr}
+ 366              	.LCFI6:
+ 367              		.cfi_def_cfa_offset 8
+ 368              		.cfi_offset 3, -8
+ 369              		.cfi_offset 14, -4
+ 370              		.loc 1 88 5 view .LVU95
+ 371 0002 FFF7FEFF 		bl	platform_init
+ 372              	.LVL34:
+  89:simpleserial-smaug.c ****     init_uart();
+ 373              		.loc 1 89 5 is_stmt 1 view .LVU96
+ 374 0006 FFF7FEFF 		bl	init_uart
+ 375              	.LVL35:
+  90:simpleserial-smaug.c ****     trigger_setup();
+ 376              		.loc 1 90 5 view .LVU97
+ 377 000a FFF7FEFF 		bl	trigger_setup
+ 378              	.LVL36:
+  91:simpleserial-smaug.c **** 
+  92:simpleserial-smaug.c ****     simpleserial_init();
+ 379              		.loc 1 92 5 view .LVU98
+ 380 000e FFF7FEFF 		bl	simpleserial_init
+ 381              	.LVL37:
+  93:simpleserial-smaug.c ****     simpleserial_addcmd('k', 0, cmd_keypair);
+ 382              		.loc 1 93 5 view .LVU99
+ 383 0012 0B4A     		ldr	r2, .L19
+ 384 0014 0021     		movs	r1, #0
+ 385 0016 6B20     		movs	r0, #107
+ 386 0018 FFF7FEFF 		bl	simpleserial_addcmd
+ 387              	.LVL38:
+  94:simpleserial-smaug.c ****     simpleserial_addcmd('e', 0, cmd_encaps);
+ 388              		.loc 1 94 5 view .LVU100
+ 389 001c 094A     		ldr	r2, .L19+4
+ 390 001e 0021     		movs	r1, #0
+ 391 0020 6520     		movs	r0, #101
+ 392 0022 FFF7FEFF 		bl	simpleserial_addcmd
  393              	.LVL39:
-  92:simpleserial-smaug.c ****     simpleserial_addcmd('k', 0, cmd_keypair);
- 394              		.loc 1 92 5 view .LVU109
- 395 0012 0B4A     		ldr	r2, .L19
- 396 0014 0021     		movs	r1, #0
- 397 0016 6B20     		movs	r0, #107
- 398 0018 FFF7FEFF 		bl	simpleserial_addcmd
+  95:simpleserial-smaug.c ****     simpleserial_addcmd('d', 0, cmd_decaps);
+ 394              		.loc 1 95 5 view .LVU101
+ 395 0026 084A     		ldr	r2, .L19+8
+ 396 0028 0021     		movs	r1, #0
+ 397 002a 6420     		movs	r0, #100
+ 398 002c FFF7FEFF 		bl	simpleserial_addcmd
  399              	.LVL40:
-  93:simpleserial-smaug.c ****     simpleserial_addcmd('e', 0, cmd_encaps);
- 400              		.loc 1 93 5 view .LVU110
- 401 001c 094A     		ldr	r2, .L19+4
- 402 001e 0021     		movs	r1, #0
- 403 0020 6520     		movs	r0, #101
- 404 0022 FFF7FEFF 		bl	simpleserial_addcmd
+  96:simpleserial-smaug.c ****     simpleserial_addcmd('p', 0, cmd_pipeline);
+ 400              		.loc 1 96 5 view .LVU102
+ 401 0030 064A     		ldr	r2, .L19+12
+ 402 0032 0021     		movs	r1, #0
+ 403 0034 7020     		movs	r0, #112
+ 404 0036 FFF7FEFF 		bl	simpleserial_addcmd
  405              	.LVL41:
-  94:simpleserial-smaug.c ****     simpleserial_addcmd('d', 0, cmd_decaps);
- 406              		.loc 1 94 5 view .LVU111
- 407 0026 084A     		ldr	r2, .L19+8
- 408 0028 0021     		movs	r1, #0
- 409 002a 6420     		movs	r0, #100
- 410 002c FFF7FEFF 		bl	simpleserial_addcmd
- 411              	.LVL42:
-  95:simpleserial-smaug.c ****     simpleserial_addcmd('p', 0, cmd_pipeline);
- 412              		.loc 1 95 5 view .LVU112
- 413 0030 064A     		ldr	r2, .L19+12
- 414 0032 0021     		movs	r1, #0
- 415 0034 7020     		movs	r0, #112
- 416 0036 FFF7FEFF 		bl	simpleserial_addcmd
- 417              	.LVL43:
- 418              	.L18:
-  96:simpleserial-smaug.c **** 
-  97:simpleserial-smaug.c ****     while (1) {
- 419              		.loc 1 97 5 discriminator 1 view .LVU113
+ 406              	.L18:
+  97:simpleserial-smaug.c **** 
+  98:simpleserial-smaug.c ****     while (1) {
+ 407              		.loc 1 98 5 discriminator 1 view .LVU103
+  99:simpleserial-smaug.c ****         simpleserial_get();
+ 408              		.loc 1 99 9 discriminator 1 view .LVU104
+ 409 003a FFF7FEFF 		bl	simpleserial_get
+ 410              	.LVL42:
   98:simpleserial-smaug.c ****         simpleserial_get();
- 420              		.loc 1 98 9 discriminator 1 view .LVU114
- 421 003a FFF7FEFF 		bl	simpleserial_get
- 422              	.LVL44:
-  97:simpleserial-smaug.c ****         simpleserial_get();
- 423              		.loc 1 97 11 discriminator 1 view .LVU115
- 424 003e FCE7     		b	.L18
- 425              	.L20:
- 426              		.align	2
- 427              	.L19:
- 428 0040 00000000 		.word	cmd_keypair
- 429 0044 00000000 		.word	cmd_encaps
- 430 0048 00000000 		.word	cmd_decaps
- 431 004c 00000000 		.word	cmd_pipeline
- 432              		.cfi_endproc
- 433              	.LFE7:
- 435              		.bss
- 436              		.set	.LANCHOR0,. + 0
- 439              	sk:
- 440 0000 00000000 		.space	832
+ 411              		.loc 1 98 11 discriminator 1 view .LVU105
+ 412 003e FCE7     		b	.L18
+ 413              	.L20:
+ 414              		.align	2
+ 415              	.L19:
+ 416 0040 00000000 		.word	cmd_keypair
+ 417 0044 00000000 		.word	cmd_encaps
+ 418 0048 00000000 		.word	cmd_decaps
+ 419 004c 00000000 		.word	cmd_pipeline
+ 420              		.cfi_endproc
+ 421              	.LFE7:
+ 423              		.bss
+ 424              		.set	.LANCHOR0,. + 0
+ 427              	sk:
+ 428 0000 00000000 		.space	832
+ 428      00000000 
+ 428      00000000 
+ 428      00000000 
+ 428      00000000 
+ 431              	pk:
+ 432 0340 00000000 		.space	672
+ 432      00000000 
+ 432      00000000 
+ 432      00000000 
+ 432      00000000 
+ 435              	ss_enc:
+ 436 05e0 00000000 		.space	32
+ 436      00000000 
+ 436      00000000 
+ 436      00000000 
+ 436      00000000 
+ 439              	ct:
+ 440 0600 00000000 		.space	672
  440      00000000 
  440      00000000 
  440      00000000 
  440      00000000 
- 443              	pk:
- 444 0340 00000000 		.space	672
+ 443              	ss_dec:
+ 444 08a0 00000000 		.space	32
  444      00000000 
  444      00000000 
  444      00000000 
  444      00000000 
- 447              	ss_enc:
- 448 05e0 00000000 		.space	32
- 448      00000000 
- 448      00000000 
- 448      00000000 
- 448      00000000 
- 451              	ct:
- 452 0600 00000000 		.space	672
- 452      00000000 
- 452      00000000 
- 452      00000000 
- 452      00000000 
- 455              	ss_dec:
- 456 08a0 00000000 		.space	32
- 456      00000000 
- 456      00000000 
- 456      00000000 
- 456      00000000 
- 457              		.text
- 458              	.Letext0:
- 459              		.file 2 "/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.h"
- 460              		.file 3 "/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm3
- 461              		.file 4 "/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.h"
- 462              		.file 5 "/usr/lib/gcc/arm-none-eabi/10.3.1/include/stdint.h"
+ 445              		.text
+ 446              	.Letext0:
+ 447              		.file 2 "/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/hal.h"
+ 448              		.file 3 "/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm3
+ 449              		.file 4 "/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.h"
+ 450              		.file 5 "/usr/lib/gcc/arm-none-eabi/10.3.1/include/stdint.h"
 DEFINED SYMBOLS
                             *ABS*:0000000000000000 simpleserial-smaug.c
-     /tmp/cc97MJkt.s:18     .text.cmd_pipeline:0000000000000000 $t
-     /tmp/cc97MJkt.s:25     .text.cmd_pipeline:0000000000000000 cmd_pipeline
-     /tmp/cc97MJkt.s:136    .text.cmd_pipeline:000000000000006c $d
-     /tmp/cc97MJkt.s:143    .text.cmd_decaps:0000000000000000 $t
-     /tmp/cc97MJkt.s:149    .text.cmd_decaps:0000000000000000 cmd_decaps
-     /tmp/cc97MJkt.s:244    .text.cmd_decaps:0000000000000054 $d
-     /tmp/cc97MJkt.s:250    .text.cmd_encaps:0000000000000000 $t
-     /tmp/cc97MJkt.s:256    .text.cmd_encaps:0000000000000000 cmd_encaps
-     /tmp/cc97MJkt.s:301    .text.cmd_encaps:0000000000000024 $d
-     /tmp/cc97MJkt.s:306    .text.cmd_keypair:0000000000000000 $t
-     /tmp/cc97MJkt.s:312    .text.cmd_keypair:0000000000000000 cmd_keypair
-     /tmp/cc97MJkt.s:355    .text.cmd_keypair:000000000000001c $d
-     /tmp/cc97MJkt.s:361    .text.startup.main:0000000000000000 $t
-     /tmp/cc97MJkt.s:368    .text.startup.main:0000000000000000 main
-     /tmp/cc97MJkt.s:428    .text.startup.main:0000000000000040 $d
-     /tmp/cc97MJkt.s:439    .bss:0000000000000000 sk
-     /tmp/cc97MJkt.s:440    .bss:0000000000000000 $d
-     /tmp/cc97MJkt.s:443    .bss:0000000000000340 pk
-     /tmp/cc97MJkt.s:447    .bss:00000000000005e0 ss_enc
-     /tmp/cc97MJkt.s:451    .bss:0000000000000600 ct
-     /tmp/cc97MJkt.s:455    .bss:00000000000008a0 ss_dec
+     /tmp/ccwSgvau.s:18     .text.cmd_pipeline:0000000000000000 $t
+     /tmp/ccwSgvau.s:25     .text.cmd_pipeline:0000000000000000 cmd_pipeline
+     /tmp/ccwSgvau.s:134    .text.cmd_pipeline:000000000000006c $d
+     /tmp/ccwSgvau.s:141    .text.cmd_decaps:0000000000000000 $t
+     /tmp/ccwSgvau.s:147    .text.cmd_decaps:0000000000000000 cmd_decaps
+     /tmp/ccwSgvau.s:240    .text.cmd_decaps:0000000000000054 $d
+     /tmp/ccwSgvau.s:246    .text.cmd_encaps:0000000000000000 $t
+     /tmp/ccwSgvau.s:252    .text.cmd_encaps:0000000000000000 cmd_encaps
+     /tmp/ccwSgvau.s:293    .text.cmd_encaps:0000000000000024 $d
+     /tmp/ccwSgvau.s:298    .text.cmd_keypair:0000000000000000 $t
+     /tmp/ccwSgvau.s:304    .text.cmd_keypair:0000000000000000 cmd_keypair
+     /tmp/ccwSgvau.s:343    .text.cmd_keypair:000000000000001c $d
+     /tmp/ccwSgvau.s:349    .text.startup.main:0000000000000000 $t
+     /tmp/ccwSgvau.s:356    .text.startup.main:0000000000000000 main
+     /tmp/ccwSgvau.s:416    .text.startup.main:0000000000000040 $d
+     /tmp/ccwSgvau.s:427    .bss:0000000000000000 sk
+     /tmp/ccwSgvau.s:428    .bss:0000000000000000 $d
+     /tmp/ccwSgvau.s:431    .bss:0000000000000340 pk
+     /tmp/ccwSgvau.s:435    .bss:00000000000005e0 ss_enc
+     /tmp/ccwSgvau.s:439    .bss:0000000000000600 ct
+     /tmp/ccwSgvau.s:443    .bss:00000000000008a0 ss_dec
 
 UNDEFINED SYMBOLS
 crypto_kem_keypair

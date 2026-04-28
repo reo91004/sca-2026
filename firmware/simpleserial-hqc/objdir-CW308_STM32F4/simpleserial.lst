@@ -1,0 +1,2698 @@
+   1              		.cpu cortex-m4
+   2              		.eabi_attribute 20, 1
+   3              		.eabi_attribute 21, 1
+   4              		.eabi_attribute 23, 3
+   5              		.eabi_attribute 24, 1
+   6              		.eabi_attribute 25, 1
+   7              		.eabi_attribute 26, 1
+   8              		.eabi_attribute 30, 2
+   9              		.eabi_attribute 34, 1
+  10              		.eabi_attribute 18, 4
+  11              		.file	"simpleserial.c"
+  12              		.text
+  13              	.Ltext0:
+  14              		.cfi_sections	.debug_frame
+  15              		.section	.text.check_version,"ax",%progbits
+  16              		.align	1
+  17              		.p2align 2,,3
+  18              		.global	check_version
+  19              		.arch armv7e-m
+  20              		.syntax unified
+  21              		.thumb
+  22              		.thumb_func
+  23              		.fpu softvfp
+  25              	check_version:
+  26              	.LVL0:
+  27              	.LFB1:
+  28              		.file 1 "/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c"
+   1:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** // simpleserial.c
+   2:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+   3:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** #include "simpleserial.h"
+   4:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** #include <stdint.h>
+   5:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** #include "hal.h"
+   6:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+   7:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+   8:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** #define MAX_SS_CMDS 32
+   9:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** static int num_commands = 0;
+  10:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+  11:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+  12:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** //#define SS_VER_1_0 0
+  13:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** //#define SS_VER_1_1 1
+  14:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** //#define SS_VER_2_0 2
+  15:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+  16:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+  17:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** // 0xA6 formerly 
+  18:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** #define CW_CRC 0x4D 
+  19:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** uint8_t ss_crc(uint8_t *buf, uint8_t len)
+  20:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+  21:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	unsigned int k = 0;
+  22:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	uint8_t crc = 0x00;
+  23:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	while (len--) {
+  24:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		crc ^= *buf++;
+  25:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		for (k = 0; k < 8; k++) {
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			crc = crc & 0x80 ? (crc << 1) ^ CW_CRC: crc << 1;
+  27:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+  28:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+  29:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	return crc;
+  30:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+  31:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+  32:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+  33:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** // [B_STUFF, CMD, SCMD, LEN, B_STUFF, DATA..., CRC, TERM]
+  34:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+  35:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** //#define SS_VER SS_VER_2_0
+  36:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** #if SS_VER == SS_VER_2_0
+  37:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** #error "SS_VER_2_0 is deprecated! Use SS_VER_2_1 instead."
+  38:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** #elif SS_VER == SS_VER_2_1
+  39:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+  40:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** #define MAX_SS_LEN 249
+  41:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+  42:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** int hex_decode(int len, char* ascii_buf, uint8_t* data_buf)
+  43:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+  44:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	for(int i = 0; i < len; i++)
+  45:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+  46:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		char n_hi = ascii_buf[2*i];
+  47:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		char n_lo = ascii_buf[2*i+1];
+  48:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+  49:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		if(n_lo >= '0' && n_lo <= '9')
+  50:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] = n_lo - '0';
+  51:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_lo >= 'A' && n_lo <= 'F')
+  52:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] = n_lo - 'A' + 10;
+  53:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_lo >= 'a' && n_lo <= 'f')
+  54:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] = n_lo - 'a' + 10;
+  55:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else
+  56:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			return 1;
+  57:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+  58:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		if(n_hi >= '0' && n_hi <= '9')
+  59:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] |= (n_hi - '0') << 4;
+  60:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_hi >= 'A' && n_hi <= 'F')
+  61:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] |= (n_hi - 'A' + 10) << 4;
+  62:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_hi >= 'a' && n_hi <= 'f')
+  63:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] |= (n_hi - 'a' + 10) << 4;
+  64:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else
+  65:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			return 1;
+  66:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+  67:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+  68:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	return 0;
+  69:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+  70:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+  71:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** typedef struct ss_cmd
+  72:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+  73:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	char c;
+  74:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	unsigned int len;
+  75:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	uint8_t (*fp)(uint8_t, uint8_t, uint8_t, uint8_t *);
+  76:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** } ss_cmd;
+  77:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** static ss_cmd commands[MAX_SS_CMDS];
+  78:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+  79:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** void ss_puts(char *x)
+  80:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+  81:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	do {
+  82:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		putch(*x);
+  83:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	} while (*++x);
+  84:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+  85:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+  86:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** #define FRAME_BYTE 0x00
+  87:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+  88:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** uint8_t check_version(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *data)
+  89:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+  90:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	uint8_t ver = SS_VER;
+  91:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	simpleserial_put('r', 1, &ver);
+  92:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	return SS_ERR_OK;
+  93:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+  94:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+  95:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** uint8_t ss_get_commands(uint8_t cmd, uint8_t scmd, uint8_t len, uint8_t *data)
+  96:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+  97:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     uint8_t cmd_chars[MAX_SS_CMDS];
+  98:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     for (uint8_t i = 0; i < (num_commands & 0xFF); i++) {
+  99:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****         cmd_chars[i] = commands[i].c;
+ 100:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     }
+ 101:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 102:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     simpleserial_put('r', num_commands & 0xFF, (void *)cmd_chars);
+ 103:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     return 0x00;
+ 104:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 105:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 106:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 107:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** uint8_t stuff_data(uint8_t *buf, uint8_t len)
+ 108:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+ 109:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	uint8_t i = 1;
+ 110:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	uint8_t last = 0;
+ 111:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	for (; i < len; i++) {
+ 112:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		if (buf[i] == FRAME_BYTE) {
+ 113:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			buf[last] = i - last;
+ 114:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			last = i;
+ 115:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 116:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 117:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	return 0x00;
+ 118:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 119:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 120:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** uint8_t unstuff_data(uint8_t *buf, uint8_t len)
+ 121:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+ 122:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	uint8_t next = buf[0];
+ 123:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	buf[0] = 0x00;
+ 124:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	//len -= 1;
+ 125:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	uint8_t tmp = next;
+ 126:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	while ((next < len) && tmp != 0) {
+ 127:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		tmp = buf[next];
+ 128:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		buf[next] = FRAME_BYTE;
+ 129:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		next += tmp;
+ 130:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 131:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	return next;
+ 132:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 133:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 134:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** // Set up the SimpleSerial module by preparing internal commands
+ 135:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** // This just adds the "v" command for now...
+ 136:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** void simpleserial_init()
+ 137:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+ 138:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	simpleserial_addcmd('v', 0, check_version);
+ 139:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     simpleserial_addcmd('w', 0, ss_get_commands);
+ 140:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 141:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 142:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** int simpleserial_addcmd(char c, unsigned int len, uint8_t (*fp)(uint8_t, uint8_t, uint8_t, uint8_t*
+ 143:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+ 144:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	if(num_commands >= MAX_SS_CMDS) {
+ 145:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		putch('a');
+ 146:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return 1;
+ 147:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 148:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 149:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	if(len >= MAX_SS_LEN) {
+ 150:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		putch('b');
+ 151:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return 1;
+ 152:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 153:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 154:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].c   = c;
+ 155:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].len = len;
+ 156:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].fp  = fp;
+ 157:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	num_commands++;
+ 158:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 159:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	return 0;
+ 160:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 161:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 162:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** void simpleserial_get(void)
+ 163:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+ 164:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	uint8_t data_buf[MAX_SS_LEN];
+ 165:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	uint8_t err = 0;
+ 166:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 167:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	for (int i = 0; i < 4; i++) {
+ 168:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		data_buf[i] = getch(); //PTR, cmd, scmd, len
+ 169:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		if (data_buf[i] == FRAME_BYTE) {
+ 170:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			err = SS_ERR_FRAME_BYTE;
+ 171:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			goto ERROR;
+ 172:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 173:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 174:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	uint8_t next_frame = unstuff_data(data_buf, 4);
+ 175:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 176:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	// check for valid command
+ 177:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	uint8_t c = 0;
+ 178:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	for(c = 0; c < num_commands; c++)
+ 179:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 180:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		if(commands[c].c == data_buf[1])
+ 181:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			break;
+ 182:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 183:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 184:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	if (c == num_commands) {
+ 185:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		err = SS_ERR_CMD;
+ 186:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		goto ERROR;
+ 187:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 188:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 189:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	//check that next frame not beyond end of message
+ 190:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	// account for cmd, scmd, len, data, crc, end of frame
+ 191:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	if ((data_buf[3] + 5) < next_frame) {
+ 192:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		err = SS_ERR_LEN;
+ 193:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		goto ERROR;
+ 194:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 195:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 196:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	// read in data
+ 197:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	// eq to len + crc + frame end
+ 198:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	int i = 4;
+ 199:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	for (; i < data_buf[3] + 5; i++) {
+ 200:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		data_buf[i] = getch();
+ 201:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		if (data_buf[i] == FRAME_BYTE) {
+ 202:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			err = SS_ERR_FRAME_BYTE;
+ 203:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			goto ERROR;
+ 204:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 205:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 206:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 207:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	//check that final byte is the FRAME_BYTE
+ 208:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	data_buf[i] = getch();
+ 209:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	if (data_buf[i] != FRAME_BYTE) {
+ 210:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		err = SS_ERR_LEN;
+ 211:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		goto ERROR;
+ 212:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 213:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 214:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	//fully unstuff data now
+ 215:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	unstuff_data(data_buf + next_frame, i - next_frame + 1);
+ 216:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 217:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	//calc crc excluding original frame offset and frame end and crc
+ 218:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	uint8_t crc = ss_crc(data_buf+1, i-2);
+ 219:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	if (crc != data_buf[i-1]) {
+ 220:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		err = SS_ERR_CRC;
+ 221:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		goto ERROR;
+ 222:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 223:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 224:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	err = commands[c].fp(data_buf[1], data_buf[2], data_buf[3], data_buf+4);
+ 225:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 226:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** ERROR:
+ 227:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	simpleserial_put('e', 0x01, &err);
+ 228:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	return;
+ 229:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 230:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 231:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** void simpleserial_put(char c, uint8_t size, uint8_t* output)
+ 232:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+ 233:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     if (!output) return;
+ 234:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	uint8_t data_buf[MAX_SS_LEN+5];
+ 235:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	data_buf[0] = 0x00;
+ 236:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	data_buf[1] = c;
+ 237:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	data_buf[2] = size;
+ 238:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	int i = 0;
+ 239:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	for (; i < size; i++) {
+ 240:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		data_buf[i + 3] = output[i];
+ 241:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 242:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	data_buf[i + 3] = ss_crc(data_buf+1, size+2);
+ 243:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	data_buf[i + 4] = 0x00;
+ 244:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	stuff_data(data_buf, i + 5);
+ 245:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	for (int i = 0; i < size + 5; i++) {
+ 246:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		putch(data_buf[i]);
+ 247:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 248:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 249:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 250:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 251:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** #else
+ 252:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 253:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** #define MAX_SS_LEN 64
+ 254:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 255:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** typedef struct ss_cmd
+ 256:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+ 257:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	char c;
+ 258:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	unsigned int len;
+ 259:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	uint8_t (*fp)(uint8_t*, uint8_t);
+ 260:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	uint8_t flags;
+ 261:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** } ss_cmd;
+ 262:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** static ss_cmd commands[MAX_SS_CMDS];
+ 263:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** // Callback function for "v" command.
+ 264:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** // This can exist in v1.0 as long as we don't actually send back an ack ("z")
+ 265:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** uint8_t check_version(uint8_t *v, uint8_t len)
+ 266:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+  29              		.loc 1 266 1 view -0
+  30              		.cfi_startproc
+  31              		@ args = 0, pretend = 0, frame = 0
+  32              		@ frame_needed = 0, uses_anonymous_args = 0
+  33              		@ link register save eliminated.
+ 267:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	return SS_VER;
+  34              		.loc 1 267 2 view .LVU1
+ 268:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+  35              		.loc 1 268 1 is_stmt 0 view .LVU2
+  36 0000 0120     		movs	r0, #1
+  37              	.LVL1:
+  38              		.loc 1 268 1 view .LVU3
+  39 0002 7047     		bx	lr
+  40              		.cfi_endproc
+  41              	.LFE1:
+  43              		.section	.text.ss_num_commands,"ax",%progbits
+  44              		.align	1
+  45              		.p2align 2,,3
+  46              		.global	ss_num_commands
+  47              		.syntax unified
+  48              		.thumb
+  49              		.thumb_func
+  50              		.fpu softvfp
+  52              	ss_num_commands:
+  53              	.LVL2:
+  54              	.LFB2:
+ 269:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 270:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** uint8_t ss_num_commands(uint8_t *x, uint8_t len)
+ 271:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+  55              		.loc 1 271 1 is_stmt 1 view -0
+  56              		.cfi_startproc
+  57              		@ args = 0, pretend = 0, frame = 0
+  58              		@ frame_needed = 0, uses_anonymous_args = 0
+ 272:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     uint8_t ncmds = num_commands & 0xFF;
+  59              		.loc 1 272 5 view .LVU5
+ 271:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     uint8_t ncmds = num_commands & 0xFF;
+  60              		.loc 1 271 1 is_stmt 0 view .LVU6
+  61 0000 38B5     		push	{r3, r4, r5, lr}
+  62              	.LCFI0:
+  63              		.cfi_def_cfa_offset 16
+  64              		.cfi_offset 3, -16
+  65              		.cfi_offset 4, -12
+  66              		.cfi_offset 5, -8
+  67              		.cfi_offset 14, -4
+  68              		.loc 1 272 13 view .LVU7
+  69 0002 0A4B     		ldr	r3, .L5
+  70              	.LBB32:
+  71              	.LBB33:
+  72              	.LBB34:
+  73              	.LBB35:
+ 273:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     simpleserial_put('r', 0x01, &ncmds);
+ 274:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     return 0x00;
+ 275:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 276:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 277:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** typedef struct ss_cmd_repr {
+ 278:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     uint8_t c;
+ 279:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     uint8_t len;
+ 280:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     uint8_t flags;
+ 281:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** } ss_cmd_repr;
+ 282:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 283:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** uint8_t ss_get_commands(uint8_t *x, uint8_t len)
+ 284:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+ 285:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     ss_cmd_repr repr_cmd_buf[MAX_SS_CMDS];
+ 286:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     for (uint8_t i = 0; i < (num_commands & 0xFF); i++) {
+ 287:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****         repr_cmd_buf[i].c = commands[i].c;
+ 288:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****         repr_cmd_buf[i].len = commands[i].len;
+ 289:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****         repr_cmd_buf[i].flags = commands[i].flags;
+ 290:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     }
+ 291:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 292:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     simpleserial_put('r', num_commands * sizeof (ss_cmd_repr), (void *) repr_cmd_buf);
+ 293:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     return 0x00;
+ 294:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 295:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 296:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** static char hex_lookup[16] =
+ 297:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+ 298:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	'0', '1', '2', '3', '4', '5', '6', '7',
+ 299:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	'8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
+ 300:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** };
+ 301:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 302:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** int hex_decode(int len, char* ascii_buf, uint8_t* data_buf)
+ 303:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+ 304:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	for(int i = 0; i < len; i++)
+ 305:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 306:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		char n_hi = ascii_buf[2*i];
+ 307:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		char n_lo = ascii_buf[2*i+1];
+ 308:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 309:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		if(n_lo >= '0' && n_lo <= '9')
+ 310:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] = n_lo - '0';
+ 311:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_lo >= 'A' && n_lo <= 'F')
+ 312:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] = n_lo - 'A' + 10;
+ 313:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_lo >= 'a' && n_lo <= 'f')
+ 314:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] = n_lo - 'a' + 10;
+ 315:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else
+ 316:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			return 1;
+ 317:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 318:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		if(n_hi >= '0' && n_hi <= '9')
+ 319:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] |= (n_hi - '0') << 4;
+ 320:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_hi >= 'A' && n_hi <= 'F')
+ 321:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] |= (n_hi - 'A' + 10) << 4;
+ 322:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_hi >= 'a' && n_hi <= 'f')
+ 323:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] |= (n_hi - 'a' + 10) << 4;
+ 324:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else
+ 325:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			return 1;
+ 326:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 327:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 328:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	return 0;
+ 329:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 330:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 331:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 332:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 333:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** // Set up the SimpleSerial module by preparing internal commands
+ 334:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** // This just adds the "v" command for now...
+ 335:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** void simpleserial_init()
+ 336:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+ 337:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	simpleserial_addcmd('v', 0, check_version);
+ 338:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     simpleserial_addcmd('w', 0, ss_get_commands);
+ 339:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     simpleserial_addcmd('y', 0, ss_num_commands);
+ 340:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 341:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 342:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** int simpleserial_addcmd(char c, unsigned int len, uint8_t (*fp)(uint8_t*, uint8_t))
+ 343:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+ 344:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	return simpleserial_addcmd_flags(c, len, fp, CMD_FLAG_NONE);
+ 345:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 346:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 347:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** int simpleserial_addcmd_flags(char c, unsigned int len, uint8_t (*fp)(uint8_t*, uint8_t), uint8_t f
+ 348:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+ 349:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	if(num_commands >= MAX_SS_CMDS)
+ 350:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return 1;
+ 351:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 352:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	if(len >= MAX_SS_LEN)
+ 353:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return 1;
+ 354:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 355:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].c   = c;
+ 356:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].len = len;
+ 357:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].fp  = fp;
+ 358:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].flags = fl;
+ 359:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	num_commands++;
+ 360:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 361:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	return 0;
+ 362:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 363:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 364:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** void simpleserial_get(void)
+ 365:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+ 366:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	char ascii_buf[2*MAX_SS_LEN];
+ 367:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	uint8_t data_buf[MAX_SS_LEN];
+ 368:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	char c;
+ 369:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 370:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	// Find which command we're receiving
+ 371:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	c = getch();
+ 372:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 373:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	int cmd;
+ 374:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	for(cmd = 0; cmd < num_commands; cmd++)
+ 375:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 376:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		if(commands[cmd].c == c)
+ 377:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			break;
+ 378:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 379:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 380:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	// If we didn't find a match, give up right away
+ 381:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	if(cmd == num_commands)
+ 382:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return;
+ 383:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 384:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	// If flag CMD_FLAG_LEN is set, the next byte indicates the sent length
+ 385:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	if ((commands[cmd].flags & CMD_FLAG_LEN) != 0)
+ 386:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 387:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		uint8_t l = 0;
+ 388:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		char buff[2];
+ 389:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		buff[0] = getch();
+ 390:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		buff[1] = getch();
+ 391:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		if (hex_decode(1, buff, &l))
+ 392:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			return;
+ 393:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		commands[cmd].len = l;
+ 394:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 395:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 396:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	// Receive characters until we fill the ASCII buffer
+ 397:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	for(int i = 0; i < 2*commands[cmd].len; i++)
+ 398:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 399:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		c = getch();
+ 400:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 401:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		// Check for early \n
+ 402:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		if(c == '\n' || c == '\r')
+ 403:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			return;
+ 404:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 405:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		ascii_buf[i] = c;
+ 406:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 407:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 408:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	// Assert that last character is \n or \r
+ 409:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	c = getch();
+ 410:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	if(c != '\n' && c != '\r')
+ 411:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return;
+ 412:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 413:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	// ASCII buffer is full: convert to bytes
+ 414:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	// Check for illegal characters here
+ 415:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	if(hex_decode(commands[cmd].len, ascii_buf, data_buf))
+ 416:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return;
+ 417:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 418:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	// Callback
+ 419:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	uint8_t ret[1];
+ 420:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	ret[0] = commands[cmd].fp(data_buf, commands[cmd].len);
+ 421:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 422:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	// Acknowledge (if version is 1.1)
+ 423:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** #if SS_VER == SS_VER_1_1
+ 424:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	simpleserial_put('z', 1, ret);
+ 425:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** #endif
+ 426:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 427:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 428:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** void simpleserial_put(char c, uint8_t size, uint8_t* output)
+ 429:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+ 430:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	// Write first character
+ 431:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     if (!output) return;
+ 432:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	putch(c);
+ 433:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 434:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	// Write each byte as two nibbles
+ 435:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	for(int i = 0; i < size; i++)
+ 436:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 437:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		putch(hex_lookup[output[i] >> 4 ]);
+  74              		.loc 1 437 3 view .LVU8
+  75 0004 0A4D     		ldr	r5, .L5+4
+  76              	.LBE35:
+  77              	.LBE34:
+  78              	.LBE33:
+  79              	.LBE32:
+ 272:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     simpleserial_put('r', 0x01, &ncmds);
+  80              		.loc 1 272 13 view .LVU9
+  81 0006 1C78     		ldrb	r4, [r3]	@ zero_extendqisi2
+  82              	.LVL3:
+ 273:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     simpleserial_put('r', 0x01, &ncmds);
+  83              		.loc 1 273 5 is_stmt 1 view .LVU10
+  84              	.LBB39:
+  85              	.LBI32:
+ 428:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+  86              		.loc 1 428 6 view .LVU11
+  87              	.LBE39:
+ 431:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	putch(c);
+  88              		.loc 1 431 5 view .LVU12
+  89              	.LBB40:
+  90              	.LBB38:
+  91              	.LBI33:
+ 428:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+  92              		.loc 1 428 6 view .LVU13
+  93              	.LBB37:
+ 432:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+  94              		.loc 1 432 2 view .LVU14
+  95 0008 7220     		movs	r0, #114
+  96              	.LVL4:
+ 432:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+  97              		.loc 1 432 2 is_stmt 0 view .LVU15
+  98 000a FFF7FEFF 		bl	putch
+  99              	.LVL5:
+ 435:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 100              		.loc 1 435 2 is_stmt 1 view .LVU16
+ 101              	.LBB36:
+ 435:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 102              		.loc 1 435 6 view .LVU17
+ 435:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 103              		.loc 1 435 17 view .LVU18
+ 104              		.loc 1 437 3 view .LVU19
+ 105              		.loc 1 437 30 is_stmt 0 view .LVU20
+ 106 000e 2309     		lsrs	r3, r4, #4
+ 438:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		putch(hex_lookup[output[i] & 0xF]);
+ 107              		.loc 1 438 30 view .LVU21
+ 108 0010 04F00F04 		and	r4, r4, #15
+ 109              	.LVL6:
+ 437:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		putch(hex_lookup[output[i] & 0xF]);
+ 110              		.loc 1 437 3 view .LVU22
+ 111 0014 E85C     		ldrb	r0, [r5, r3]	@ zero_extendqisi2
+ 112 0016 FFF7FEFF 		bl	putch
+ 113              	.LVL7:
+ 114              		.loc 1 438 3 is_stmt 1 view .LVU23
+ 115 001a 285D     		ldrb	r0, [r5, r4]	@ zero_extendqisi2
+ 116 001c FFF7FEFF 		bl	putch
+ 117              	.LVL8:
+ 435:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 118              		.loc 1 435 27 view .LVU24
+ 435:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 119              		.loc 1 435 17 view .LVU25
+ 120              	.LBE36:
+ 439:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 440:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 441:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	// Write trailing '\n'
+ 442:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	putch('\n');
+ 121              		.loc 1 442 2 view .LVU26
+ 122 0020 0A20     		movs	r0, #10
+ 123 0022 FFF7FEFF 		bl	putch
+ 124              	.LVL9:
+ 125              		.loc 1 442 2 is_stmt 0 view .LVU27
+ 126              	.LBE37:
+ 127              	.LBE38:
+ 128              	.LBE40:
+ 274:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 129              		.loc 1 274 5 is_stmt 1 view .LVU28
+ 275:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 130              		.loc 1 275 1 is_stmt 0 view .LVU29
+ 131 0026 0020     		movs	r0, #0
+ 132 0028 38BD     		pop	{r3, r4, r5, pc}
+ 133              	.L6:
+ 134 002a 00BF     		.align	2
+ 135              	.L5:
+ 136 002c 00000000 		.word	.LANCHOR0
+ 137 0030 00000000 		.word	.LANCHOR1
+ 138              		.cfi_endproc
+ 139              	.LFE2:
+ 141              		.section	.text.ss_get_commands,"ax",%progbits
+ 142              		.align	1
+ 143              		.p2align 2,,3
+ 144              		.global	ss_get_commands
+ 145              		.syntax unified
+ 146              		.thumb
+ 147              		.thumb_func
+ 148              		.fpu softvfp
+ 150              	ss_get_commands:
+ 151              	.LVL10:
+ 152              	.LFB3:
+ 284:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     ss_cmd_repr repr_cmd_buf[MAX_SS_CMDS];
+ 153              		.loc 1 284 1 is_stmt 1 view -0
+ 154              		.cfi_startproc
+ 155              		@ args = 0, pretend = 0, frame = 96
+ 156              		@ frame_needed = 0, uses_anonymous_args = 0
+ 285:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     for (uint8_t i = 0; i < (num_commands & 0xFF); i++) {
+ 157              		.loc 1 285 5 view .LVU31
+ 286:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****         repr_cmd_buf[i].c = commands[i].c;
+ 158              		.loc 1 286 5 view .LVU32
+ 159              	.LBB47:
+ 286:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****         repr_cmd_buf[i].c = commands[i].c;
+ 160              		.loc 1 286 10 view .LVU33
+ 286:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****         repr_cmd_buf[i].c = commands[i].c;
+ 161              		.loc 1 286 25 view .LVU34
+ 162              	.LBE47:
+ 284:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     ss_cmd_repr repr_cmd_buf[MAX_SS_CMDS];
+ 163              		.loc 1 284 1 is_stmt 0 view .LVU35
+ 164 0000 F0B5     		push	{r4, r5, r6, r7, lr}
+ 165              	.LCFI1:
+ 166              		.cfi_def_cfa_offset 20
+ 167              		.cfi_offset 4, -20
+ 168              		.cfi_offset 5, -16
+ 169              		.cfi_offset 6, -12
+ 170              		.cfi_offset 7, -8
+ 171              		.cfi_offset 14, -4
+ 172              	.LBB48:
+ 286:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****         repr_cmd_buf[i].c = commands[i].c;
+ 173              		.loc 1 286 43 view .LVU36
+ 174 0002 1C4D     		ldr	r5, .L21
+ 175 0004 2E68     		ldr	r6, [r5]
+ 286:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****         repr_cmd_buf[i].c = commands[i].c;
+ 176              		.loc 1 286 5 view .LVU37
+ 177 0006 16F0FF07 		ands	r7, r6, #255
+ 178              	.LBE48:
+ 284:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     ss_cmd_repr repr_cmd_buf[MAX_SS_CMDS];
+ 179              		.loc 1 284 1 view .LVU38
+ 180 000a 99B0     		sub	sp, sp, #100
+ 181              	.LCFI2:
+ 182              		.cfi_def_cfa_offset 120
+ 183              	.LBB49:
+ 286:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****         repr_cmd_buf[i].c = commands[i].c;
+ 184              		.loc 1 286 5 view .LVU39
+ 185 000c 15D0     		beq	.L8
+ 286:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****         repr_cmd_buf[i].c = commands[i].c;
+ 186              		.loc 1 286 18 view .LVU40
+ 187 000e 0022     		movs	r2, #0
+ 286:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****         repr_cmd_buf[i].c = commands[i].c;
+ 188              		.loc 1 286 27 view .LVU41
+ 189 0010 1346     		mov	r3, r2
+ 190              	.LVL11:
+ 191              	.L9:
+ 287:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****         repr_cmd_buf[i].len = commands[i].len;
+ 192              		.loc 1 287 9 is_stmt 1 discriminator 3 view .LVU42
+ 287:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****         repr_cmd_buf[i].len = commands[i].len;
+ 193              		.loc 1 287 40 is_stmt 0 discriminator 3 view .LVU43
+ 194 0012 05EB0311 		add	r1, r5, r3, lsl #4
+ 287:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****         repr_cmd_buf[i].len = commands[i].len;
+ 195              		.loc 1 287 27 discriminator 3 view .LVU44
+ 196 0016 03EB4303 		add	r3, r3, r3, lsl #1
+ 197 001a 6033     		adds	r3, r3, #96
+ 286:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****         repr_cmd_buf[i].c = commands[i].c;
+ 198              		.loc 1 286 53 discriminator 3 view .LVU45
+ 199 001c 0132     		adds	r2, r2, #1
+ 200              	.LVL12:
+ 287:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****         repr_cmd_buf[i].len = commands[i].len;
+ 201              		.loc 1 287 27 discriminator 3 view .LVU46
+ 202 001e 6B44     		add	r3, sp, r3
+ 286:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****         repr_cmd_buf[i].c = commands[i].c;
+ 203              		.loc 1 286 53 discriminator 3 view .LVU47
+ 204 0020 D2B2     		uxtb	r2, r2
+ 287:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****         repr_cmd_buf[i].len = commands[i].len;
+ 205              		.loc 1 287 27 discriminator 3 view .LVU48
+ 206 0022 0C79     		ldrb	r4, [r1, #4]	@ zero_extendqisi2
+ 288:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****         repr_cmd_buf[i].flags = commands[i].flags;
+ 207              		.loc 1 288 29 discriminator 3 view .LVU49
+ 208 0024 8868     		ldr	r0, [r1, #8]
+ 289:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     }
+ 209              		.loc 1 289 31 discriminator 3 view .LVU50
+ 210 0026 097C     		ldrb	r1, [r1, #16]	@ zero_extendqisi2
+ 287:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****         repr_cmd_buf[i].len = commands[i].len;
+ 211              		.loc 1 287 27 discriminator 3 view .LVU51
+ 212 0028 03F8604C 		strb	r4, [r3, #-96]
+ 288:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****         repr_cmd_buf[i].flags = commands[i].flags;
+ 213              		.loc 1 288 9 is_stmt 1 discriminator 3 view .LVU52
+ 286:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****         repr_cmd_buf[i].c = commands[i].c;
+ 214              		.loc 1 286 5 is_stmt 0 discriminator 3 view .LVU53
+ 215 002c BA42     		cmp	r2, r7
+ 288:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****         repr_cmd_buf[i].flags = commands[i].flags;
+ 216              		.loc 1 288 29 discriminator 3 view .LVU54
+ 217 002e 03F85F0C 		strb	r0, [r3, #-95]
+ 289:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     }
+ 218              		.loc 1 289 9 is_stmt 1 discriminator 3 view .LVU55
+ 289:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     }
+ 219              		.loc 1 289 31 is_stmt 0 discriminator 3 view .LVU56
+ 220 0032 03F85E1C 		strb	r1, [r3, #-94]
+ 286:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****         repr_cmd_buf[i].c = commands[i].c;
+ 221              		.loc 1 286 52 is_stmt 1 discriminator 3 view .LVU57
+ 222              	.LVL13:
+ 286:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****         repr_cmd_buf[i].c = commands[i].c;
+ 223              		.loc 1 286 25 discriminator 3 view .LVU58
+ 286:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****         repr_cmd_buf[i].c = commands[i].c;
+ 224              		.loc 1 286 27 is_stmt 0 discriminator 3 view .LVU59
+ 225 0036 1346     		mov	r3, r2
+ 286:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****         repr_cmd_buf[i].c = commands[i].c;
+ 226              		.loc 1 286 5 discriminator 3 view .LVU60
+ 227 0038 EBDB     		blt	.L9
+ 228              	.LVL14:
+ 229              	.L8:
+ 286:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****         repr_cmd_buf[i].c = commands[i].c;
+ 230              		.loc 1 286 5 discriminator 3 view .LVU61
+ 231              	.LBE49:
+ 292:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     return 0x00;
+ 232              		.loc 1 292 5 is_stmt 1 view .LVU62
+ 233 003a 06EB4606 		add	r6, r6, r6, lsl #1
+ 234 003e F6B2     		uxtb	r6, r6
+ 235              	.LVL15:
+ 236              	.LBB50:
+ 237              	.LBI50:
+ 428:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+ 238              		.loc 1 428 6 view .LVU63
+ 239              	.LBE50:
+ 431:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	putch(c);
+ 240              		.loc 1 431 5 view .LVU64
+ 241              	.LBB54:
+ 242              	.LBB51:
+ 243              	.LBI51:
+ 428:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+ 244              		.loc 1 428 6 view .LVU65
+ 245              	.LBB52:
+ 432:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 246              		.loc 1 432 2 view .LVU66
+ 247 0040 7220     		movs	r0, #114
+ 248 0042 FFF7FEFF 		bl	putch
+ 249              	.LVL16:
+ 435:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 250              		.loc 1 435 2 view .LVU67
+ 251              	.LBB53:
+ 435:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 252              		.loc 1 435 6 view .LVU68
+ 435:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 253              		.loc 1 435 17 view .LVU69
+ 435:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 254              		.loc 1 435 2 is_stmt 0 view .LVU70
+ 255 0046 7EB1     		cbz	r6, .L10
+ 256 0048 6D46     		mov	r5, sp
+ 257 004a 0B4F     		ldr	r7, .L21+4
+ 258 004c 2E44     		add	r6, r6, r5
+ 259              	.LVL17:
+ 260              	.L11:
+ 437:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		putch(hex_lookup[output[i] & 0xF]);
+ 261              		.loc 1 437 3 is_stmt 1 view .LVU71
+ 437:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		putch(hex_lookup[output[i] & 0xF]);
+ 262              		.loc 1 437 26 is_stmt 0 view .LVU72
+ 263 004e 15F8014B 		ldrb	r4, [r5], #1	@ zero_extendqisi2
+ 264              	.LVL18:
+ 437:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		putch(hex_lookup[output[i] & 0xF]);
+ 265              		.loc 1 437 30 view .LVU73
+ 266 0052 2309     		lsrs	r3, r4, #4
+ 438:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 267              		.loc 1 438 30 view .LVU74
+ 268 0054 04F00F04 		and	r4, r4, #15
+ 437:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		putch(hex_lookup[output[i] & 0xF]);
+ 269              		.loc 1 437 3 view .LVU75
+ 270 0058 F85C     		ldrb	r0, [r7, r3]	@ zero_extendqisi2
+ 271 005a FFF7FEFF 		bl	putch
+ 272              	.LVL19:
+ 438:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 273              		.loc 1 438 3 is_stmt 1 view .LVU76
+ 274 005e 385D     		ldrb	r0, [r7, r4]	@ zero_extendqisi2
+ 275 0060 FFF7FEFF 		bl	putch
+ 276              	.LVL20:
+ 435:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 277              		.loc 1 435 27 view .LVU77
+ 435:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 278              		.loc 1 435 17 view .LVU78
+ 435:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 279              		.loc 1 435 2 is_stmt 0 view .LVU79
+ 280 0064 B542     		cmp	r5, r6
+ 281 0066 F2D1     		bne	.L11
+ 282              	.LVL21:
+ 283              	.L10:
+ 435:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 284              		.loc 1 435 2 view .LVU80
+ 285              	.LBE53:
+ 286              		.loc 1 442 2 is_stmt 1 view .LVU81
+ 287 0068 0A20     		movs	r0, #10
+ 288 006a FFF7FEFF 		bl	putch
+ 289              	.LVL22:
+ 290              		.loc 1 442 2 is_stmt 0 view .LVU82
+ 291              	.LBE52:
+ 292              	.LBE51:
+ 293              	.LBE54:
+ 293:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 294              		.loc 1 293 5 is_stmt 1 view .LVU83
+ 294:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 295              		.loc 1 294 1 is_stmt 0 view .LVU84
+ 296 006e 0020     		movs	r0, #0
+ 297 0070 19B0     		add	sp, sp, #100
+ 298              	.LCFI3:
+ 299              		.cfi_def_cfa_offset 20
+ 300              		@ sp needed
+ 301 0072 F0BD     		pop	{r4, r5, r6, r7, pc}
+ 302              	.L22:
+ 303              		.align	2
+ 304              	.L21:
+ 305 0074 00000000 		.word	.LANCHOR0
+ 306 0078 00000000 		.word	.LANCHOR1
+ 307              		.cfi_endproc
+ 308              	.LFE3:
+ 310              		.section	.text.ss_crc,"ax",%progbits
+ 311              		.align	1
+ 312              		.p2align 2,,3
+ 313              		.global	ss_crc
+ 314              		.syntax unified
+ 315              		.thumb
+ 316              		.thumb_func
+ 317              		.fpu softvfp
+ 319              	ss_crc:
+ 320              	.LVL23:
+ 321              	.LFB0:
+  20:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	unsigned int k = 0;
+ 322              		.loc 1 20 1 is_stmt 1 view -0
+ 323              		.cfi_startproc
+ 324              		@ args = 0, pretend = 0, frame = 0
+ 325              		@ frame_needed = 0, uses_anonymous_args = 0
+ 326              		@ link register save eliminated.
+  20:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	unsigned int k = 0;
+ 327              		.loc 1 20 1 is_stmt 0 view .LVU86
+ 328 0000 8446     		mov	ip, r0
+  21:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	uint8_t crc = 0x00;
+ 329              		.loc 1 21 2 is_stmt 1 view .LVU87
+ 330              	.LVL24:
+  22:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	while (len--) {
+ 331              		.loc 1 22 2 view .LVU88
+  23:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		crc ^= *buf++;
+ 332              		.loc 1 23 2 view .LVU89
+  23:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		crc ^= *buf++;
+ 333              		.loc 1 23 8 view .LVU90
+  23:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		crc ^= *buf++;
+ 334              		.loc 1 23 8 is_stmt 0 view .LVU91
+ 335 0002 0029     		cmp	r1, #0
+ 336 0004 62D0     		beq	.L42
+ 337 0006 0144     		add	r1, r1, r0
+ 338              	.LVL25:
+  22:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	while (len--) {
+ 339              		.loc 1 22 10 view .LVU92
+ 340 0008 0020     		movs	r0, #0
+ 341              	.LVL26:
+  22:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	while (len--) {
+ 342              		.loc 1 22 10 view .LVU93
+ 343 000a 27E0     		b	.L41
+ 344              	.LVL27:
+ 345              	.L46:
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 346              		.loc 1 26 8 view .LVU94
+ 347 000c DAB2     		uxtb	r2, r3
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 348              		.loc 1 26 21 view .LVU95
+ 349 000e 5BB2     		sxtb	r3, r3
+ 350              	.LVL28:
+  25:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			crc = crc & 0x80 ? (crc << 1) ^ CW_CRC: crc << 1;
+ 351              		.loc 1 25 22 is_stmt 1 view .LVU96
+  25:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			crc = crc & 0x80 ? (crc << 1) ^ CW_CRC: crc << 1;
+ 352              		.loc 1 25 15 view .LVU97
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 353              		.loc 1 26 4 view .LVU98
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 354              		.loc 1 26 8 is_stmt 0 view .LVU99
+ 355 0010 002B     		cmp	r3, #0
+ 356 0012 31DB     		blt	.L27
+ 357              	.L47:
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 358              		.loc 1 26 8 view .LVU100
+ 359 0014 5300     		lsls	r3, r2, #1
+ 360 0016 DAB2     		uxtb	r2, r3
+ 361              	.LVL29:
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 362              		.loc 1 26 21 view .LVU101
+ 363 0018 5BB2     		sxtb	r3, r3
+ 364              	.LVL30:
+  25:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			crc = crc & 0x80 ? (crc << 1) ^ CW_CRC: crc << 1;
+ 365              		.loc 1 25 22 is_stmt 1 view .LVU102
+  25:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			crc = crc & 0x80 ? (crc << 1) ^ CW_CRC: crc << 1;
+ 366              		.loc 1 25 15 view .LVU103
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 367              		.loc 1 26 4 view .LVU104
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 368              		.loc 1 26 8 is_stmt 0 view .LVU105
+ 369 001a 002B     		cmp	r3, #0
+ 370 001c 33DB     		blt	.L29
+ 371              	.L48:
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 372              		.loc 1 26 8 view .LVU106
+ 373 001e 5200     		lsls	r2, r2, #1
+ 374              	.LVL31:
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 375              		.loc 1 26 8 view .LVU107
+ 376 0020 D3B2     		uxtb	r3, r2
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 377              		.loc 1 26 21 view .LVU108
+ 378 0022 52B2     		sxtb	r2, r2
+ 379              	.LVL32:
+  25:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			crc = crc & 0x80 ? (crc << 1) ^ CW_CRC: crc << 1;
+ 380              		.loc 1 25 22 is_stmt 1 view .LVU109
+  25:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			crc = crc & 0x80 ? (crc << 1) ^ CW_CRC: crc << 1;
+ 381              		.loc 1 25 15 view .LVU110
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 382              		.loc 1 26 4 view .LVU111
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 383              		.loc 1 26 8 is_stmt 0 view .LVU112
+ 384 0024 002A     		cmp	r2, #0
+ 385 0026 35DB     		blt	.L31
+ 386              	.L49:
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 387              		.loc 1 26 8 view .LVU113
+ 388 0028 5A00     		lsls	r2, r3, #1
+ 389 002a D3B2     		uxtb	r3, r2
+ 390              	.LVL33:
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 391              		.loc 1 26 21 view .LVU114
+ 392 002c 52B2     		sxtb	r2, r2
+ 393              	.LVL34:
+  25:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			crc = crc & 0x80 ? (crc << 1) ^ CW_CRC: crc << 1;
+ 394              		.loc 1 25 22 is_stmt 1 view .LVU115
+  25:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			crc = crc & 0x80 ? (crc << 1) ^ CW_CRC: crc << 1;
+ 395              		.loc 1 25 15 view .LVU116
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 396              		.loc 1 26 4 view .LVU117
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 397              		.loc 1 26 8 is_stmt 0 view .LVU118
+ 398 002e 002A     		cmp	r2, #0
+ 399 0030 37DB     		blt	.L33
+ 400              	.L50:
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 401              		.loc 1 26 8 view .LVU119
+ 402 0032 5A00     		lsls	r2, r3, #1
+ 403 0034 D3B2     		uxtb	r3, r2
+ 404              	.LVL35:
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 405              		.loc 1 26 21 view .LVU120
+ 406 0036 52B2     		sxtb	r2, r2
+ 407              	.LVL36:
+  25:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			crc = crc & 0x80 ? (crc << 1) ^ CW_CRC: crc << 1;
+ 408              		.loc 1 25 22 is_stmt 1 view .LVU121
+  25:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			crc = crc & 0x80 ? (crc << 1) ^ CW_CRC: crc << 1;
+ 409              		.loc 1 25 15 view .LVU122
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 410              		.loc 1 26 4 view .LVU123
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 411              		.loc 1 26 8 is_stmt 0 view .LVU124
+ 412 0038 002A     		cmp	r2, #0
+ 413 003a 39DB     		blt	.L35
+ 414              	.L51:
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 415              		.loc 1 26 8 view .LVU125
+ 416 003c 5A00     		lsls	r2, r3, #1
+ 417 003e D3B2     		uxtb	r3, r2
+ 418              	.LVL37:
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 419              		.loc 1 26 21 view .LVU126
+ 420 0040 52B2     		sxtb	r2, r2
+ 421              	.LVL38:
+  25:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			crc = crc & 0x80 ? (crc << 1) ^ CW_CRC: crc << 1;
+ 422              		.loc 1 25 22 is_stmt 1 view .LVU127
+  25:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			crc = crc & 0x80 ? (crc << 1) ^ CW_CRC: crc << 1;
+ 423              		.loc 1 25 15 view .LVU128
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 424              		.loc 1 26 4 view .LVU129
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 425              		.loc 1 26 8 is_stmt 0 view .LVU130
+ 426 0042 002A     		cmp	r2, #0
+ 427 0044 3BDB     		blt	.L37
+ 428              	.L52:
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 429              		.loc 1 26 8 view .LVU131
+ 430 0046 5A00     		lsls	r2, r3, #1
+ 431 0048 D3B2     		uxtb	r3, r2
+ 432              	.LVL39:
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 433              		.loc 1 26 21 view .LVU132
+ 434 004a 52B2     		sxtb	r2, r2
+ 435              	.L38:
+ 436              	.LVL40:
+  25:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			crc = crc & 0x80 ? (crc << 1) ^ CW_CRC: crc << 1;
+ 437              		.loc 1 25 22 is_stmt 1 view .LVU133
+  25:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			crc = crc & 0x80 ? (crc << 1) ^ CW_CRC: crc << 1;
+ 438              		.loc 1 25 15 view .LVU134
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 439              		.loc 1 26 4 view .LVU135
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 440              		.loc 1 26 28 is_stmt 0 view .LVU136
+ 441 004c 5B00     		lsls	r3, r3, #1
+ 442              	.LVL41:
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 443              		.loc 1 26 8 view .LVU137
+ 444 004e 002A     		cmp	r2, #0
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 445              		.loc 1 26 34 view .LVU138
+ 446 0050 B8BF     		it	lt
+ 447 0052 83F04D03 		eorlt	r3, r3, #77
+  23:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		crc ^= *buf++;
+ 448              		.loc 1 23 8 view .LVU139
+ 449 0056 6145     		cmp	r1, ip
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 450              		.loc 1 26 8 view .LVU140
+ 451 0058 D8B2     		uxtb	r0, r3
+ 452              	.LVL42:
+  23:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		crc ^= *buf++;
+ 453              		.loc 1 23 8 is_stmt 1 view .LVU141
+  23:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		crc ^= *buf++;
+ 454              		.loc 1 23 8 is_stmt 0 view .LVU142
+ 455 005a 36D0     		beq	.L45
+ 456              	.LVL43:
+ 457              	.L41:
+  24:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		for (k = 0; k < 8; k++) {
+ 458              		.loc 1 24 3 is_stmt 1 view .LVU143
+  24:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		for (k = 0; k < 8; k++) {
+ 459              		.loc 1 24 7 is_stmt 0 view .LVU144
+ 460 005c 1CF8013B 		ldrb	r3, [ip], #1	@ zero_extendqisi2
+ 461              	.LVL44:
+  24:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		for (k = 0; k < 8; k++) {
+ 462              		.loc 1 24 7 view .LVU145
+ 463 0060 4340     		eors	r3, r3, r0
+ 464              	.LVL45:
+  25:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			crc = crc & 0x80 ? (crc << 1) ^ CW_CRC: crc << 1;
+ 465              		.loc 1 25 3 is_stmt 1 view .LVU146
+  25:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			crc = crc & 0x80 ? (crc << 1) ^ CW_CRC: crc << 1;
+ 466              		.loc 1 25 15 view .LVU147
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 467              		.loc 1 26 4 view .LVU148
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 468              		.loc 1 26 8 is_stmt 0 view .LVU149
+ 469 0062 13F0800F 		tst	r3, #128
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 470              		.loc 1 26 28 view .LVU150
+ 471 0066 4FEA4303 		lsl	r3, r3, #1
+ 472              	.LVL46:
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 473              		.loc 1 26 8 view .LVU151
+ 474 006a CFD0     		beq	.L46
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 475              		.loc 1 26 34 view .LVU152
+ 476 006c 83F04D02 		eor	r2, r3, #77
+ 477 0070 53B2     		sxtb	r3, r2
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 478              		.loc 1 26 8 view .LVU153
+ 479 0072 002B     		cmp	r3, #0
+ 480 0074 D2B2     		uxtb	r2, r2
+ 481              	.LVL47:
+  25:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			crc = crc & 0x80 ? (crc << 1) ^ CW_CRC: crc << 1;
+ 482              		.loc 1 25 22 is_stmt 1 view .LVU154
+  25:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			crc = crc & 0x80 ? (crc << 1) ^ CW_CRC: crc << 1;
+ 483              		.loc 1 25 15 view .LVU155
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 484              		.loc 1 26 4 view .LVU156
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 485              		.loc 1 26 8 is_stmt 0 view .LVU157
+ 486 0076 CDDA     		bge	.L47
+ 487              	.L27:
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 488              		.loc 1 26 28 view .LVU158
+ 489 0078 5200     		lsls	r2, r2, #1
+ 490              	.LVL48:
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 491              		.loc 1 26 34 view .LVU159
+ 492 007a 82F04D02 		eor	r2, r2, #77
+ 493 007e 53B2     		sxtb	r3, r2
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 494              		.loc 1 26 8 view .LVU160
+ 495 0080 002B     		cmp	r3, #0
+ 496 0082 D2B2     		uxtb	r2, r2
+ 497              	.LVL49:
+  25:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			crc = crc & 0x80 ? (crc << 1) ^ CW_CRC: crc << 1;
+ 498              		.loc 1 25 22 is_stmt 1 view .LVU161
+  25:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			crc = crc & 0x80 ? (crc << 1) ^ CW_CRC: crc << 1;
+ 499              		.loc 1 25 15 view .LVU162
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 500              		.loc 1 26 4 view .LVU163
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 501              		.loc 1 26 8 is_stmt 0 view .LVU164
+ 502 0084 CBDA     		bge	.L48
+ 503              	.L29:
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 504              		.loc 1 26 28 view .LVU165
+ 505 0086 5300     		lsls	r3, r2, #1
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 506              		.loc 1 26 34 view .LVU166
+ 507 0088 83F04D03 		eor	r3, r3, #77
+ 508 008c 5AB2     		sxtb	r2, r3
+ 509              	.LVL50:
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 510              		.loc 1 26 8 view .LVU167
+ 511 008e 002A     		cmp	r2, #0
+ 512 0090 DBB2     		uxtb	r3, r3
+ 513              	.LVL51:
+  25:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			crc = crc & 0x80 ? (crc << 1) ^ CW_CRC: crc << 1;
+ 514              		.loc 1 25 22 is_stmt 1 view .LVU168
+  25:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			crc = crc & 0x80 ? (crc << 1) ^ CW_CRC: crc << 1;
+ 515              		.loc 1 25 15 view .LVU169
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 516              		.loc 1 26 4 view .LVU170
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 517              		.loc 1 26 8 is_stmt 0 view .LVU171
+ 518 0092 C9DA     		bge	.L49
+ 519              	.L31:
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 520              		.loc 1 26 28 view .LVU172
+ 521 0094 5B00     		lsls	r3, r3, #1
+ 522              	.LVL52:
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 523              		.loc 1 26 34 view .LVU173
+ 524 0096 83F04D03 		eor	r3, r3, #77
+ 525 009a 5AB2     		sxtb	r2, r3
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 526              		.loc 1 26 8 view .LVU174
+ 527 009c 002A     		cmp	r2, #0
+ 528 009e DBB2     		uxtb	r3, r3
+ 529              	.LVL53:
+  25:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			crc = crc & 0x80 ? (crc << 1) ^ CW_CRC: crc << 1;
+ 530              		.loc 1 25 22 is_stmt 1 view .LVU175
+  25:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			crc = crc & 0x80 ? (crc << 1) ^ CW_CRC: crc << 1;
+ 531              		.loc 1 25 15 view .LVU176
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 532              		.loc 1 26 4 view .LVU177
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 533              		.loc 1 26 8 is_stmt 0 view .LVU178
+ 534 00a0 C7DA     		bge	.L50
+ 535              	.L33:
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 536              		.loc 1 26 28 view .LVU179
+ 537 00a2 5B00     		lsls	r3, r3, #1
+ 538              	.LVL54:
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 539              		.loc 1 26 34 view .LVU180
+ 540 00a4 83F04D03 		eor	r3, r3, #77
+ 541 00a8 5AB2     		sxtb	r2, r3
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 542              		.loc 1 26 8 view .LVU181
+ 543 00aa 002A     		cmp	r2, #0
+ 544 00ac DBB2     		uxtb	r3, r3
+ 545              	.LVL55:
+  25:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			crc = crc & 0x80 ? (crc << 1) ^ CW_CRC: crc << 1;
+ 546              		.loc 1 25 22 is_stmt 1 view .LVU182
+  25:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			crc = crc & 0x80 ? (crc << 1) ^ CW_CRC: crc << 1;
+ 547              		.loc 1 25 15 view .LVU183
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 548              		.loc 1 26 4 view .LVU184
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 549              		.loc 1 26 8 is_stmt 0 view .LVU185
+ 550 00ae C5DA     		bge	.L51
+ 551              	.L35:
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 552              		.loc 1 26 28 view .LVU186
+ 553 00b0 5B00     		lsls	r3, r3, #1
+ 554              	.LVL56:
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 555              		.loc 1 26 34 view .LVU187
+ 556 00b2 83F04D03 		eor	r3, r3, #77
+ 557 00b6 5AB2     		sxtb	r2, r3
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 558              		.loc 1 26 8 view .LVU188
+ 559 00b8 002A     		cmp	r2, #0
+ 560 00ba DBB2     		uxtb	r3, r3
+ 561              	.LVL57:
+  25:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			crc = crc & 0x80 ? (crc << 1) ^ CW_CRC: crc << 1;
+ 562              		.loc 1 25 22 is_stmt 1 view .LVU189
+  25:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			crc = crc & 0x80 ? (crc << 1) ^ CW_CRC: crc << 1;
+ 563              		.loc 1 25 15 view .LVU190
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 564              		.loc 1 26 4 view .LVU191
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 565              		.loc 1 26 8 is_stmt 0 view .LVU192
+ 566 00bc C3DA     		bge	.L52
+ 567              	.L37:
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 568              		.loc 1 26 28 view .LVU193
+ 569 00be 5B00     		lsls	r3, r3, #1
+ 570              	.LVL58:
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 571              		.loc 1 26 34 view .LVU194
+ 572 00c0 83F04D03 		eor	r3, r3, #77
+ 573 00c4 5AB2     		sxtb	r2, r3
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 574              		.loc 1 26 8 view .LVU195
+ 575 00c6 DBB2     		uxtb	r3, r3
+ 576 00c8 C0E7     		b	.L38
+ 577              	.LVL59:
+ 578              	.L45:
+  26:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		}
+ 579              		.loc 1 26 8 view .LVU196
+ 580 00ca 7047     		bx	lr
+ 581              	.LVL60:
+ 582              	.L42:
+  22:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	while (len--) {
+ 583              		.loc 1 22 10 view .LVU197
+ 584 00cc 0846     		mov	r0, r1
+ 585              	.LVL61:
+  29:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 586              		.loc 1 29 2 is_stmt 1 view .LVU198
+  31:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 587              		.loc 1 31 1 is_stmt 0 view .LVU199
+ 588 00ce 7047     		bx	lr
+ 589              		.cfi_endproc
+ 590              	.LFE0:
+ 592              		.section	.text.hex_decode,"ax",%progbits
+ 593              		.align	1
+ 594              		.p2align 2,,3
+ 595              		.global	hex_decode
+ 596              		.syntax unified
+ 597              		.thumb
+ 598              		.thumb_func
+ 599              		.fpu softvfp
+ 601              	hex_decode:
+ 602              	.LVL62:
+ 603              	.LFB4:
+ 303:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	for(int i = 0; i < len; i++)
+ 604              		.loc 1 303 1 is_stmt 1 view -0
+ 605              		.cfi_startproc
+ 606              		@ args = 0, pretend = 0, frame = 0
+ 607              		@ frame_needed = 0, uses_anonymous_args = 0
+ 304:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 608              		.loc 1 304 2 view .LVU201
+ 609              	.LBB57:
+ 304:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 610              		.loc 1 304 6 view .LVU202
+ 304:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 611              		.loc 1 304 17 view .LVU203
+ 304:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 612              		.loc 1 304 2 is_stmt 0 view .LVU204
+ 613 0000 0028     		cmp	r0, #0
+ 304:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 614              		.loc 1 304 2 view .LVU205
+ 615 0002 4DDD     		ble	.L71
+ 616              	.LBE57:
+ 303:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	for(int i = 0; i < len; i++)
+ 617              		.loc 1 303 1 view .LVU206
+ 618 0004 10B5     		push	{r4, lr}
+ 619              	.LCFI4:
+ 620              		.cfi_def_cfa_offset 8
+ 621              		.cfi_offset 4, -8
+ 622              		.cfi_offset 14, -4
+ 623 0006 9446     		mov	ip, r2
+ 624 0008 01EB400E 		add	lr, r1, r0, lsl #1
+ 625 000c 15E0     		b	.L64
+ 626              	.LVL63:
+ 627              	.L56:
+ 628              	.LBB63:
+ 629              	.LBB58:
+ 311:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] = n_lo - 'A' + 10;
+ 630              		.loc 1 311 8 is_stmt 1 view .LVU207
+ 311:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] = n_lo - 'A' + 10;
+ 631              		.loc 1 311 10 is_stmt 0 view .LVU208
+ 632 000e A2F14103 		sub	r3, r2, #65
+ 633 0012 052B     		cmp	r3, #5
+ 634 0014 2FD8     		bhi	.L58
+ 312:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_lo >= 'a' && n_lo <= 'f')
+ 635              		.loc 1 312 4 is_stmt 1 view .LVU209
+ 312:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_lo >= 'a' && n_lo <= 'f')
+ 636              		.loc 1 312 29 is_stmt 0 view .LVU210
+ 637 0016 373A     		subs	r2, r2, #55
+ 638              	.LVL64:
+ 312:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_lo >= 'a' && n_lo <= 'f')
+ 639              		.loc 1 312 29 view .LVU211
+ 640 0018 D3B2     		uxtb	r3, r2
+ 318:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] |= (n_hi - '0') << 4;
+ 641              		.loc 1 318 18 view .LVU212
+ 642 001a A0F13002 		sub	r2, r0, #48
+ 643              	.LVL65:
+ 318:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] |= (n_hi - '0') << 4;
+ 644              		.loc 1 318 5 view .LVU213
+ 645 001e D4B2     		uxtb	r4, r2
+ 646 0020 092C     		cmp	r4, #9
+ 312:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_lo >= 'a' && n_lo <= 'f')
+ 647              		.loc 1 312 16 view .LVU214
+ 648 0022 8CF80030 		strb	r3, [ip]
+ 649              	.LVL66:
+ 318:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] |= (n_hi - '0') << 4;
+ 650              		.loc 1 318 3 is_stmt 1 view .LVU215
+ 318:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] |= (n_hi - '0') << 4;
+ 651              		.loc 1 318 5 is_stmt 0 view .LVU216
+ 652 0026 16D8     		bhi	.L60
+ 653              	.L73:
+ 319:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_hi >= 'A' && n_hi <= 'F')
+ 654              		.loc 1 319 4 is_stmt 1 view .LVU217
+ 319:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_hi >= 'A' && n_hi <= 'F')
+ 655              		.loc 1 319 16 is_stmt 0 view .LVU218
+ 656 0028 43EA0213 		orr	r3, r3, r2, lsl #4
+ 657 002c 8CF80030 		strb	r3, [ip]
+ 658              	.LVL67:
+ 659              	.L61:
+ 319:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_hi >= 'A' && n_hi <= 'F')
+ 660              		.loc 1 319 16 view .LVU219
+ 661              	.LBE58:
+ 304:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 662              		.loc 1 304 26 is_stmt 1 discriminator 2 view .LVU220
+ 304:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 663              		.loc 1 304 17 discriminator 2 view .LVU221
+ 304:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 664              		.loc 1 304 2 is_stmt 0 discriminator 2 view .LVU222
+ 665 0030 0231     		adds	r1, r1, #2
+ 666 0032 8E45     		cmp	lr, r1
+ 667 0034 0CF1010C 		add	ip, ip, #1
+ 668              	.LVL68:
+ 304:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 669              		.loc 1 304 2 discriminator 2 view .LVU223
+ 670 0038 1BD0     		beq	.L72
+ 671              	.LVL69:
+ 672              	.L64:
+ 673              	.LBB59:
+ 306:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		char n_lo = ascii_buf[2*i+1];
+ 674              		.loc 1 306 3 is_stmt 1 view .LVU224
+ 307:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 675              		.loc 1 307 8 is_stmt 0 view .LVU225
+ 676 003a 4A78     		ldrb	r2, [r1, #1]	@ zero_extendqisi2
+ 306:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		char n_lo = ascii_buf[2*i+1];
+ 677              		.loc 1 306 8 view .LVU226
+ 678 003c 0878     		ldrb	r0, [r1]	@ zero_extendqisi2
+ 679              	.LVL70:
+ 307:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 680              		.loc 1 307 3 is_stmt 1 view .LVU227
+ 309:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] = n_lo - '0';
+ 681              		.loc 1 309 3 view .LVU228
+ 309:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] = n_lo - '0';
+ 682              		.loc 1 309 18 is_stmt 0 view .LVU229
+ 683 003e A2F13003 		sub	r3, r2, #48
+ 684 0042 DBB2     		uxtb	r3, r3
+ 309:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] = n_lo - '0';
+ 685              		.loc 1 309 5 view .LVU230
+ 686 0044 092B     		cmp	r3, #9
+ 687 0046 E2D8     		bhi	.L56
+ 314:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else
+ 688              		.loc 1 314 16 view .LVU231
+ 689 0048 8CF80030 		strb	r3, [ip]
+ 690              	.LVL71:
+ 691              	.L74:
+ 318:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] |= (n_hi - '0') << 4;
+ 692              		.loc 1 318 3 is_stmt 1 view .LVU232
+ 318:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] |= (n_hi - '0') << 4;
+ 693              		.loc 1 318 18 is_stmt 0 view .LVU233
+ 694 004c A0F13002 		sub	r2, r0, #48
+ 318:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] |= (n_hi - '0') << 4;
+ 695              		.loc 1 318 5 view .LVU234
+ 696 0050 D4B2     		uxtb	r4, r2
+ 697 0052 092C     		cmp	r4, #9
+ 698 0054 E8D9     		bls	.L73
+ 699              	.L60:
+ 320:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] |= (n_hi - 'A' + 10) << 4;
+ 700              		.loc 1 320 8 is_stmt 1 view .LVU235
+ 320:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] |= (n_hi - 'A' + 10) << 4;
+ 701              		.loc 1 320 10 is_stmt 0 view .LVU236
+ 702 0056 A0F14102 		sub	r2, r0, #65
+ 703 005a 052A     		cmp	r2, #5
+ 704 005c 14D8     		bhi	.L62
+ 321:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_hi >= 'a' && n_hi <= 'f')
+ 705              		.loc 1 321 4 is_stmt 1 view .LVU237
+ 321:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_hi >= 'a' && n_hi <= 'f')
+ 706              		.loc 1 321 31 is_stmt 0 view .LVU238
+ 707 005e 3738     		subs	r0, r0, #55
+ 708              	.LVL72:
+ 321:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_hi >= 'a' && n_hi <= 'f')
+ 709              		.loc 1 321 31 view .LVU239
+ 710              	.LBE59:
+ 304:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 711              		.loc 1 304 2 view .LVU240
+ 712 0060 0231     		adds	r1, r1, #2
+ 713              	.LBB60:
+ 321:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_hi >= 'a' && n_hi <= 'f')
+ 714              		.loc 1 321 16 view .LVU241
+ 715 0062 43EA0013 		orr	r3, r3, r0, lsl #4
+ 716              	.LBE60:
+ 304:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 717              		.loc 1 304 2 view .LVU242
+ 718 0066 8E45     		cmp	lr, r1
+ 719              	.LBB61:
+ 321:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_hi >= 'a' && n_hi <= 'f')
+ 720              		.loc 1 321 16 view .LVU243
+ 721 0068 8CF80030 		strb	r3, [ip]
+ 722              	.LBE61:
+ 304:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 723              		.loc 1 304 26 is_stmt 1 view .LVU244
+ 724              	.LVL73:
+ 304:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 725              		.loc 1 304 17 view .LVU245
+ 304:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 726              		.loc 1 304 2 is_stmt 0 view .LVU246
+ 727 006c 0CF1010C 		add	ip, ip, #1
+ 728              	.LVL74:
+ 304:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 729              		.loc 1 304 2 view .LVU247
+ 730 0070 E3D1     		bne	.L64
+ 731              	.LVL75:
+ 732              	.L72:
+ 304:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 733              		.loc 1 304 2 view .LVU248
+ 734              	.LBE63:
+ 328:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 735              		.loc 1 328 9 view .LVU249
+ 736 0072 0020     		movs	r0, #0
+ 329:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 737              		.loc 1 329 1 view .LVU250
+ 738 0074 10BD     		pop	{r4, pc}
+ 739              	.LVL76:
+ 740              	.L58:
+ 741              	.LBB64:
+ 742              	.LBB62:
+ 313:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] = n_lo - 'a' + 10;
+ 743              		.loc 1 313 8 is_stmt 1 view .LVU251
+ 313:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] = n_lo - 'a' + 10;
+ 744              		.loc 1 313 10 is_stmt 0 view .LVU252
+ 745 0076 A2F16103 		sub	r3, r2, #97
+ 746 007a 052B     		cmp	r3, #5
+ 747 007c 0ED8     		bhi	.L63
+ 314:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else
+ 748              		.loc 1 314 4 is_stmt 1 view .LVU253
+ 314:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else
+ 749              		.loc 1 314 29 is_stmt 0 view .LVU254
+ 750 007e 573A     		subs	r2, r2, #87
+ 751              	.LVL77:
+ 314:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else
+ 752              		.loc 1 314 29 view .LVU255
+ 753 0080 D3B2     		uxtb	r3, r2
+ 314:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else
+ 754              		.loc 1 314 16 view .LVU256
+ 755 0082 8CF80030 		strb	r3, [ip]
+ 756 0086 E1E7     		b	.L74
+ 757              	.LVL78:
+ 758              	.L62:
+ 322:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] |= (n_hi - 'a' + 10) << 4;
+ 759              		.loc 1 322 8 is_stmt 1 view .LVU257
+ 322:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] |= (n_hi - 'a' + 10) << 4;
+ 760              		.loc 1 322 10 is_stmt 0 view .LVU258
+ 761 0088 A0F16102 		sub	r2, r0, #97
+ 762 008c 052A     		cmp	r2, #5
+ 763 008e 05D8     		bhi	.L63
+ 323:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else
+ 764              		.loc 1 323 4 is_stmt 1 view .LVU259
+ 323:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else
+ 765              		.loc 1 323 31 is_stmt 0 view .LVU260
+ 766 0090 5738     		subs	r0, r0, #87
+ 767              	.LVL79:
+ 323:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else
+ 768              		.loc 1 323 16 view .LVU261
+ 769 0092 43EA0013 		orr	r3, r3, r0, lsl #4
+ 770 0096 8CF80030 		strb	r3, [ip]
+ 771 009a C9E7     		b	.L61
+ 772              	.LVL80:
+ 773              	.L63:
+ 316:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 774              		.loc 1 316 11 view .LVU262
+ 775 009c 0120     		movs	r0, #1
+ 776              	.LVL81:
+ 316:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 777              		.loc 1 316 11 view .LVU263
+ 778              	.LBE62:
+ 779              	.LBE64:
+ 329:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 780              		.loc 1 329 1 view .LVU264
+ 781 009e 10BD     		pop	{r4, pc}
+ 782              	.LVL82:
+ 783              	.L71:
+ 784              	.LCFI5:
+ 785              		.cfi_def_cfa_offset 0
+ 786              		.cfi_restore 4
+ 787              		.cfi_restore 14
+ 328:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 788              		.loc 1 328 9 view .LVU265
+ 789 00a0 0020     		movs	r0, #0
+ 790              	.LVL83:
+ 329:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 791              		.loc 1 329 1 view .LVU266
+ 792 00a2 7047     		bx	lr
+ 793              		.cfi_endproc
+ 794              	.LFE4:
+ 796              		.section	.text.simpleserial_init,"ax",%progbits
+ 797              		.align	1
+ 798              		.p2align 2,,3
+ 799              		.global	simpleserial_init
+ 800              		.syntax unified
+ 801              		.thumb
+ 802              		.thumb_func
+ 803              		.fpu softvfp
+ 805              	simpleserial_init:
+ 806              	.LFB5:
+ 336:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	simpleserial_addcmd('v', 0, check_version);
+ 807              		.loc 1 336 1 is_stmt 1 view -0
+ 808              		.cfi_startproc
+ 809              		@ args = 0, pretend = 0, frame = 0
+ 810              		@ frame_needed = 0, uses_anonymous_args = 0
+ 811              		@ link register save eliminated.
+ 337:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     simpleserial_addcmd('w', 0, ss_get_commands);
+ 812              		.loc 1 337 2 view .LVU268
+ 813              	.LVL84:
+ 814              	.LBB65:
+ 815              	.LBI65:
+ 342:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+ 816              		.loc 1 342 5 view .LVU269
+ 817              	.LBE65:
+ 344:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 818              		.loc 1 344 2 view .LVU270
+ 819              	.LBB72:
+ 820              	.LBB66:
+ 821              	.LBI66:
+ 347:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+ 822              		.loc 1 347 5 view .LVU271
+ 823              	.LBB67:
+ 349:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return 1;
+ 824              		.loc 1 349 2 view .LVU272
+ 349:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return 1;
+ 825              		.loc 1 349 18 is_stmt 0 view .LVU273
+ 826 0000 164B     		ldr	r3, .L89
+ 827 0002 1A68     		ldr	r2, [r3]
+ 349:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return 1;
+ 828              		.loc 1 349 4 view .LVU274
+ 829 0004 1F2A     		cmp	r2, #31
+ 830 0006 27DC     		bgt	.L86
+ 352:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return 1;
+ 831              		.loc 1 352 2 is_stmt 1 view .LVU275
+ 355:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].len = len;
+ 832              		.loc 1 355 2 view .LVU276
+ 357:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].flags = fl;
+ 833              		.loc 1 357 29 is_stmt 0 view .LVU277
+ 834 0008 1548     		ldr	r0, .L89+4
+ 835              	.LBE67:
+ 836              	.LBE66:
+ 837              	.LBE72:
+ 336:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	simpleserial_addcmd('v', 0, check_version);
+ 838              		.loc 1 336 1 view .LVU278
+ 839 000a 10B4     		push	{r4}
+ 840              	.LCFI6:
+ 841              		.cfi_def_cfa_offset 4
+ 842              		.cfi_offset 4, -4
+ 843              	.LBB73:
+ 844              	.LBB70:
+ 845              	.LBB68:
+ 355:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].len = len;
+ 846              		.loc 1 355 29 view .LVU279
+ 847 000c 03EB0211 		add	r1, r3, r2, lsl #4
+ 356:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].fp  = fp;
+ 848              		.loc 1 356 29 view .LVU280
+ 849 0010 0024     		movs	r4, #0
+ 357:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].flags = fl;
+ 850              		.loc 1 357 29 view .LVU281
+ 851 0012 C1E90240 		strd	r4, r0, [r1, #8]
+ 359:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 852              		.loc 1 359 14 view .LVU282
+ 853 0016 501C     		adds	r0, r2, #1
+ 355:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].len = len;
+ 854              		.loc 1 355 29 view .LVU283
+ 855 0018 4FF0760C 		mov	ip, #118
+ 856              	.LBE68:
+ 857              	.LBE70:
+ 858              	.LBE73:
+ 859              	.LBB74:
+ 860              	.LBB75:
+ 861              	.LBB76:
+ 349:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return 1;
+ 862              		.loc 1 349 4 view .LVU284
+ 863 001c 2028     		cmp	r0, #32
+ 864              	.LBE76:
+ 865              	.LBE75:
+ 866              	.LBE74:
+ 867              	.LBB81:
+ 868              	.LBB71:
+ 869              	.LBB69:
+ 355:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].len = len;
+ 870              		.loc 1 355 29 view .LVU285
+ 871 001e 81F804C0 		strb	ip, [r1, #4]
+ 356:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].fp  = fp;
+ 872              		.loc 1 356 2 is_stmt 1 view .LVU286
+ 358:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	num_commands++;
+ 873              		.loc 1 358 2 view .LVU287
+ 358:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	num_commands++;
+ 874              		.loc 1 358 31 is_stmt 0 view .LVU288
+ 875 0022 0C74     		strb	r4, [r1, #16]
+ 359:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 876              		.loc 1 359 2 is_stmt 1 view .LVU289
+ 359:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 877              		.loc 1 359 14 is_stmt 0 view .LVU290
+ 878 0024 1860     		str	r0, [r3]
+ 361:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 879              		.loc 1 361 2 is_stmt 1 view .LVU291
+ 880              	.LVL85:
+ 361:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 881              		.loc 1 361 2 is_stmt 0 view .LVU292
+ 882              	.LBE69:
+ 883              	.LBE71:
+ 884              	.LBE81:
+ 338:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c ****     simpleserial_addcmd('y', 0, ss_num_commands);
+ 885              		.loc 1 338 5 is_stmt 1 view .LVU293
+ 886              	.LBB82:
+ 887              	.LBI74:
+ 342:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+ 888              		.loc 1 342 5 view .LVU294
+ 889              	.LBE82:
+ 344:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 890              		.loc 1 344 2 view .LVU295
+ 891              	.LBB83:
+ 892              	.LBB79:
+ 893              	.LBI75:
+ 347:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+ 894              		.loc 1 347 5 view .LVU296
+ 895              	.LBB77:
+ 349:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return 1;
+ 896              		.loc 1 349 2 view .LVU297
+ 349:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return 1;
+ 897              		.loc 1 349 4 is_stmt 0 view .LVU298
+ 898 0026 15D0     		beq	.L75
+ 352:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return 1;
+ 899              		.loc 1 352 2 is_stmt 1 view .LVU299
+ 355:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].len = len;
+ 900              		.loc 1 355 2 view .LVU300
+ 355:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].len = len;
+ 901              		.loc 1 355 29 is_stmt 0 view .LVU301
+ 902 0028 03EB0010 		add	r0, r3, r0, lsl #4
+ 903 002c 7721     		movs	r1, #119
+ 904 002e 0171     		strb	r1, [r0, #4]
+ 356:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].fp  = fp;
+ 905              		.loc 1 356 2 is_stmt 1 view .LVU302
+ 357:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].flags = fl;
+ 906              		.loc 1 357 29 is_stmt 0 view .LVU303
+ 907 0030 0C49     		ldr	r1, .L89+8
+ 358:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	num_commands++;
+ 908              		.loc 1 358 31 view .LVU304
+ 909 0032 0474     		strb	r4, [r0, #16]
+ 357:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].flags = fl;
+ 910              		.loc 1 357 29 view .LVU305
+ 911 0034 C0E90241 		strd	r4, r1, [r0, #8]
+ 358:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	num_commands++;
+ 912              		.loc 1 358 2 is_stmt 1 view .LVU306
+ 359:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 913              		.loc 1 359 2 view .LVU307
+ 359:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 914              		.loc 1 359 14 is_stmt 0 view .LVU308
+ 915 0038 911C     		adds	r1, r2, #2
+ 916              	.LBE77:
+ 917              	.LBE79:
+ 918              	.LBE83:
+ 919              	.LBB84:
+ 920              	.LBB85:
+ 921              	.LBB86:
+ 349:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return 1;
+ 922              		.loc 1 349 4 view .LVU309
+ 923 003a 2029     		cmp	r1, #32
+ 924              	.LBE86:
+ 925              	.LBE85:
+ 926              	.LBE84:
+ 927              	.LBB89:
+ 928              	.LBB80:
+ 929              	.LBB78:
+ 359:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 930              		.loc 1 359 14 view .LVU310
+ 931 003c 1960     		str	r1, [r3]
+ 361:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 932              		.loc 1 361 2 is_stmt 1 view .LVU311
+ 933              	.LVL86:
+ 361:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 934              		.loc 1 361 2 is_stmt 0 view .LVU312
+ 935              	.LBE78:
+ 936              	.LBE80:
+ 937              	.LBE89:
+ 339:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 938              		.loc 1 339 5 is_stmt 1 view .LVU313
+ 939              	.LBB90:
+ 940              	.LBI84:
+ 342:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+ 941              		.loc 1 342 5 view .LVU314
+ 942              	.LBE90:
+ 344:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 943              		.loc 1 344 2 view .LVU315
+ 944              	.LBB91:
+ 945              	.LBB88:
+ 946              	.LBI85:
+ 347:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+ 947              		.loc 1 347 5 view .LVU316
+ 948              	.LBB87:
+ 349:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return 1;
+ 949              		.loc 1 349 2 view .LVU317
+ 349:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return 1;
+ 950              		.loc 1 349 4 is_stmt 0 view .LVU318
+ 951 003e 09D0     		beq	.L75
+ 352:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return 1;
+ 952              		.loc 1 352 2 is_stmt 1 view .LVU319
+ 355:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].len = len;
+ 953              		.loc 1 355 2 view .LVU320
+ 355:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].len = len;
+ 954              		.loc 1 355 29 is_stmt 0 view .LVU321
+ 955 0040 03EB0111 		add	r1, r3, r1, lsl #4
+ 956 0044 7920     		movs	r0, #121
+ 957 0046 0871     		strb	r0, [r1, #4]
+ 356:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].fp  = fp;
+ 958              		.loc 1 356 2 is_stmt 1 view .LVU322
+ 357:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].flags = fl;
+ 959              		.loc 1 357 29 is_stmt 0 view .LVU323
+ 960 0048 0748     		ldr	r0, .L89+12
+ 358:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	num_commands++;
+ 961              		.loc 1 358 31 view .LVU324
+ 962 004a 0C74     		strb	r4, [r1, #16]
+ 357:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].flags = fl;
+ 963              		.loc 1 357 29 view .LVU325
+ 964 004c C1E90240 		strd	r4, r0, [r1, #8]
+ 358:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	num_commands++;
+ 965              		.loc 1 358 2 is_stmt 1 view .LVU326
+ 359:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 966              		.loc 1 359 2 view .LVU327
+ 359:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 967              		.loc 1 359 14 is_stmt 0 view .LVU328
+ 968 0050 0332     		adds	r2, r2, #3
+ 969 0052 1A60     		str	r2, [r3]
+ 361:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 970              		.loc 1 361 2 is_stmt 1 view .LVU329
+ 971              	.LVL87:
+ 972              	.L75:
+ 361:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 973              		.loc 1 361 2 is_stmt 0 view .LVU330
+ 974              	.LBE87:
+ 975              	.LBE88:
+ 976              	.LBE91:
+ 340:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 977              		.loc 1 340 1 view .LVU331
+ 978 0054 10BC     		pop	{r4}
+ 979              	.LCFI7:
+ 980              		.cfi_restore 4
+ 981              		.cfi_def_cfa_offset 0
+ 982 0056 7047     		bx	lr
+ 983              	.LVL88:
+ 984              	.L86:
+ 340:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 985              		.loc 1 340 1 view .LVU332
+ 986 0058 7047     		bx	lr
+ 987              	.L90:
+ 988 005a 00BF     		.align	2
+ 989              	.L89:
+ 990 005c 00000000 		.word	.LANCHOR0
+ 991 0060 00000000 		.word	check_version
+ 992 0064 00000000 		.word	ss_get_commands
+ 993 0068 00000000 		.word	ss_num_commands
+ 994              		.cfi_endproc
+ 995              	.LFE5:
+ 997              		.section	.text.simpleserial_addcmd,"ax",%progbits
+ 998              		.align	1
+ 999              		.p2align 2,,3
+ 1000              		.global	simpleserial_addcmd
+ 1001              		.syntax unified
+ 1002              		.thumb
+ 1003              		.thumb_func
+ 1004              		.fpu softvfp
+ 1006              	simpleserial_addcmd:
+ 1007              	.LVL89:
+ 1008              	.LFB6:
+ 343:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	return simpleserial_addcmd_flags(c, len, fp, CMD_FLAG_NONE);
+ 1009              		.loc 1 343 1 is_stmt 1 view -0
+ 1010              		.cfi_startproc
+ 1011              		@ args = 0, pretend = 0, frame = 0
+ 1012              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1013              		@ link register save eliminated.
+ 344:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 1014              		.loc 1 344 2 view .LVU334
+ 343:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	return simpleserial_addcmd_flags(c, len, fp, CMD_FLAG_NONE);
+ 1015              		.loc 1 343 1 is_stmt 0 view .LVU335
+ 1016 0000 10B4     		push	{r4}
+ 1017              	.LCFI8:
+ 1018              		.cfi_def_cfa_offset 4
+ 1019              		.cfi_offset 4, -4
+ 1020              	.LBB92:
+ 1021              	.LBB93:
+ 349:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return 1;
+ 1022              		.loc 1 349 18 view .LVU336
+ 1023 0002 0C4C     		ldr	r4, .L96
+ 1024 0004 2368     		ldr	r3, [r4]
+ 1025              	.LVL90:
+ 349:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return 1;
+ 1026              		.loc 1 349 18 view .LVU337
+ 1027              	.LBE93:
+ 1028              	.LBI92:
+ 347:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+ 1029              		.loc 1 347 5 is_stmt 1 view .LVU338
+ 1030              	.LBB94:
+ 349:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return 1;
+ 1031              		.loc 1 349 2 view .LVU339
+ 349:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return 1;
+ 1032              		.loc 1 349 4 is_stmt 0 view .LVU340
+ 1033 0006 1F2B     		cmp	r3, #31
+ 1034 0008 10DC     		bgt	.L94
+ 352:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return 1;
+ 1035              		.loc 1 352 2 is_stmt 1 view .LVU341
+ 352:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return 1;
+ 1036              		.loc 1 352 4 is_stmt 0 view .LVU342
+ 1037 000a 3F29     		cmp	r1, #63
+ 1038 000c 0ED8     		bhi	.L94
+ 355:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].len = len;
+ 1039              		.loc 1 355 2 is_stmt 1 view .LVU343
+ 355:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].len = len;
+ 1040              		.loc 1 355 29 is_stmt 0 view .LVU344
+ 1041 000e 04EB031C 		add	ip, r4, r3, lsl #4
+ 359:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 1042              		.loc 1 359 14 view .LVU345
+ 1043 0012 0133     		adds	r3, r3, #1
+ 355:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].len = len;
+ 1044              		.loc 1 355 29 view .LVU346
+ 1045 0014 8CF80400 		strb	r0, [ip, #4]
+ 356:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].fp  = fp;
+ 1046              		.loc 1 356 2 is_stmt 1 view .LVU347
+ 358:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	num_commands++;
+ 1047              		.loc 1 358 31 is_stmt 0 view .LVU348
+ 1048 0018 0020     		movs	r0, #0
+ 1049              	.LVL91:
+ 358:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	num_commands++;
+ 1050              		.loc 1 358 31 view .LVU349
+ 1051 001a 8CF81000 		strb	r0, [ip, #16]
+ 359:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 1052              		.loc 1 359 14 view .LVU350
+ 1053 001e 2360     		str	r3, [r4]
+ 356:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].fp  = fp;
+ 1054              		.loc 1 356 29 view .LVU351
+ 1055 0020 CCF80810 		str	r1, [ip, #8]
+ 357:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].flags = fl;
+ 1056              		.loc 1 357 2 is_stmt 1 view .LVU352
+ 1057              	.LBE94:
+ 1058              	.LBE92:
+ 345:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 1059              		.loc 1 345 1 is_stmt 0 view .LVU353
+ 1060 0024 10BC     		pop	{r4}
+ 1061              	.LCFI9:
+ 1062              		.cfi_remember_state
+ 1063              		.cfi_restore 4
+ 1064              		.cfi_def_cfa_offset 0
+ 1065              	.LBB97:
+ 1066              	.LBB95:
+ 357:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].flags = fl;
+ 1067              		.loc 1 357 29 view .LVU354
+ 1068 0026 CCF80C20 		str	r2, [ip, #12]
+ 358:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	num_commands++;
+ 1069              		.loc 1 358 2 is_stmt 1 view .LVU355
+ 359:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 1070              		.loc 1 359 2 view .LVU356
+ 361:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 1071              		.loc 1 361 2 view .LVU357
+ 1072              	.LBE95:
+ 1073              	.LBE97:
+ 345:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 1074              		.loc 1 345 1 is_stmt 0 view .LVU358
+ 1075 002a 7047     		bx	lr
+ 1076              	.LVL92:
+ 1077              	.L94:
+ 1078              	.LCFI10:
+ 1079              		.cfi_restore_state
+ 1080              	.LBB98:
+ 1081              	.LBB96:
+ 350:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 1082              		.loc 1 350 10 view .LVU359
+ 1083 002c 0120     		movs	r0, #1
+ 1084              	.LVL93:
+ 350:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 1085              		.loc 1 350 10 view .LVU360
+ 1086              	.LBE96:
+ 1087              	.LBE98:
+ 345:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 1088              		.loc 1 345 1 view .LVU361
+ 1089 002e 10BC     		pop	{r4}
+ 1090              	.LCFI11:
+ 1091              		.cfi_restore 4
+ 1092              		.cfi_def_cfa_offset 0
+ 1093 0030 7047     		bx	lr
+ 1094              	.L97:
+ 1095 0032 00BF     		.align	2
+ 1096              	.L96:
+ 1097 0034 00000000 		.word	.LANCHOR0
+ 1098              		.cfi_endproc
+ 1099              	.LFE6:
+ 1101              		.section	.text.simpleserial_addcmd_flags,"ax",%progbits
+ 1102              		.align	1
+ 1103              		.p2align 2,,3
+ 1104              		.global	simpleserial_addcmd_flags
+ 1105              		.syntax unified
+ 1106              		.thumb
+ 1107              		.thumb_func
+ 1108              		.fpu softvfp
+ 1110              	simpleserial_addcmd_flags:
+ 1111              	.LVL94:
+ 1112              	.LFB7:
+ 348:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	if(num_commands >= MAX_SS_CMDS)
+ 1113              		.loc 1 348 1 is_stmt 1 view -0
+ 1114              		.cfi_startproc
+ 1115              		@ args = 0, pretend = 0, frame = 0
+ 1116              		@ frame_needed = 0, uses_anonymous_args = 0
+ 1117              		@ link register save eliminated.
+ 349:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return 1;
+ 1118              		.loc 1 349 2 view .LVU363
+ 348:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	if(num_commands >= MAX_SS_CMDS)
+ 1119              		.loc 1 348 1 is_stmt 0 view .LVU364
+ 1120 0000 30B4     		push	{r4, r5}
+ 1121              	.LCFI12:
+ 1122              		.cfi_def_cfa_offset 8
+ 1123              		.cfi_offset 4, -8
+ 1124              		.cfi_offset 5, -4
+ 349:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return 1;
+ 1125              		.loc 1 349 18 view .LVU365
+ 1126 0002 0C4D     		ldr	r5, .L103
+ 1127 0004 2C68     		ldr	r4, [r5]
+ 349:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return 1;
+ 1128              		.loc 1 349 4 view .LVU366
+ 1129 0006 1F2C     		cmp	r4, #31
+ 1130 0008 10DC     		bgt	.L101
+ 352:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return 1;
+ 1131              		.loc 1 352 2 is_stmt 1 view .LVU367
+ 352:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return 1;
+ 1132              		.loc 1 352 4 is_stmt 0 view .LVU368
+ 1133 000a 3F29     		cmp	r1, #63
+ 1134 000c 0ED8     		bhi	.L101
+ 355:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].len = len;
+ 1135              		.loc 1 355 2 is_stmt 1 view .LVU369
+ 355:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].len = len;
+ 1136              		.loc 1 355 29 is_stmt 0 view .LVU370
+ 1137 000e 05EB041C 		add	ip, r5, r4, lsl #4
+ 359:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 1138              		.loc 1 359 14 view .LVU371
+ 1139 0012 0134     		adds	r4, r4, #1
+ 355:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].len = len;
+ 1140              		.loc 1 355 29 view .LVU372
+ 1141 0014 8CF80400 		strb	r0, [ip, #4]
+ 356:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].fp  = fp;
+ 1142              		.loc 1 356 2 is_stmt 1 view .LVU373
+ 358:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	num_commands++;
+ 1143              		.loc 1 358 31 is_stmt 0 view .LVU374
+ 1144 0018 8CF81030 		strb	r3, [ip, #16]
+ 359:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 1145              		.loc 1 359 14 view .LVU375
+ 1146 001c 2C60     		str	r4, [r5]
+ 361:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 1147              		.loc 1 361 9 view .LVU376
+ 1148 001e 0020     		movs	r0, #0
+ 1149              	.LVL95:
+ 362:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 1150              		.loc 1 362 1 view .LVU377
+ 1151 0020 30BC     		pop	{r4, r5}
+ 1152              	.LCFI13:
+ 1153              		.cfi_remember_state
+ 1154              		.cfi_restore 5
+ 1155              		.cfi_restore 4
+ 1156              		.cfi_def_cfa_offset 0
+ 356:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].fp  = fp;
+ 1157              		.loc 1 356 29 view .LVU378
+ 1158 0022 CCF80810 		str	r1, [ip, #8]
+ 357:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].flags = fl;
+ 1159              		.loc 1 357 2 is_stmt 1 view .LVU379
+ 357:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	commands[num_commands].flags = fl;
+ 1160              		.loc 1 357 29 is_stmt 0 view .LVU380
+ 1161 0026 CCF80C20 		str	r2, [ip, #12]
+ 358:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	num_commands++;
+ 1162              		.loc 1 358 2 is_stmt 1 view .LVU381
+ 359:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 1163              		.loc 1 359 2 view .LVU382
+ 361:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 1164              		.loc 1 361 2 view .LVU383
+ 362:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 1165              		.loc 1 362 1 is_stmt 0 view .LVU384
+ 1166 002a 7047     		bx	lr
+ 1167              	.LVL96:
+ 1168              	.L101:
+ 1169              	.LCFI14:
+ 1170              		.cfi_restore_state
+ 350:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 1171              		.loc 1 350 10 view .LVU385
+ 1172 002c 0120     		movs	r0, #1
+ 1173              	.LVL97:
+ 362:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 1174              		.loc 1 362 1 view .LVU386
+ 1175 002e 30BC     		pop	{r4, r5}
+ 1176              	.LCFI15:
+ 1177              		.cfi_restore 5
+ 1178              		.cfi_restore 4
+ 1179              		.cfi_def_cfa_offset 0
+ 1180 0030 7047     		bx	lr
+ 1181              	.L104:
+ 1182 0032 00BF     		.align	2
+ 1183              	.L103:
+ 1184 0034 00000000 		.word	.LANCHOR0
+ 1185              		.cfi_endproc
+ 1186              	.LFE7:
+ 1188              		.section	.text.simpleserial_get,"ax",%progbits
+ 1189              		.align	1
+ 1190              		.p2align 2,,3
+ 1191              		.global	simpleserial_get
+ 1192              		.syntax unified
+ 1193              		.thumb
+ 1194              		.thumb_func
+ 1195              		.fpu softvfp
+ 1197              	simpleserial_get:
+ 1198              	.LFB8:
+ 365:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	char ascii_buf[2*MAX_SS_LEN];
+ 1199              		.loc 1 365 1 is_stmt 1 view -0
+ 1200              		.cfi_startproc
+ 1201              		@ args = 0, pretend = 0, frame = 192
+ 1202              		@ frame_needed = 0, uses_anonymous_args = 0
+ 366:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	uint8_t data_buf[MAX_SS_LEN];
+ 1203              		.loc 1 366 2 view .LVU388
+ 367:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	char c;
+ 1204              		.loc 1 367 2 view .LVU389
+ 368:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 1205              		.loc 1 368 2 view .LVU390
+ 371:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 1206              		.loc 1 371 2 view .LVU391
+ 365:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	char ascii_buf[2*MAX_SS_LEN];
+ 1207              		.loc 1 365 1 is_stmt 0 view .LVU392
+ 1208 0000 2DE9F041 		push	{r4, r5, r6, r7, r8, lr}
+ 1209              	.LCFI16:
+ 1210              		.cfi_def_cfa_offset 24
+ 1211              		.cfi_offset 4, -24
+ 1212              		.cfi_offset 5, -20
+ 1213              		.cfi_offset 6, -16
+ 1214              		.cfi_offset 7, -12
+ 1215              		.cfi_offset 8, -8
+ 1216              		.cfi_offset 14, -4
+ 374:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1217              		.loc 1 374 19 view .LVU393
+ 1218 0004 4A4F     		ldr	r7, .L137
+ 365:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	char ascii_buf[2*MAX_SS_LEN];
+ 1219              		.loc 1 365 1 view .LVU394
+ 1220 0006 B0B0     		sub	sp, sp, #192
+ 1221              	.LCFI17:
+ 1222              		.cfi_def_cfa_offset 216
+ 371:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 1223              		.loc 1 371 6 view .LVU395
+ 1224 0008 FFF7FEFF 		bl	getch
+ 1225              	.LVL98:
+ 374:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1226              		.loc 1 374 19 view .LVU396
+ 1227 000c 3968     		ldr	r1, [r7]
+ 1228              	.LVL99:
+ 373:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	for(cmd = 0; cmd < num_commands; cmd++)
+ 1229              		.loc 1 373 2 is_stmt 1 view .LVU397
+ 374:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1230              		.loc 1 374 2 view .LVU398
+ 374:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1231              		.loc 1 374 15 view .LVU399
+ 374:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1232              		.loc 1 374 2 is_stmt 0 view .LVU400
+ 1233 000e 0029     		cmp	r1, #0
+ 1234 0010 27DD     		ble	.L106
+ 374:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1235              		.loc 1 374 10 view .LVU401
+ 1236 0012 0023     		movs	r3, #0
+ 1237 0014 3D1D     		adds	r5, r7, #4
+ 1238 0016 01E0     		b	.L108
+ 1239              	.LVL100:
+ 1240              	.L134:
+ 374:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1241              		.loc 1 374 2 discriminator 2 view .LVU402
+ 1242 0018 8B42     		cmp	r3, r1
+ 1243 001a 1FD0     		beq	.L105
+ 1244              	.LVL101:
+ 1245              	.L108:
+ 376:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			break;
+ 1246              		.loc 1 376 3 is_stmt 1 view .LVU403
+ 374:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1247              		.loc 1 374 35 view .LVU404
+ 376:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			break;
+ 1248              		.loc 1 376 19 is_stmt 0 view .LVU405
+ 1249 001c 1C01     		lsls	r4, r3, #4
+ 374:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1250              		.loc 1 374 38 view .LVU406
+ 1251 001e 0133     		adds	r3, r3, #1
+ 1252              	.LVL102:
+ 374:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1253              		.loc 1 374 15 is_stmt 1 view .LVU407
+ 376:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			break;
+ 1254              		.loc 1 376 5 is_stmt 0 view .LVU408
+ 1255 0020 2A5D     		ldrb	r2, [r5, r4]	@ zero_extendqisi2
+ 1256 0022 8242     		cmp	r2, r0
+ 1257 0024 F8D1     		bne	.L134
+ 385:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1258              		.loc 1 385 2 is_stmt 1 view .LVU409
+ 385:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1259              		.loc 1 385 20 is_stmt 0 view .LVU410
+ 1260 0026 3B19     		adds	r3, r7, r4
+ 1261              	.LVL103:
+ 385:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1262              		.loc 1 385 5 view .LVU411
+ 1263 0028 1A7C     		ldrb	r2, [r3, #16]	@ zero_extendqisi2
+ 1264 002a D207     		lsls	r2, r2, #31
+ 1265 002c 1FD4     		bmi	.L110
+ 1266              	.L136:
+ 1267              	.LBB110:
+ 397:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1268              		.loc 1 397 36 view .LVU412
+ 1269 002e 9B68     		ldr	r3, [r3, #8]
+ 1270              	.LVL104:
+ 1271              	.L111:
+ 397:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1272              		.loc 1 397 17 is_stmt 1 discriminator 1 view .LVU413
+ 397:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1273              		.loc 1 397 2 is_stmt 0 discriminator 1 view .LVU414
+ 1274 0030 5B00     		lsls	r3, r3, #1
+ 1275 0032 49D0     		beq	.L123
+ 1276 0034 10AE     		add	r6, sp, #64
+ 397:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1277              		.loc 1 397 2 view .LVU415
+ 1278 0036 0025     		movs	r5, #0
+ 397:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1279              		.loc 1 397 36 view .LVU416
+ 1280 0038 07EB0408 		add	r8, r7, r4
+ 1281 003c 08E0     		b	.L122
+ 1282              	.LVL105:
+ 1283              	.L135:
+ 402:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			return;
+ 1284              		.loc 1 402 16 discriminator 1 view .LVU417
+ 1285 003e 0D28     		cmp	r0, #13
+ 1286 0040 0CD0     		beq	.L105
+ 397:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1287              		.loc 1 397 22 discriminator 2 view .LVU418
+ 1288 0042 D8F80830 		ldr	r3, [r8, #8]
+ 405:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 1289              		.loc 1 405 16 discriminator 2 view .LVU419
+ 1290 0046 06F8010B 		strb	r0, [r6], #1
+ 397:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1291              		.loc 1 397 42 is_stmt 1 discriminator 2 view .LVU420
+ 1292              	.LVL106:
+ 397:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1293              		.loc 1 397 17 discriminator 2 view .LVU421
+ 397:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1294              		.loc 1 397 2 is_stmt 0 discriminator 2 view .LVU422
+ 1295 004a B5EB430F 		cmp	r5, r3, lsl #1
+ 1296 004e 3BD2     		bcs	.L123
+ 1297              	.LVL107:
+ 1298              	.L122:
+ 399:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 1299              		.loc 1 399 3 is_stmt 1 view .LVU423
+ 399:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 1300              		.loc 1 399 7 is_stmt 0 view .LVU424
+ 1301 0050 FFF7FEFF 		bl	getch
+ 1302              	.LVL108:
+ 405:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 1303              		.loc 1 405 3 is_stmt 1 view .LVU425
+ 402:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			return;
+ 1304              		.loc 1 402 3 view .LVU426
+ 402:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			return;
+ 1305              		.loc 1 402 5 is_stmt 0 view .LVU427
+ 1306 0054 0A28     		cmp	r0, #10
+ 397:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1307              		.loc 1 397 43 view .LVU428
+ 1308 0056 05F10105 		add	r5, r5, #1
+ 1309              	.LVL109:
+ 402:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			return;
+ 1310              		.loc 1 402 5 view .LVU429
+ 1311 005a F0D1     		bne	.L135
+ 1312              	.LVL110:
+ 1313              	.L105:
+ 402:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			return;
+ 1314              		.loc 1 402 5 view .LVU430
+ 1315              	.LBE110:
+ 426:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 1316              		.loc 1 426 1 view .LVU431
+ 1317 005c 30B0     		add	sp, sp, #192
+ 1318              	.LCFI18:
+ 1319              		.cfi_remember_state
+ 1320              		.cfi_def_cfa_offset 24
+ 1321              		@ sp needed
+ 1322 005e BDE8F081 		pop	{r4, r5, r6, r7, r8, pc}
+ 1323              	.LVL111:
+ 1324              	.L106:
+ 1325              	.LCFI19:
+ 1326              		.cfi_restore_state
+ 381:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return;
+ 1327              		.loc 1 381 2 is_stmt 1 view .LVU432
+ 381:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return;
+ 1328              		.loc 1 381 4 is_stmt 0 view .LVU433
+ 1329 0062 FBD0     		beq	.L105
+ 1330 0064 0024     		movs	r4, #0
+ 385:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1331              		.loc 1 385 2 is_stmt 1 view .LVU434
+ 385:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1332              		.loc 1 385 20 is_stmt 0 view .LVU435
+ 1333 0066 3B19     		adds	r3, r7, r4
+ 385:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1334              		.loc 1 385 5 view .LVU436
+ 1335 0068 1A7C     		ldrb	r2, [r3, #16]	@ zero_extendqisi2
+ 1336 006a D207     		lsls	r2, r2, #31
+ 1337 006c DFD5     		bpl	.L136
+ 1338              	.LVL112:
+ 1339              	.L110:
+ 1340              	.LBB111:
+ 387:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		char buff[2];
+ 1341              		.loc 1 387 3 is_stmt 1 view .LVU437
+ 388:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		buff[0] = getch();
+ 1342              		.loc 1 388 3 view .LVU438
+ 389:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		buff[1] = getch();
+ 1343              		.loc 1 389 3 view .LVU439
+ 389:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		buff[1] = getch();
+ 1344              		.loc 1 389 13 is_stmt 0 view .LVU440
+ 1345 006e FFF7FEFF 		bl	getch
+ 1346              	.LVL113:
+ 389:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		buff[1] = getch();
+ 1347              		.loc 1 389 13 view .LVU441
+ 1348 0072 0546     		mov	r5, r0
+ 1349              	.LVL114:
+ 390:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		if (hex_decode(1, buff, &l))
+ 1350              		.loc 1 390 3 is_stmt 1 view .LVU442
+ 390:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		if (hex_decode(1, buff, &l))
+ 1351              		.loc 1 390 13 is_stmt 0 view .LVU443
+ 1352 0074 FFF7FEFF 		bl	getch
+ 1353              	.LVL115:
+ 391:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			return;
+ 1354              		.loc 1 391 3 is_stmt 1 view .LVU444
+ 1355              	.LBB112:
+ 1356              	.LBI112:
+ 302:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+ 1357              		.loc 1 302 5 view .LVU445
+ 1358              	.LBB113:
+ 304:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1359              		.loc 1 304 17 view .LVU446
+ 1360              	.LBB114:
+ 306:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		char n_lo = ascii_buf[2*i+1];
+ 1361              		.loc 1 306 3 view .LVU447
+ 307:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 1362              		.loc 1 307 3 view .LVU448
+ 309:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] = n_lo - '0';
+ 1363              		.loc 1 309 3 view .LVU449
+ 309:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] = n_lo - '0';
+ 1364              		.loc 1 309 18 is_stmt 0 view .LVU450
+ 1365 0078 A0F13003 		sub	r3, r0, #48
+ 1366 007c DBB2     		uxtb	r3, r3
+ 309:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] = n_lo - '0';
+ 1367              		.loc 1 309 5 view .LVU451
+ 1368 007e 092B     		cmp	r3, #9
+ 1369 0080 0CD9     		bls	.L112
+ 311:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] = n_lo - 'A' + 10;
+ 1370              		.loc 1 311 8 is_stmt 1 view .LVU452
+ 311:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] = n_lo - 'A' + 10;
+ 1371              		.loc 1 311 23 is_stmt 0 view .LVU453
+ 1372 0082 A0F14103 		sub	r3, r0, #65
+ 311:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] = n_lo - 'A' + 10;
+ 1373              		.loc 1 311 10 view .LVU454
+ 1374 0086 DBB2     		uxtb	r3, r3
+ 1375 0088 052B     		cmp	r3, #5
+ 1376 008a 47D9     		bls	.L113
+ 313:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] = n_lo - 'a' + 10;
+ 1377              		.loc 1 313 8 is_stmt 1 view .LVU455
+ 313:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] = n_lo - 'a' + 10;
+ 1378              		.loc 1 313 23 is_stmt 0 view .LVU456
+ 1379 008c A0F16103 		sub	r3, r0, #97
+ 313:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] = n_lo - 'a' + 10;
+ 1380              		.loc 1 313 10 view .LVU457
+ 1381 0090 DBB2     		uxtb	r3, r3
+ 1382 0092 052B     		cmp	r3, #5
+ 1383 0094 E2D8     		bhi	.L105
+ 314:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else
+ 1384              		.loc 1 314 4 is_stmt 1 view .LVU458
+ 314:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else
+ 1385              		.loc 1 314 29 is_stmt 0 view .LVU459
+ 1386 0096 A0F15703 		sub	r3, r0, #87
+ 1387 009a DBB2     		uxtb	r3, r3
+ 1388              	.LVL116:
+ 1389              	.L112:
+ 318:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] |= (n_hi - '0') << 4;
+ 1390              		.loc 1 318 3 is_stmt 1 view .LVU460
+ 318:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] |= (n_hi - '0') << 4;
+ 1391              		.loc 1 318 18 is_stmt 0 view .LVU461
+ 1392 009c A5F13002 		sub	r2, r5, #48
+ 318:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] |= (n_hi - '0') << 4;
+ 1393              		.loc 1 318 5 view .LVU462
+ 1394 00a0 D1B2     		uxtb	r1, r2
+ 1395 00a2 0929     		cmp	r1, #9
+ 1396 00a4 36D9     		bls	.L115
+ 320:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] |= (n_hi - 'A' + 10) << 4;
+ 1397              		.loc 1 320 8 is_stmt 1 view .LVU463
+ 320:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] |= (n_hi - 'A' + 10) << 4;
+ 1398              		.loc 1 320 23 is_stmt 0 view .LVU464
+ 1399 00a6 A5F14102 		sub	r2, r5, #65
+ 320:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] |= (n_hi - 'A' + 10) << 4;
+ 1400              		.loc 1 320 10 view .LVU465
+ 1401 00aa D2B2     		uxtb	r2, r2
+ 1402 00ac 052A     		cmp	r2, #5
+ 1403 00ae 39D9     		bls	.L116
+ 322:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] |= (n_hi - 'a' + 10) << 4;
+ 1404              		.loc 1 322 8 is_stmt 1 view .LVU466
+ 322:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] |= (n_hi - 'a' + 10) << 4;
+ 1405              		.loc 1 322 23 is_stmt 0 view .LVU467
+ 1406 00b0 A5F16102 		sub	r2, r5, #97
+ 322:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 			data_buf[i] |= (n_hi - 'a' + 10) << 4;
+ 1407              		.loc 1 322 10 view .LVU468
+ 1408 00b4 D2B2     		uxtb	r2, r2
+ 1409 00b6 052A     		cmp	r2, #5
+ 1410 00b8 D0D8     		bhi	.L105
+ 323:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else
+ 1411              		.loc 1 323 4 is_stmt 1 view .LVU469
+ 323:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else
+ 1412              		.loc 1 323 31 is_stmt 0 view .LVU470
+ 1413 00ba 573D     		subs	r5, r5, #87
+ 1414              	.LVL117:
+ 323:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else
+ 1415              		.loc 1 323 16 view .LVU471
+ 1416 00bc 43EA0513 		orr	r3, r3, r5, lsl #4
+ 1417              	.LVL118:
+ 323:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else
+ 1418              		.loc 1 323 16 view .LVU472
+ 1419 00c0 DBB2     		uxtb	r3, r3
+ 1420              	.LVL119:
+ 1421              	.L117:
+ 323:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else
+ 1422              		.loc 1 323 16 view .LVU473
+ 1423              	.LBE114:
+ 1424              	.LBE113:
+ 1425              	.LBE112:
+ 393:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 1426              		.loc 1 393 3 is_stmt 1 view .LVU474
+ 393:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 1427              		.loc 1 393 21 is_stmt 0 view .LVU475
+ 1428 00c2 3A19     		adds	r2, r7, r4
+ 1429 00c4 9360     		str	r3, [r2, #8]
+ 1430              	.LVL120:
+ 393:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 1431              		.loc 1 393 21 view .LVU476
+ 1432 00c6 B3E7     		b	.L111
+ 1433              	.LVL121:
+ 1434              	.L123:
+ 393:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 1435              		.loc 1 393 21 view .LVU477
+ 1436              	.LBE111:
+ 409:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	if(c != '\n' && c != '\r')
+ 1437              		.loc 1 409 2 is_stmt 1 view .LVU478
+ 409:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	if(c != '\n' && c != '\r')
+ 1438              		.loc 1 409 6 is_stmt 0 view .LVU479
+ 1439 00c8 FFF7FEFF 		bl	getch
+ 1440              	.LVL122:
+ 410:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return;
+ 1441              		.loc 1 410 2 is_stmt 1 view .LVU480
+ 410:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return;
+ 1442              		.loc 1 410 4 is_stmt 0 view .LVU481
+ 1443 00cc 0A28     		cmp	r0, #10
+ 1444 00ce 01D0     		beq	.L121
+ 410:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return;
+ 1445              		.loc 1 410 15 discriminator 1 view .LVU482
+ 1446 00d0 0D28     		cmp	r0, #13
+ 1447 00d2 C3D1     		bne	.L105
+ 1448              	.L121:
+ 415:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return;
+ 1449              		.loc 1 415 2 is_stmt 1 view .LVU483
+ 415:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return;
+ 1450              		.loc 1 415 29 is_stmt 0 view .LVU484
+ 1451 00d4 3C44     		add	r4, r4, r7
+ 415:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return;
+ 1452              		.loc 1 415 5 view .LVU485
+ 1453 00d6 6A46     		mov	r2, sp
+ 415:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return;
+ 1454              		.loc 1 415 29 view .LVU486
+ 1455 00d8 A568     		ldr	r5, [r4, #8]
+ 415:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return;
+ 1456              		.loc 1 415 5 view .LVU487
+ 1457 00da 10A9     		add	r1, sp, #64
+ 1458 00dc 2846     		mov	r0, r5
+ 1459              	.LVL123:
+ 415:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return;
+ 1460              		.loc 1 415 5 view .LVU488
+ 1461 00de FFF7FEFF 		bl	hex_decode
+ 1462              	.LVL124:
+ 415:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		return;
+ 1463              		.loc 1 415 4 view .LVU489
+ 1464 00e2 0028     		cmp	r0, #0
+ 1465 00e4 BAD1     		bne	.L105
+ 419:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	ret[0] = commands[cmd].fp(data_buf, commands[cmd].len);
+ 1466              		.loc 1 419 2 is_stmt 1 view .LVU490
+ 420:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 1467              		.loc 1 420 2 view .LVU491
+ 420:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 1468              		.loc 1 420 11 is_stmt 0 view .LVU492
+ 1469 00e6 E9B2     		uxtb	r1, r5
+ 1470 00e8 E368     		ldr	r3, [r4, #12]
+ 1471              	.LBB118:
+ 1472              	.LBB119:
+ 1473              	.LBB120:
+ 1474              	.LBB121:
+ 437:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		putch(hex_lookup[output[i] & 0xF]);
+ 1475              		.loc 1 437 3 view .LVU493
+ 1476 00ea 124D     		ldr	r5, .L137+4
+ 1477              	.LBE121:
+ 1478              	.LBE120:
+ 1479              	.LBE119:
+ 1480              	.LBE118:
+ 420:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 1481              		.loc 1 420 11 view .LVU494
+ 1482 00ec 6846     		mov	r0, sp
+ 1483 00ee 9847     		blx	r3
+ 1484              	.LVL125:
+ 1485 00f0 0446     		mov	r4, r0
+ 1486              	.LVL126:
+ 424:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** #endif
+ 1487              		.loc 1 424 2 is_stmt 1 view .LVU495
+ 1488              	.LBB125:
+ 1489              	.LBI118:
+ 428:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+ 1490              		.loc 1 428 6 view .LVU496
+ 1491              	.LBE125:
+ 431:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	putch(c);
+ 1492              		.loc 1 431 5 view .LVU497
+ 1493              	.LBB126:
+ 1494              	.LBB124:
+ 1495              	.LBI119:
+ 428:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+ 1496              		.loc 1 428 6 view .LVU498
+ 1497              	.LBB123:
+ 432:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 1498              		.loc 1 432 2 view .LVU499
+ 1499 00f2 7A20     		movs	r0, #122
+ 1500 00f4 FFF7FEFF 		bl	putch
+ 1501              	.LVL127:
+ 435:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1502              		.loc 1 435 2 view .LVU500
+ 1503              	.LBB122:
+ 435:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1504              		.loc 1 435 6 view .LVU501
+ 435:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1505              		.loc 1 435 17 view .LVU502
+ 437:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		putch(hex_lookup[output[i] & 0xF]);
+ 1506              		.loc 1 437 3 view .LVU503
+ 437:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		putch(hex_lookup[output[i] & 0xF]);
+ 1507              		.loc 1 437 30 is_stmt 0 view .LVU504
+ 1508 00f8 C4F30713 		ubfx	r3, r4, #4, #8
+ 438:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 1509              		.loc 1 438 30 view .LVU505
+ 1510 00fc 04F00F04 		and	r4, r4, #15
+ 1511              	.LVL128:
+ 437:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		putch(hex_lookup[output[i] & 0xF]);
+ 1512              		.loc 1 437 3 view .LVU506
+ 1513 0100 E85C     		ldrb	r0, [r5, r3]	@ zero_extendqisi2
+ 1514 0102 FFF7FEFF 		bl	putch
+ 1515              	.LVL129:
+ 438:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 1516              		.loc 1 438 3 is_stmt 1 view .LVU507
+ 1517 0106 285D     		ldrb	r0, [r5, r4]	@ zero_extendqisi2
+ 1518 0108 FFF7FEFF 		bl	putch
+ 1519              	.LVL130:
+ 435:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1520              		.loc 1 435 27 view .LVU508
+ 435:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1521              		.loc 1 435 17 view .LVU509
+ 1522              	.LBE122:
+ 1523              		.loc 1 442 2 view .LVU510
+ 1524 010c 0A20     		movs	r0, #10
+ 1525 010e FFF7FEFF 		bl	putch
+ 1526              	.LVL131:
+ 1527              		.loc 1 442 2 is_stmt 0 view .LVU511
+ 1528              	.LBE123:
+ 1529              	.LBE124:
+ 1530              	.LBE126:
+ 1531 0112 A3E7     		b	.L105
+ 1532              	.LVL132:
+ 1533              	.L115:
+ 1534              	.LBB127:
+ 1535              	.LBB117:
+ 1536              	.LBB116:
+ 1537              	.LBB115:
+ 319:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_hi >= 'A' && n_hi <= 'F')
+ 1538              		.loc 1 319 4 is_stmt 1 view .LVU512
+ 319:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_hi >= 'A' && n_hi <= 'F')
+ 1539              		.loc 1 319 16 is_stmt 0 view .LVU513
+ 1540 0114 43EA0213 		orr	r3, r3, r2, lsl #4
+ 1541              	.LVL133:
+ 319:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_hi >= 'A' && n_hi <= 'F')
+ 1542              		.loc 1 319 16 view .LVU514
+ 1543 0118 DBB2     		uxtb	r3, r3
+ 1544              	.LVL134:
+ 319:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_hi >= 'A' && n_hi <= 'F')
+ 1545              		.loc 1 319 16 view .LVU515
+ 1546 011a D2E7     		b	.L117
+ 1547              	.LVL135:
+ 1548              	.L113:
+ 312:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_lo >= 'a' && n_lo <= 'f')
+ 1549              		.loc 1 312 4 is_stmt 1 view .LVU516
+ 312:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_lo >= 'a' && n_lo <= 'f')
+ 1550              		.loc 1 312 29 is_stmt 0 view .LVU517
+ 1551 011c A0F13703 		sub	r3, r0, #55
+ 1552 0120 DBB2     		uxtb	r3, r3
+ 1553              	.LVL136:
+ 312:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_lo >= 'a' && n_lo <= 'f')
+ 1554              		.loc 1 312 29 view .LVU518
+ 1555 0122 BBE7     		b	.L112
+ 1556              	.L116:
+ 321:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_hi >= 'a' && n_hi <= 'f')
+ 1557              		.loc 1 321 4 is_stmt 1 view .LVU519
+ 321:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_hi >= 'a' && n_hi <= 'f')
+ 1558              		.loc 1 321 31 is_stmt 0 view .LVU520
+ 1559 0124 373D     		subs	r5, r5, #55
+ 1560              	.LVL137:
+ 321:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_hi >= 'a' && n_hi <= 'f')
+ 1561              		.loc 1 321 16 view .LVU521
+ 1562 0126 43EA0513 		orr	r3, r3, r5, lsl #4
+ 1563              	.LVL138:
+ 321:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_hi >= 'a' && n_hi <= 'f')
+ 1564              		.loc 1 321 16 view .LVU522
+ 1565 012a DBB2     		uxtb	r3, r3
+ 1566              	.LVL139:
+ 321:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		else if(n_hi >= 'a' && n_hi <= 'f')
+ 1567              		.loc 1 321 16 view .LVU523
+ 1568 012c C9E7     		b	.L117
+ 1569              	.L138:
+ 1570 012e 00BF     		.align	2
+ 1571              	.L137:
+ 1572 0130 00000000 		.word	.LANCHOR0
+ 1573 0134 00000000 		.word	.LANCHOR1
+ 1574              	.LBE115:
+ 1575              	.LBE116:
+ 1576              	.LBE117:
+ 1577              	.LBE127:
+ 1578              		.cfi_endproc
+ 1579              	.LFE8:
+ 1581              		.section	.text.simpleserial_put,"ax",%progbits
+ 1582              		.align	1
+ 1583              		.p2align 2,,3
+ 1584              		.global	simpleserial_put
+ 1585              		.syntax unified
+ 1586              		.thumb
+ 1587              		.thumb_func
+ 1588              		.fpu softvfp
+ 1590              	simpleserial_put:
+ 1591              	.LVL140:
+ 1592              	.LFB9:
+ 429:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	// Write first character
+ 1593              		.loc 1 429 1 is_stmt 1 view -0
+ 1594              		.cfi_startproc
+ 1595              		@ args = 0, pretend = 0, frame = 0
+ 1596              		@ frame_needed = 0, uses_anonymous_args = 0
+ 431:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	putch(c);
+ 1597              		.loc 1 431 5 view .LVU525
+ 431:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	putch(c);
+ 1598              		.loc 1 431 8 is_stmt 0 view .LVU526
+ 1599 0000 D2B1     		cbz	r2, .L139
+ 429:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	// Write first character
+ 1600              		.loc 1 429 1 view .LVU527
+ 1601 0002 70B5     		push	{r4, r5, r6, lr}
+ 1602              	.LCFI20:
+ 1603              		.cfi_def_cfa_offset 16
+ 1604              		.cfi_offset 4, -16
+ 1605              		.cfi_offset 5, -12
+ 1606              		.cfi_offset 6, -8
+ 1607              		.cfi_offset 14, -4
+ 1608 0004 0E46     		mov	r6, r1
+ 1609              	.LVL141:
+ 1610              	.LBB131:
+ 1611              	.LBI131:
+ 428:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** {
+ 1612              		.loc 1 428 6 is_stmt 1 view .LVU528
+ 1613              	.LBB132:
+ 432:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 
+ 1614              		.loc 1 432 2 view .LVU529
+ 1615 0006 1446     		mov	r4, r2
+ 1616 0008 FFF7FEFF 		bl	putch
+ 1617              	.LVL142:
+ 435:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1618              		.loc 1 435 2 view .LVU530
+ 1619              	.LBB133:
+ 435:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1620              		.loc 1 435 6 view .LVU531
+ 435:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1621              		.loc 1 435 17 view .LVU532
+ 435:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1622              		.loc 1 435 2 is_stmt 0 view .LVU533
+ 1623 000c 7EB1     		cbz	r6, .L141
+ 1624 000e 0B4D     		ldr	r5, .L150
+ 1625 0010 2644     		add	r6, r6, r4
+ 1626              	.LVL143:
+ 1627              	.L142:
+ 437:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		putch(hex_lookup[output[i] & 0xF]);
+ 1628              		.loc 1 437 3 is_stmt 1 view .LVU534
+ 437:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		putch(hex_lookup[output[i] & 0xF]);
+ 1629              		.loc 1 437 26 is_stmt 0 view .LVU535
+ 1630 0012 2378     		ldrb	r3, [r4]	@ zero_extendqisi2
+ 437:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		putch(hex_lookup[output[i] & 0xF]);
+ 1631              		.loc 1 437 30 view .LVU536
+ 1632 0014 1B09     		lsrs	r3, r3, #4
+ 437:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 		putch(hex_lookup[output[i] & 0xF]);
+ 1633              		.loc 1 437 3 view .LVU537
+ 1634 0016 E85C     		ldrb	r0, [r5, r3]	@ zero_extendqisi2
+ 1635 0018 FFF7FEFF 		bl	putch
+ 1636              	.LVL144:
+ 438:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 1637              		.loc 1 438 3 is_stmt 1 view .LVU538
+ 438:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 1638              		.loc 1 438 30 is_stmt 0 view .LVU539
+ 1639 001c 14F8013B 		ldrb	r3, [r4], #1	@ zero_extendqisi2
+ 1640              	.LVL145:
+ 438:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 1641              		.loc 1 438 30 view .LVU540
+ 1642 0020 03F00F03 		and	r3, r3, #15
+ 438:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	}
+ 1643              		.loc 1 438 3 view .LVU541
+ 1644 0024 E85C     		ldrb	r0, [r5, r3]	@ zero_extendqisi2
+ 1645 0026 FFF7FEFF 		bl	putch
+ 1646              	.LVL146:
+ 435:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1647              		.loc 1 435 27 is_stmt 1 view .LVU542
+ 435:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1648              		.loc 1 435 17 view .LVU543
+ 435:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1649              		.loc 1 435 2 is_stmt 0 view .LVU544
+ 1650 002a A642     		cmp	r6, r4
+ 1651 002c F1D1     		bne	.L142
+ 1652              	.LVL147:
+ 1653              	.L141:
+ 435:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** 	{
+ 1654              		.loc 1 435 2 view .LVU545
+ 1655              	.LBE133:
+ 1656              		.loc 1 442 2 is_stmt 1 view .LVU546
+ 1657              	.LBE132:
+ 1658              	.LBE131:
+ 443:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 1659              		.loc 1 443 1 is_stmt 0 view .LVU547
+ 1660 002e BDE87040 		pop	{r4, r5, r6, lr}
+ 1661              	.LCFI21:
+ 1662              		.cfi_restore 14
+ 1663              		.cfi_restore 6
+ 1664              		.cfi_restore 5
+ 1665              		.cfi_restore 4
+ 1666              		.cfi_def_cfa_offset 0
+ 1667              	.LBB135:
+ 1668              	.LBB134:
+ 442:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 1669              		.loc 1 442 2 view .LVU548
+ 1670 0032 0A20     		movs	r0, #10
+ 1671 0034 FFF7FEBF 		b	putch
+ 1672              	.LVL148:
+ 1673              	.L139:
+ 442:/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/simpleserial/simpleserial.c **** }
+ 1674              		.loc 1 442 2 view .LVU549
+ 1675 0038 7047     		bx	lr
+ 1676              	.L151:
+ 1677 003a 00BF     		.align	2
+ 1678              	.L150:
+ 1679 003c 00000000 		.word	.LANCHOR1
+ 1680              	.LBE134:
+ 1681              	.LBE135:
+ 1682              		.cfi_endproc
+ 1683              	.LFE9:
+ 1685              		.section	.rodata
+ 1686              		.align	2
+ 1687              		.set	.LANCHOR1,. + 0
+ 1690              	hex_lookup:
+ 1691 0000 30313233 		.ascii	"0123456789ABCDEF"
+ 1691      34353637 
+ 1691      38394142 
+ 1691      43444546 
+ 1692              		.bss
+ 1693              		.align	2
+ 1694              		.set	.LANCHOR0,. + 0
+ 1697              	num_commands:
+ 1698 0000 00000000 		.space	4
+ 1701              	commands:
+ 1702 0004 00000000 		.space	512
+ 1702      00000000 
+ 1702      00000000 
+ 1702      00000000 
+ 1702      00000000 
+ 1703              		.text
+ 1704              	.Letext0:
+ 1705              		.file 2 "/usr/lib/gcc/arm-none-eabi/10.3.1/include/stdint.h"
+ 1706              		.file 3 "/home/reo/Documents/Repository/chipwhisperer/firmware/mcu/hal/chipwhisperer-fw-extra/stm3
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 simpleserial.c
+     /tmp/ccARkY98.s:16     .text.check_version:0000000000000000 $t
+     /tmp/ccARkY98.s:25     .text.check_version:0000000000000000 check_version
+     /tmp/ccARkY98.s:44     .text.ss_num_commands:0000000000000000 $t
+     /tmp/ccARkY98.s:52     .text.ss_num_commands:0000000000000000 ss_num_commands
+     /tmp/ccARkY98.s:136    .text.ss_num_commands:000000000000002c $d
+     /tmp/ccARkY98.s:142    .text.ss_get_commands:0000000000000000 $t
+     /tmp/ccARkY98.s:150    .text.ss_get_commands:0000000000000000 ss_get_commands
+     /tmp/ccARkY98.s:305    .text.ss_get_commands:0000000000000074 $d
+     /tmp/ccARkY98.s:311    .text.ss_crc:0000000000000000 $t
+     /tmp/ccARkY98.s:319    .text.ss_crc:0000000000000000 ss_crc
+     /tmp/ccARkY98.s:593    .text.hex_decode:0000000000000000 $t
+     /tmp/ccARkY98.s:601    .text.hex_decode:0000000000000000 hex_decode
+     /tmp/ccARkY98.s:797    .text.simpleserial_init:0000000000000000 $t
+     /tmp/ccARkY98.s:805    .text.simpleserial_init:0000000000000000 simpleserial_init
+     /tmp/ccARkY98.s:990    .text.simpleserial_init:000000000000005c $d
+     /tmp/ccARkY98.s:998    .text.simpleserial_addcmd:0000000000000000 $t
+     /tmp/ccARkY98.s:1006   .text.simpleserial_addcmd:0000000000000000 simpleserial_addcmd
+     /tmp/ccARkY98.s:1097   .text.simpleserial_addcmd:0000000000000034 $d
+     /tmp/ccARkY98.s:1102   .text.simpleserial_addcmd_flags:0000000000000000 $t
+     /tmp/ccARkY98.s:1110   .text.simpleserial_addcmd_flags:0000000000000000 simpleserial_addcmd_flags
+     /tmp/ccARkY98.s:1184   .text.simpleserial_addcmd_flags:0000000000000034 $d
+     /tmp/ccARkY98.s:1189   .text.simpleserial_get:0000000000000000 $t
+     /tmp/ccARkY98.s:1197   .text.simpleserial_get:0000000000000000 simpleserial_get
+     /tmp/ccARkY98.s:1572   .text.simpleserial_get:0000000000000130 $d
+     /tmp/ccARkY98.s:1582   .text.simpleserial_put:0000000000000000 $t
+     /tmp/ccARkY98.s:1590   .text.simpleserial_put:0000000000000000 simpleserial_put
+     /tmp/ccARkY98.s:1679   .text.simpleserial_put:000000000000003c $d
+     /tmp/ccARkY98.s:1686   .rodata:0000000000000000 $d
+     /tmp/ccARkY98.s:1690   .rodata:0000000000000000 hex_lookup
+     /tmp/ccARkY98.s:1693   .bss:0000000000000000 $d
+     /tmp/ccARkY98.s:1697   .bss:0000000000000000 num_commands
+     /tmp/ccARkY98.s:1701   .bss:0000000000000004 commands
+
+UNDEFINED SYMBOLS
+putch
+getch

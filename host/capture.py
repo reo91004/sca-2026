@@ -1,25 +1,32 @@
 #!/usr/bin/env python3
 """
-SMAUG-T 부채널 트레이스 캡처 (ChipWhisperer-Lite + CW308T-STM32F4 / STM32F415).
+SCA 트레이스 캡처 (ChipWhisperer-Lite + CW308T-STM32F4 / STM32F415).
+
+지원 타겟:
+    --target smaug : SMAUG-T KEM (firmware/simpleserial-smaug)
+    --target hqc   : HQC (firmware/simpleserial-hqc)
 
 사용법:
+    # SMAUG-T full pipeline (기본)
     python3 host/capture.py -n 1000 -s 24400 -o traces/smaug1_dec.npz
+
+    # HQC custom RM encode_single ('e' 명령, 16바이트 응답)
+    python3 host/capture.py --target hqc -c e --send-len 1 --resp-len 16 \\
+        -n 1000 -s 24400 -o traces/hqc_custom_e.npz
 
 흐름:
     1. CW1173 (F415가 매달린 보드, sn=TARGET_SN) 만 사용. 금지 시리얼은 거부.
     2. scope.default_setup() 후 ADC 샘플 수 / 게인 / 트리거 설정.
-    3. SimpleSerial v2.1 타겟으로 sca-2026/firmware/simpleserial-smaug 펌웨어와 통신.
+    3. SimpleSerial v1.1 타겟으로 펌웨어와 통신 (양 firmware 모두 v1_1로 통일).
     4. 캡처 루프:
-           scope.arm() -> target.simpleserial_write('p', b'')
-                       -> scope.capture() (펌웨어가 trigger_high()/_low() 사이의 dec 실행)
-                       -> target.simpleserial_read('r', 1) (1바이트 mismatch flag)
+           scope.arm() -> target.simpleserial_write(cmd, payload)
+                       -> scope.capture()
+                       -> target.simpleserial_read('r', resp_len)
                        -> scope.get_last_trace()
     5. 트레이스를 numpy .npz로 저장: traces (N,T), responses (N,), timestamp 등.
 
 전제:
-    - host/upload.py 로 simpleserial-smaug-CW308_STM32F4.{hex,bin}을 이미 플래시했을 것.
-    - SimpleSerial 명령은 'p' (full pipeline) 로 시작. 'd' (dec only) 등은 향후 chosen-CT
-      공격 시 추가.
+    - host/upload.py 로 해당 firmware .hex 를 이미 플래시했을 것.
 """
 
 from __future__ import annotations
@@ -38,7 +45,11 @@ from cw_serial import TARGET_SN, pick_serial
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
-        description="SMAUG-T crypto_kem_dec 부채널 트레이스 캡처",
+        description="ChipWhisperer SCA 트레이스 캡처 (SMAUG-T / HQC)",
+    )
+    p.add_argument(
+        "--target", choices=("smaug", "hqc"), default="smaug",
+        help="대상 KEM (기본 smaug). 메타에만 기록되며, 실제 동작은 cmd/길이로 결정.",
     )
     p.add_argument(
         "-n", "--num-traces",
@@ -57,10 +68,20 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument(
         "-c", "--cmd",
-        choices=("p", "d"),
         default="p",
-        help="펌웨어에 보낼 명령: p=full pipeline / d=decaps만 (기본 p). "
-             "'d'를 사용하려면 별도 keypair/encaps 사전준비가 필요.",
+        help=(
+            "펌웨어에 보낼 SimpleSerial 명령 1글자 (기본 'p'). "
+            "SMAUG: 'p' full pipeline / 'd' decaps만 / 'k' keypair / 'e' encaps. "
+            "HQC: 'e' encode_single (16B) / 'p' encode_full (16B) / 'c' code_encode (pqclean)."
+        ),
+    )
+    p.add_argument(
+        "--send-len", type=int, default=0,
+        help="명령 페이로드 바이트 수 (zero-fill, 기본 0)",
+    )
+    p.add_argument(
+        "--resp-len", type=int, default=1,
+        help="응답 'r' 바이트 수 (기본 1; HQC encode 계열은 16)",
     )
     p.add_argument(
         "-o", "--output",
@@ -75,8 +96,8 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     p.add_argument(
-        "--baud", type=int, default=230400,
-        help="SimpleSerial UART 보레이트 (기본 230400; CW SS2 표준)",
+        "--baud", type=int, default=38400,
+        help="SimpleSerial UART 보레이트 (기본 38400; SS_VER_1_1 표준)",
     )
     p.add_argument(
         "--timeout-ms", type=int, default=5000,
@@ -99,7 +120,7 @@ def setup_scope(sn: str, samples: int, gain_db: float):
 
 
 def setup_target(scope, baud: int):
-    target = cw.target(scope, cw.targets.SimpleSerial2)
+    target = cw.target(scope, cw.targets.SimpleSerial)
     target.baud = baud
     target.flush()
     return target
@@ -115,20 +136,24 @@ def main() -> int:
     scope = setup_scope(sn, args.samples, args.gain_db)
     target = setup_target(scope, args.baud)
     print(f"[INFO] scope.adc.samples={scope.adc.samples} gain={scope.gain.db} dB")
-    print(f"[INFO] target SS_VER_2_1 baud={target.baud}")
+    print(f"[INFO] target=SS_VER_1_1 baud={target.baud} "
+          f"target_kind={args.target} cmd='{args.cmd}' "
+          f"send_len={args.send_len} resp_len={args.resp_len}")
 
-    cmd = args.cmd.encode("ascii")
+    cmd = args.cmd  # SimpleSerial v1 takes a str, not bytes
     n = args.num_traces
 
     traces = np.empty((n, args.samples), dtype=np.float32)
-    responses = np.empty((n,), dtype=np.uint8)
+    # responses: (N, resp_len) uint8 — full ack payload per trace
+    responses = np.zeros((n, args.resp_len), dtype=np.uint8)
     timeouts = 0
     started = time.time()
+    payload = bytearray(args.send_len)
 
     try:
         for i in range(n):
             scope.arm()
-            target.simpleserial_write(cmd, bytearray())
+            target.simpleserial_write(cmd, payload)
 
             # capture() -> True if the trigger never fired in time
             if scope.capture():
@@ -136,14 +161,16 @@ def main() -> int:
                 print(f"[WARN] trace {i}: scope.capture() timeout")
                 continue
 
-            ack = target.simpleserial_read("r", 1, timeout=args.timeout_ms)
-            if ack is None or len(ack) != 1:
+            ack = target.simpleserial_read("r", args.resp_len, timeout=args.timeout_ms)
+            if ack is None or len(ack) != args.resp_len:
                 timeouts += 1
-                print(f"[WARN] trace {i}: SimpleSerial response missing/short")
+                got = 0 if ack is None else len(ack)
+                print(f"[WARN] trace {i}: SimpleSerial response len={got} "
+                      f"(expected {args.resp_len})")
                 continue
 
             traces[i] = scope.get_last_trace()
-            responses[i] = ack[0]
+            responses[i, :] = bytes(ack)
 
             if (i + 1) % 50 == 0 or i == n - 1:
                 elapsed = time.time() - started
@@ -171,7 +198,11 @@ def main() -> int:
                 "scope_sn": sn,
                 "samples": args.samples,
                 "gain_db": args.gain_db,
+                "target": args.target,
                 "cmd": args.cmd,
+                "send_len": args.send_len,
+                "resp_len": args.resp_len,
+                "ss_ver": "SS_VER_1_1",
                 "baud": args.baud,
                 "n_attempted": n,
                 "n_timeouts": timeouts,

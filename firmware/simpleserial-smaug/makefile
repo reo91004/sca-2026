@@ -37,8 +37,14 @@ FPUUSE = 1
 CRYPTO_TARGET  = NONE
 CRYPTO_OPTIONS =
 
-# SimpleSerial protocol version. Pair with cw.target(..., target_type=cw.targets.SimpleSerial2)
-SS_VER ?= SS_VER_2_1
+# SimpleSerial protocol version.
+#   SS_VER_1_1 (default): ASCII hex framing, callback (uint8_t*, uint8_t),
+#                          host pairs with cw.targets.SimpleSerial.
+#   SS_VER_2_1          : binary framing, callback (cmd,scmd,len,buf),
+#                          host pairs with cw.targets.SimpleSerial2.
+# Pinned to v1_1 to match the HQC reference firmware so 0x44 ack behavior
+# can be diagnosed apples-to-apples between SMAUG-T and HQC.
+SS_VER ?= SS_VER_1_1
 
 # Hand the SMAUG-T archive to the linker. GNU ld scans archives only for currently
 # undefined symbols, so smaug_rng.o (defining rng_get_random_blocking) must already
