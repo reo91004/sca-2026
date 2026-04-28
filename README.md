@@ -85,13 +85,15 @@ simpleserial-smaug-CW308_STM32F4.bin   ← 0x08000000 로드, 부트로더 / 디
 ## 플래시
 
 ```bash
-python3 host/upload.py firmware/simpleserial-smaug/simpleserial-smaug-CW308_STM32F4.bin
-# 또는
-python3 host/upload.py firmware/simpleserial-smaug/simpleserial-smaug-CW308_STM32F4.hex --no-verify
+python3 host/upload.py firmware/simpleserial-smaug/simpleserial-smaug-CW308_STM32F4.hex
 ```
 
-`.bin` 입력시 자동으로 `0x08000000` 오프셋으로 IntelHex 변환 후 플래시한다.
-flow: `cw.scope().default_setup()` → `STM32FProgrammer.open() → find() → erase() → program()`.
+`.hex` 만 받는다 (`make` 가 동시에 만드는 산출물). flow:
+`cw.scope().default_setup()` → `STM32FProgrammer.open() → find() → erase() → program()`.
+
+> `.bin` 직접 플래시는 지원하지 않음. chipwhisperer 6.0.0 의
+> `IntelHex.loadbin/write_hex_file` 가 Py3 와 호환되지 않아 `.bin → 임시 .hex`
+> 변환 경로가 깨져 있다. `.hex` 경로는 native 그대로 잘 작동한다.
 
 ## 트레이스 캡처
 

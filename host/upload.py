@@ -6,47 +6,26 @@ CW 보드 선택은 ``cw_serial.pick_serial`` 정책을 따른다:
     - 없고 forbidden 제외 단일 보드면 그것을 자동 선택
     - 명시적인 ``--serial`` 은 위 정책을 무시 (단, FORBIDDEN_SN 은 항상 거부)
 
+흐름은 정상 동작하는 레퍼런스 프로젝트와 같은 ChipWhisperer 기본 패턴을 쓴다:
+    scope = cw.scope(sn=...)
+    target = cw.target(scope, cw.targets.SimpleSerial)
+    scope.default_setup()
+    cw.program_target(scope, cw.programmers.STM32FProgrammer, fw_path)
+
 사용 예:
-    python3 host/upload.py firmware/simpleserial-smaug/simpleserial-smaug-CW308_STM32F4.bin
-    python3 host/upload.py path/to/firmware.hex --no-verify
+    python3 host/upload.py firmware/simpleserial-smaug/simpleserial-smaug-CW308_STM32F4.hex
 """
 
 from __future__ import annotations
 
 import argparse
-import os
 import sys
-import tempfile
+import time
 from pathlib import Path
 
 import chipwhisperer as cw
-from chipwhisperer.capture.utils.IntelHex import IntelHex
 
 from cw_serial import TARGET_SN, pick_serial
-
-
-# STM32 내장 부트로더가 기대하는 플래시 시작 주소
-STM32_FLASH_BASE = 0x08000000
-
-
-def to_hex_path(fw_path: Path) -> tuple[Path, Path | None]:
-    """
-    .hex이면 그대로 사용, .bin이면 STM32_FLASH_BASE 오프셋으로 임시 .hex 변환.
-    반환: (programmer에 넘길 경로, 정리해야 할 임시 파일 경로 또는 None)
-    """
-    suffix = fw_path.suffix.lower()
-    if suffix == ".hex":
-        return fw_path, None
-    if suffix == ".bin":
-        ih = IntelHex()
-        ih.loadbin(str(fw_path), offset=STM32_FLASH_BASE)
-        tmp = tempfile.NamedTemporaryFile(
-            mode="w", suffix=".hex", delete=False, prefix="smaug_fw_"
-        )
-        tmp.close()
-        ih.write_hex_file(tmp.name)
-        return Path(tmp.name), Path(tmp.name)
-    sys.exit(f"[ABORT] 지원하지 않는 펌웨어 확장자: {suffix} ({fw_path})")
 
 
 def parse_args() -> argparse.Namespace:
@@ -56,7 +35,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "firmware",
         type=Path,
-        help="플래시할 펌웨어 (.bin 또는 .hex)",
+        help="플래시할 .hex 펌웨어 (Intel HEX, 0x08000000 베이스)",
     )
     p.add_argument(
         "-s",
@@ -65,11 +44,6 @@ def parse_args() -> argparse.Namespace:
         help=(
             f"CW1173 시리얼 명시 (미지정시 자동 선택; 표준 F415 sn={TARGET_SN})"
         ),
-    )
-    p.add_argument(
-        "--no-verify",
-        action="store_true",
-        help="플래시 후 베리파이 생략",
     )
     p.add_argument(
         "--baud",
@@ -85,38 +59,39 @@ def main() -> int:
 
     if not args.firmware.is_file():
         sys.exit(f"[ABORT] 파일이 없음: {args.firmware}")
+    if args.firmware.suffix.lower() != ".hex":
+        sys.exit(
+            f"[ABORT] .hex 만 지원 (받은 확장자: {args.firmware.suffix}). "
+            "make 가 동시에 만드는 simpleserial-smaug-*.hex 를 쓰라."
+        )
 
     sn = pick_serial(args.serial)
-    fw_path, tmp_to_clean = to_hex_path(args.firmware.resolve())
+    fw_path = args.firmware.resolve()
 
     print(f"[INFO] CW1173 sn={sn} 에 연결")
     scope = cw.scope(sn=sn)
+    target = cw.target(scope, cw.targets.SimpleSerial)
+    prog = cw.programmers.STM32FProgrammer
+    time.sleep(0.05)
+    scope.default_setup()
     try:
-        # CW308T-STM32F4 표준 셋업: HS2=CLKGEN, tio1/2 = serial, 7.37MHz 등.
-        scope.default_setup()
-
-        prog = cw.programmers.STM32FProgrammer(baud=args.baud)
-        prog.scope = scope
-
-        print(f"[INFO] STM32 부트로더 진입 및 칩 식별")
-        prog.open()
-        prog.find()
-        prog.erase()
-
-        print(f"[INFO] 플래시 중: {fw_path} (verify={not args.no_verify})")
-        prog.program(str(fw_path), memtype="flash", verify=not args.no_verify)
-        prog.close()
+        print(f"[INFO] 플래시 중: {fw_path}")
+        cw.program_target(
+            scope,
+            prog,
+            str(fw_path),
+            baud=args.baud,
+        )
         print("[OK] 플래시 완료")
     finally:
+        try:
+            target.dis()
+        except Exception:
+            pass
         try:
             scope.dis()
         except Exception:
             pass
-        if tmp_to_clean is not None:
-            try:
-                os.unlink(tmp_to_clean)
-            except OSError:
-                pass
 
     return 0
 

@@ -633,27 +633,27 @@
  462              		.file 5 "/usr/lib/gcc/arm-none-eabi/10.3.1/include/stdint.h"
 DEFINED SYMBOLS
                             *ABS*:0000000000000000 simpleserial-smaug.c
-     /tmp/ccu0zFih.s:18     .text.cmd_pipeline:0000000000000000 $t
-     /tmp/ccu0zFih.s:25     .text.cmd_pipeline:0000000000000000 cmd_pipeline
-     /tmp/ccu0zFih.s:136    .text.cmd_pipeline:000000000000006c $d
-     /tmp/ccu0zFih.s:143    .text.cmd_decaps:0000000000000000 $t
-     /tmp/ccu0zFih.s:149    .text.cmd_decaps:0000000000000000 cmd_decaps
-     /tmp/ccu0zFih.s:244    .text.cmd_decaps:0000000000000054 $d
-     /tmp/ccu0zFih.s:250    .text.cmd_encaps:0000000000000000 $t
-     /tmp/ccu0zFih.s:256    .text.cmd_encaps:0000000000000000 cmd_encaps
-     /tmp/ccu0zFih.s:301    .text.cmd_encaps:0000000000000024 $d
-     /tmp/ccu0zFih.s:306    .text.cmd_keypair:0000000000000000 $t
-     /tmp/ccu0zFih.s:312    .text.cmd_keypair:0000000000000000 cmd_keypair
-     /tmp/ccu0zFih.s:355    .text.cmd_keypair:000000000000001c $d
-     /tmp/ccu0zFih.s:361    .text.startup.main:0000000000000000 $t
-     /tmp/ccu0zFih.s:368    .text.startup.main:0000000000000000 main
-     /tmp/ccu0zFih.s:428    .text.startup.main:0000000000000040 $d
-     /tmp/ccu0zFih.s:439    .bss:0000000000000000 sk
-     /tmp/ccu0zFih.s:440    .bss:0000000000000000 $d
-     /tmp/ccu0zFih.s:443    .bss:0000000000000340 pk
-     /tmp/ccu0zFih.s:447    .bss:00000000000005e0 ss_enc
-     /tmp/ccu0zFih.s:451    .bss:0000000000000600 ct
-     /tmp/ccu0zFih.s:455    .bss:00000000000008a0 ss_dec
+     /tmp/cc97MJkt.s:18     .text.cmd_pipeline:0000000000000000 $t
+     /tmp/cc97MJkt.s:25     .text.cmd_pipeline:0000000000000000 cmd_pipeline
+     /tmp/cc97MJkt.s:136    .text.cmd_pipeline:000000000000006c $d
+     /tmp/cc97MJkt.s:143    .text.cmd_decaps:0000000000000000 $t
+     /tmp/cc97MJkt.s:149    .text.cmd_decaps:0000000000000000 cmd_decaps
+     /tmp/cc97MJkt.s:244    .text.cmd_decaps:0000000000000054 $d
+     /tmp/cc97MJkt.s:250    .text.cmd_encaps:0000000000000000 $t
+     /tmp/cc97MJkt.s:256    .text.cmd_encaps:0000000000000000 cmd_encaps
+     /tmp/cc97MJkt.s:301    .text.cmd_encaps:0000000000000024 $d
+     /tmp/cc97MJkt.s:306    .text.cmd_keypair:0000000000000000 $t
+     /tmp/cc97MJkt.s:312    .text.cmd_keypair:0000000000000000 cmd_keypair
+     /tmp/cc97MJkt.s:355    .text.cmd_keypair:000000000000001c $d
+     /tmp/cc97MJkt.s:361    .text.startup.main:0000000000000000 $t
+     /tmp/cc97MJkt.s:368    .text.startup.main:0000000000000000 main
+     /tmp/cc97MJkt.s:428    .text.startup.main:0000000000000040 $d
+     /tmp/cc97MJkt.s:439    .bss:0000000000000000 sk
+     /tmp/cc97MJkt.s:440    .bss:0000000000000000 $d
+     /tmp/cc97MJkt.s:443    .bss:0000000000000340 pk
+     /tmp/cc97MJkt.s:447    .bss:00000000000005e0 ss_enc
+     /tmp/cc97MJkt.s:451    .bss:0000000000000600 ct
+     /tmp/cc97MJkt.s:455    .bss:00000000000008a0 ss_dec
 
 UNDEFINED SYMBOLS
 crypto_kem_keypair
