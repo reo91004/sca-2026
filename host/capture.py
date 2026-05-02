@@ -103,10 +103,46 @@ def parse_args() -> argparse.Namespace:
         "--timeout-ms", type=int, default=5000,
         help="명령당 응답 타임아웃 (ms)",
     )
+    p.add_argument(
+        "--firmware-hex", type=Path, default=None,
+        help=".npz meta 에 firmware_hex_sha256 을 기록할 .hex 경로 (옵션)",
+    )
+    p.add_argument(
+        "--seed", type=int, default=None,
+        help="meta 에 기록할 host-side seed (chosen-CT 재현용; 기본=0)",
+    )
+    p.add_argument(
+        "--label", default=None,
+        help="meta 에 기록할 사람 읽기용 라벨 (기본: 'p'/'D' 등 cmd 그대로)",
+    )
     return p.parse_args()
 
 
+def _git_rev_short() -> str:
+    """현재 HEAD 의 짧은 sha. 실패 시 'unknown' (no-throw)."""
+    import subprocess
+    try:
+        out = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=Path(__file__).resolve().parent.parent,
+            stderr=subprocess.DEVNULL,
+        )
+        return out.decode().strip()
+    except Exception:
+        return "unknown"
+
+
+def _file_sha256(path: Path) -> str:
+    import hashlib
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 16), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
 def setup_scope(sn: str, samples: int, gain_db: float):
+    import time
     scope = cw.scope(sn=sn)
     scope.default_setup()                # CW-Lite + STM32F4 표준 셋업
 
@@ -116,6 +152,13 @@ def setup_scope(sn: str, samples: int, gain_db: float):
     scope.gain.db = gain_db
     scope.clock.adc_src = "clkgen_x4"    # 4x 샘플링
     scope.trigger.triggers = "tio4"      # CW308T-STM32F4 trigger pad
+
+    # nRST 토글 + 부팅 대기 — default_setup() 직후 통신이 안정되도록.
+    # (실측: 이 reset 없이는 첫 simpleserial_read 가 즉시 timeout.)
+    scope.io.nrst = "low"
+    time.sleep(0.05)
+    scope.io.nrst = "high_z"
+    time.sleep(0.5)
     return scope
 
 
@@ -188,27 +231,39 @@ def main() -> int:
             pass
 
     captured = n - timeouts
+
+    fw_sha = None
+    if args.firmware_hex is not None:
+        if args.firmware_hex.exists():
+            fw_sha = _file_sha256(args.firmware_hex)
+        else:
+            print(f"[WARN] --firmware-hex 경로 없음: {args.firmware_hex}")
+
+    meta = {
+        "captured_at": datetime.now(timezone.utc).isoformat(),
+        "scope_sn": sn,
+        "samples": args.samples,
+        "gain_db": args.gain_db,
+        "target": args.target,
+        "cmd": args.cmd,
+        "send_len": args.send_len,
+        "resp_len": args.resp_len,
+        "ss_ver": "SS_VER_1_1",
+        "baud": args.baud,
+        "n_attempted": n,
+        "n_timeouts": timeouts,
+        # 재현성 보강 (모든 .npz 가 어떤 펌웨어/git 상태에서 나왔는지 추적):
+        "git_rev": _git_rev_short(),
+        "firmware_hex": str(args.firmware_hex) if args.firmware_hex else None,
+        "firmware_hex_sha256": fw_sha,
+        "seed": 0 if args.seed is None else int(args.seed),
+        "label": args.label or args.cmd,
+    }
     np.savez_compressed(
         args.output,
         traces=traces[:n],
         responses=responses[:n],
-        meta=np.array(
-            {
-                "captured_at": datetime.now(timezone.utc).isoformat(),
-                "scope_sn": sn,
-                "samples": args.samples,
-                "gain_db": args.gain_db,
-                "target": args.target,
-                "cmd": args.cmd,
-                "send_len": args.send_len,
-                "resp_len": args.resp_len,
-                "ss_ver": "SS_VER_1_1",
-                "baud": args.baud,
-                "n_attempted": n,
-                "n_timeouts": timeouts,
-            },
-            dtype=object,
-        ),
+        meta=np.array(meta, dtype=object),
     )
     print(
         f"[OK] saved {captured}/{n} traces to {args.output} "

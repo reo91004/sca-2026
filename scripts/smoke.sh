@@ -2,14 +2,16 @@
 # sca-2026 smoke test
 #   preflight -> build -> flash -> capture -> validate -> visualize
 #
+# 위치: scripts/smoke.sh (REPO_ROOT 한 단계 위가 레포 루트)
+#
 # Usage:
-#   ./smoke.sh                                    # SMAUG-T level 1 (기본)
-#   TARGET=hqc-custom ./smoke.sh                  # HQC custom RM (encode_single)
-#   TARGET=hqc-pqclean ./smoke.sh                 # HQC PQClean code_encode (RS+RM)
-#   LEVEL=3 ./smoke.sh                            # SMAUG level 3
-#   NUM_TRACES=200 SAMPLES=8000 ./smoke.sh
-#   SKIP_BUILD=1 SKIP_FLASH=1 ./smoke.sh          # capture + viz only
-#   SKIP_CAPTURE=1 NPZ=traces/foo.npz ./smoke.sh  # re-visualize a saved file
+#   scripts/smoke.sh                                    # SMAUG-T level 1 (기본)
+#   TARGET=hqc-custom scripts/smoke.sh                  # HQC custom RM (encode_single)
+#   TARGET=hqc-pqclean scripts/smoke.sh                 # HQC PQClean code_encode (RS+RM)
+#   LEVEL=3 scripts/smoke.sh                            # SMAUG level 3
+#   NUM_TRACES=200 SAMPLES=8000 scripts/smoke.sh
+#   SKIP_BUILD=1 SKIP_FLASH=1 scripts/smoke.sh          # capture + viz only
+#   SKIP_CAPTURE=1 NPZ=traces/foo.npz scripts/smoke.sh  # re-visualize a saved file
 #
 # Env overrides:
 #   TARGET         smaug | hqc-custom | hqc-pqclean (기본 smaug)
@@ -34,8 +36,9 @@ SKIP_BUILD="${SKIP_BUILD:-0}"
 SKIP_FLASH="${SKIP_FLASH:-0}"
 SKIP_CAPTURE="${SKIP_CAPTURE:-0}"
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HOST_DIR="$REPO_ROOT/host"
+SCRIPTS_DIR="$REPO_ROOT/scripts"
 
 # ---- TARGET dispatch ---------------------------------------------------------
 # Each TARGET sets:
@@ -208,104 +211,14 @@ else
 fi
 
 # --------------------------------------------------------- E. validate + F. viz
+# host/analysis/ 패키지가 SSOT — scripts/plot_overview.py 만 호출한다.
+# 캡처를 건너뛴 경우(SKIP_CAPTURE=1) N/S 검증은 생략 (기존 .npz 그대로 시각화).
 hdr "[E/F] validate + visualize  ($NPZ -> $PNG)"
-NPZ="$NPZ" PNG="$PNG" EXPECTED_N="$NUM_TRACES" EXPECTED_S="$SAMPLES" \
-SKIPPED_CAPTURE="$SKIP_CAPTURE" DO_MATCH_CHECK="$DO_MATCH_CHECK" \
-TARGET="$TARGET" python3 - <<'PY'
-import os, sys
-import numpy as np
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
+plot_args=("$NPZ" --png "$PNG")
+if [[ "$SKIP_CAPTURE" != "1" ]]; then
+    plot_args+=(--expected-n "$NUM_TRACES" --expected-samples "$SAMPLES")
+fi
+[[ "$DO_MATCH_CHECK" == "1" ]] && plot_args+=(--kem-match-check)
 
-npz_path = os.environ["NPZ"]
-png_path = os.environ["PNG"]
-expected_n = int(os.environ["EXPECTED_N"])
-expected_s = int(os.environ["EXPECTED_S"])
-skipped_capture = os.environ["SKIPPED_CAPTURE"] == "1"
-do_match_check = os.environ["DO_MATCH_CHECK"] == "1"
-target_name = os.environ["TARGET"]
-
-d = np.load(npz_path, allow_pickle=True)
-traces = d["traces"]
-responses = d["responses"]
-meta = d["meta"].item()
-
-print(f"[VAL] target     : {target_name}")
-print(f"[VAL] file       : {npz_path}")
-print(f"[VAL] traces     : shape={traces.shape} dtype={traces.dtype}")
-print(f"[VAL] responses  : shape={responses.shape} dtype={responses.dtype}")
-print(f"[VAL] meta       : {meta}")
-
-errs = []
-if traces.ndim != 2:
-    errs.append(f"traces.ndim={traces.ndim} (expected 2)")
-if not skipped_capture:
-    if traces.shape[0] != expected_n:
-        errs.append(f"traces.shape[0]={traces.shape[0]} != N={expected_n}")
-    if traces.shape[1] != expected_s:
-        errs.append(f"traces.shape[1]={traces.shape[1]} != samples={expected_s}")
-if traces.dtype != np.float32:
-    errs.append(f"traces.dtype={traces.dtype} (expected float32)")
-if responses.dtype != np.uint8:
-    errs.append(f"responses.dtype={responses.dtype} (expected uint8)")
-
-n_timeouts = int(meta.get("n_timeouts", 0))
-if n_timeouts != 0:
-    errs.append(f"meta.n_timeouts={n_timeouts} (expected 0)")
-elif do_match_check:
-    # SMAUG only: 1바이트 mismatch flag → 0 이 정상. HQC 응답은 codeword 데이터라 무의미.
-    bad = int((responses != 0).sum())
-    if bad:
-        errs.append(f"mismatch != 0 인 trace {bad}개 (KEM dec 결과가 enc 와 불일치)")
-else:
-    # HQC: 응답이 codeword 페이로드. 응답 분포만 간단 요약.
-    nonzero_rows = int((responses.any(axis=1) if responses.ndim == 2 else responses != 0).sum())
-    print(f"[VAL] HQC ack    : nonzero rows = {nonzero_rows}/{responses.shape[0]} "
-          f"(round-trip 확인용; mismatch flag 검사는 SMAUG 전용)")
-
-# 트레이스 자체의 sanity: NaN/Inf, 전부 0, 분산 거의 0 등.
-finite = np.isfinite(traces).all()
-if not finite:
-    errs.append("traces 에 NaN/Inf 포함")
-elif not skipped_capture and (np.abs(traces).max() < 1e-9):
-    errs.append("traces 가 사실상 0 — 게인/트리거/HAL 클록 의심")
-
-if errs:
-    print("[VAL] 실패 원인:")
-    for e in errs:
-        print(f"       - {e}")
-    sys.exit(1)
-print("[VAL] OK — KEM 동작 + 트레이스 형식 모두 정상")
-
-# 시각화: 평균 ± 1σ + 무작위 5개 오버레이.
-mean = traces.mean(axis=0)
-std  = traces.std(axis=0)
-x = np.arange(traces.shape[1])
-rng = np.random.default_rng(0)
-sample_idx = rng.choice(traces.shape[0], size=min(5, traces.shape[0]), replace=False)
-
-fig, axes = plt.subplots(2, 1, figsize=(12, 6), sharex=True,
-                         gridspec_kw={"height_ratios": [2, 1]})
-ax1, ax2 = axes
-ax1.fill_between(x, mean - std, mean + std, color="C0", alpha=0.25, label=r"$\mu \pm \sigma$")
-ax1.plot(x, mean, color="C0", lw=0.8, label=r"$\mu$")
-for i in sample_idx:
-    ax1.plot(x, traces[i], lw=0.4, alpha=0.6, label=f"trace {i}")
-ax1.set_ylabel("ADC (norm.)")
-ax1.set_title(f"{target_name} smoke trace  N={traces.shape[0]}  S={traces.shape[1]}  "
-              f"cmd={meta.get('cmd','?')}  gain={meta.get('gain_db','?')}dB")
-ax1.legend(loc="upper right", fontsize=8, ncols=2)
-ax1.grid(alpha=0.3)
-
-ax2.plot(x, std, color="C3", lw=0.6)
-ax2.set_ylabel(r"$\sigma$")
-ax2.set_xlabel("sample")
-ax2.grid(alpha=0.3)
-
-fig.tight_layout()
-fig.savefig(png_path, dpi=120)
-print(f"[VIZ] saved {png_path}")
-PY
-
+python3 "$SCRIPTS_DIR/plot_overview.py" "${plot_args[@]}"
 ok "smoke test 통과 — $NPZ / $PNG"

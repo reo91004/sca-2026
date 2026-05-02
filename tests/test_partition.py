@@ -1,0 +1,117 @@
+"""E3a partition table 의 형식과 핵심 정합성."""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+import numpy as np
+
+_REPO = Path(__file__).resolve().parent.parent
+if str(_REPO) not in sys.path:
+    sys.path.insert(0, str(_REPO))
+
+from host.smaug import params, sk_partition  # noqa: E402
+
+
+def test_predict_mu_prime_bit_basic_smaug1() -> None:
+    p = params.SMAUG1
+    # α=0 → 모든 s 에 대해 µ′=0
+    for s in (-1, 0, 1):
+        assert sk_partition.predict_mu_prime_bit(p, 0, s) == 0
+    # α=128, s=+1 → ⌊128/128⌉=1 mod 2 → 1
+    assert sk_partition.predict_mu_prime_bit(p, 128, 1) == 1
+    # α=128, s=-1 → ⌊-128/128⌉=-1 mod 2 → 1
+    assert sk_partition.predict_mu_prime_bit(p, 128, -1) == 1
+    # α=128, s=0  → 0
+    assert sk_partition.predict_mu_prime_bit(p, 128, 0) == 0
+    # α=64, s=+1  → ⌊0.5⌉ = 1 (round-half-up) → 1 mod 2 = 1
+    assert sk_partition.predict_mu_prime_bit(p, 64, 1) == 1
+    # α=64, s=-1  → ⌊-0.5⌉ = 0 (round-half-up) → 0
+    assert sk_partition.predict_mu_prime_bit(p, 64, -1) == 0
+
+
+def test_partition_table_smaug1_shape() -> None:
+    p = params.SMAUG1
+    stats = sk_partition.build_partition_table(p)
+    # smaug1: U_p 사이즈 = 256
+    assert stats.alphas.size == 256
+    assert stats.matrix.shape == (256, 3)
+    assert tuple(int(x) for x in stats.classes) == (-1, 0, 1)
+    # 모든 항목 ∈ {0, 1}
+    assert set(stats.matrix.ravel().tolist()) <= {0, 1}
+
+
+def test_partition_table_alpha0_row_is_all_zero() -> None:
+    p = params.SMAUG1
+    stats = sk_partition.build_partition_table(p)
+    a0_idx = int(np.where(stats.alphas == 0)[0][0])
+    assert (stats.matrix[a0_idx] == 0).all(), "α=0 행이 모두 0 이어야 함"
+
+
+def test_partition_has_some_full_separation_or_signal() -> None:
+    """smaug1 에서 적어도 어떤 α 가 sign 분리를 만든다는 사실 numeric 으로 확인.
+
+    이게 통과하면 *message-only* chosen-CT 로 sign 회복 가능성이 0 이 아님.
+    실패하면 모든 α 에서 ±1 이 같은 클래스 → message-only 로는 support 만.
+    """
+    p = params.SMAUG1
+    stats = sk_partition.build_partition_table(p)
+    sign_or_full = stats.fully_separating_idx.size + stats.sign_separating_idx.size
+    assert sign_or_full > 0, (
+        "어떤 α 도 +1/-1 을 분리 못 함 — message-only sign recovery 수학적으로 불가능. "
+        "이 결과는 docs/idea.md §정합성 점검 노트 에 사실관계로 추가 필요."
+    )
+
+
+def test_partition_summary_runs() -> None:
+    p = params.SMAUG1
+    stats = sk_partition.build_partition_table(p)
+    s = stats.summary()
+    assert "fully_separating" in s
+    # 디버그 시 사람이 보고 싶은 형태 확인
+    print(s)
+
+
+def test_oracle_pairs_discoverable_smaug1() -> None:
+    """smaug1 에서 (α=64, α=192) 류의 oracle pair 가 ternary 분류를 만든다.
+
+    2 chosen-CT join 으로 단일 secret 의 -1/0/+1 완전 분류:
+       (0, 0) → s = 0
+       (1, 0) → s = +1
+       (0, 1) → s = -1
+       (1, 1) → 불가능 (모순)
+    """
+    p = params.SMAUG1
+    stats = sk_partition.build_partition_table(p)
+    pairs = sk_partition.find_oracle_pairs(stats)
+    assert len(pairs) > 0, "smaug1 에서 oracle pair 가 0 개 — partition 가설 깨짐"
+
+    # 첫 pair 의 정확성: 모든 s ∈ {-1, 0, +1} 에 대해 join 이 unique.
+    pr = pairs[0]
+    pred_for_neg = pr.predict_pair(-1)
+    pred_for_zero = pr.predict_pair(0)
+    pred_for_pos = pr.predict_pair(1)
+    assert pred_for_neg == (0, 1), pred_for_neg
+    assert pred_for_zero == (0, 0), pred_for_zero
+    assert pred_for_pos == (1, 0), pred_for_pos
+    # (1, 1) 은 어떤 s 도 만들지 않음 — 모순 응답이라는 제약.
+    seen = {pr.predict_pair(s) for s in (-1, 0, 1)}
+    assert (1, 1) not in seen
+
+
+def test_oracle_pair_count_smaug1() -> None:
+    """4 개 +1 detector × 4 개 -1 detector = 16 쌍."""
+    p = params.SMAUG1
+    stats = sk_partition.build_partition_table(p)
+    pairs = sk_partition.find_oracle_pairs(stats)
+    assert len(pairs) == 16, f"oracle pair count = {len(pairs)}, 기대 16"
+
+
+if __name__ == "__main__":
+    fns = sorted(n for n in globals() if n.startswith("test_"))
+    for n in fns:
+        print(f"[RUN] {n}")
+        globals()[n]()
+        print(f"[OK ] {n}")
+    print(f"[OK ] {len(fns)} tests")
