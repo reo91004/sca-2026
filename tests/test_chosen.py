@@ -54,6 +54,188 @@ def test_monomial_c1_alpha_must_be_in_fixed_point_set() -> None:
     assert raised, "fixed-point set 밖 alpha 가 ValueError 안 던짐"
 
 
+def test_multi_term_c1_shape_and_placement() -> None:
+    """build_multi_term_c1 가 dict 의 (m, l) 자리에 정확히 alpha 를 둔다."""
+    p = params.SMAUG1
+    coefs = {(0, 5): 64, (0, 50): 192, (1, 200): 64}
+    ct = chosen.build_multi_term_c1(p, coefs)
+    assert ct.c1.shape == (p.module_rank, p.n)
+    assert ct.c2.shape == (p.n,)
+    assert (ct.c2 == 0).all()
+    # 명시된 자리 정확
+    for (m, l), a in coefs.items():
+        assert int(ct.c1[m, l]) == a, f"c1[{m},{l}] = {ct.c1[m, l]} != {a}"
+    # 그 외 자리 0
+    expected_nonzero = set(coefs.keys())
+    for m in range(p.module_rank):
+        for l in range(p.n):
+            if (m, l) in expected_nonzero:
+                continue
+            assert int(ct.c1[m, l]) == 0
+
+
+def test_multi_term_c1_rejects_invalid_alpha() -> None:
+    p = params.SMAUG1
+    raised = False
+    try:
+        chosen.build_multi_term_c1(p, {(0, 0): 3})  # 3 ∉ U_p
+    except ValueError:
+        raised = True
+    assert raised
+
+
+def test_multi_term_c1_rejects_oor_index() -> None:
+    p = params.SMAUG1
+    for bad in [(p.module_rank, 0), (0, p.n), (-1, 0), (0, -1)]:
+        raised = False
+        try:
+            chosen.build_multi_term_c1(p, {bad: 4})
+        except (IndexError, ValueError):
+            raised = True
+        assert raised, f"bad index {bad} 통과해버림"
+
+
+def test_combined_c1_cross_component() -> None:
+    """build_combined_c1 가 coefs0 → c1[0], coefs1 → c1[1] 로 라우팅."""
+    p = params.SMAUG1
+    ct = chosen.build_combined_c1(p, {10: 64}, {50: 192})
+    assert int(ct.c1[0, 10]) == 64
+    assert int(ct.c1[1, 50]) == 192
+    # 다른 자리 모두 0
+    nonzero = np.argwhere(ct.c1 != 0)
+    assert nonzero.shape == (2, 2)
+
+
+def test_combined_c1_equivalent_to_multi_term() -> None:
+    p = params.SMAUG1
+    a = chosen.build_combined_c1(p, {10: 64}, {50: 192})
+    b = chosen.build_multi_term_c1(p, {(0, 10): 64, (1, 50): 192})
+    assert np.array_equal(a.c1, b.c1)
+    assert np.array_equal(a.c2, b.c2)
+
+
+def _random_ternary_sk(p, seed: int) -> np.ndarray:
+    """테스트용 ternary sk (HW 제약 없는 임의값)."""
+    rng = np.random.default_rng(seed)
+    return rng.choice([-1, 0, 1], size=(p.module_rank, p.n)).astype(np.int64)
+
+
+def test_predict_mu_prime_monomial_matches_partition_predict() -> None:
+    """단항 c1 = α·X^l 의 predict_mu_prime 가 partition predict_mu_prime_bit 와
+    모든 i 에서 일치 (anticyclic wrap 부호 포함)."""
+    from host.smaug import sk_partition
+
+    p = params.SMAUG1
+    sk = _random_ternary_sk(p, seed=0xCAFE)
+    alpha = 64
+    l = 33
+    ct = chosen.build_monomial_c1(p, component=0, coef_idx=l, alpha=alpha)
+    mu_pred = chosen.predict_mu_prime(p, ct.c1, sk)
+    assert mu_pred.shape == (p.n,)
+    # i 별 비교: ⟨c1, s⟩_i = α · sign_l(i) · sk[0]_((i-l) mod n)
+    for i in range(p.n):
+        sign = +1 if i >= l else -1
+        sval = int(sk[0, (i - l) % p.n])
+        eff_alpha = alpha * sign
+        bit_expected = sk_partition.predict_mu_prime_bit(p, eff_alpha, sval)
+        assert int(mu_pred[i]) == bit_expected, (
+            f"i={i} l={l} sign={sign} s={sval}: pred={mu_pred[i]} vs "
+            f"predict_bit({eff_alpha}, {sval})={bit_expected}"
+        )
+
+
+def test_predict_mu_prime_constant_c1_leaks_all_secret_positions() -> None:
+    """c1 = α (l=0 의 단항) → ⟨c1, s⟩_i = α · s[0]_i for all i (no wrap).
+
+    우리 컨벤션 발견 (2026-05-02) 의 기본 케이스 — 단일 chosen-CT 가 256 비밀
+    계수 모두를 µ′_0..255 로 동시에 leak.
+    """
+    from host.smaug import sk_partition
+
+    p = params.SMAUG1
+    sk = _random_ternary_sk(p, seed=0xBEEF)
+    alpha = 128
+    ct = chosen.build_monomial_c1(p, component=0, coef_idx=0, alpha=alpha)
+    mu_pred = chosen.predict_mu_prime(p, ct.c1, sk)
+    for i in range(p.n):
+        sval = int(sk[0, i])
+        bit_expected = sk_partition.predict_mu_prime_bit(p, alpha, sval)
+        assert int(mu_pred[i]) == bit_expected, f"i={i} s={sval}"
+
+
+def test_predict_mu_prime_2term_matches_pair_no_wrap() -> None:
+    """2-term c1 = α(X^l + X^k) 의 predict_mu_prime 가 predict_mu_prime_pair 와
+    일치 (i ≥ max(l, k) 영역 — wrap 없음, sign_a=+1, sign_b=+1)."""
+    from host.smaug import sk_partition
+
+    p = params.SMAUG1
+    sk = _random_ternary_sk(p, seed=0xDEAD)
+    alpha = 64
+    l, k = 5, 50
+    coefs = {(0, l): alpha, (0, k): alpha}
+    ct = chosen.build_multi_term_c1(p, coefs)
+    mu_pred = chosen.predict_mu_prime(p, ct.c1, sk)
+    # i ≥ max(l, k) → 둘 다 wrap 없음 → sign_a = sign_b = +1
+    for i in range(max(l, k), p.n):
+        sa = int(sk[0, (i - l) % p.n])
+        sb = int(sk[0, (i - k) % p.n])
+        bit_expected = sk_partition.predict_mu_prime_pair(
+            p, alpha, sa, sb, sign_a=+1, sign_b=+1,
+        )
+        assert int(mu_pred[i]) == bit_expected, (
+            f"i={i} l={l} k={k} s_a={sa} s_b={sb}"
+        )
+
+
+def test_predict_mu_prime_2term_anticyclic_wrap_signs() -> None:
+    """l > k > 0 인 2-term c1 = α(X^l + X^k) 의 wrap 영역 (i < k):
+    sign_a = sign_b = -1 → µ′ = pair predict with sign_a=-1, sign_b=-1.
+
+    부분 wrap 영역 (k ≤ i < l): sign_a=-1, sign_b=+1.
+    """
+    from host.smaug import sk_partition
+
+    p = params.SMAUG1
+    sk = _random_ternary_sk(p, seed=0x1234)
+    alpha = 128
+    l, k = 100, 30
+    ct = chosen.build_multi_term_c1(p, {(0, l): alpha, (0, k): alpha})
+    mu_pred = chosen.predict_mu_prime(p, ct.c1, sk)
+    for i in range(p.n):
+        sa = int(sk[0, (i - l) % p.n])
+        sb = int(sk[0, (i - k) % p.n])
+        sign_a = +1 if i >= l else -1
+        sign_b = +1 if i >= k else -1
+        bit_expected = sk_partition.predict_mu_prime_pair(
+            p, alpha, sa, sb, sign_a=sign_a, sign_b=sign_b,
+        )
+        assert int(mu_pred[i]) == bit_expected, (
+            f"i={i} l={l} k={k} sign_a={sign_a} sign_b={sign_b} "
+            f"s_a={sa} s_b={sb}: pred={mu_pred[i]} expected={bit_expected}"
+        )
+
+
+def test_predict_mu_prime_combined_cross_component() -> None:
+    """c1[0] = α·X^l, c1[1] = α·X^k → ⟨c1, s⟩_i = α(sign_l·s[0]_(i-l) + sign_k·s[1]_(i-k))."""
+    from host.smaug import sk_partition
+
+    p = params.SMAUG1
+    sk = _random_ternary_sk(p, seed=0x5678)
+    alpha = 64
+    l, k = 5, 80
+    ct = chosen.build_combined_c1(p, {l: alpha}, {k: alpha})
+    mu_pred = chosen.predict_mu_prime(p, ct.c1, sk)
+    for i in range(p.n):
+        sa = int(sk[0, (i - l) % p.n])
+        sb = int(sk[1, (i - k) % p.n])
+        sign_a = +1 if i >= l else -1
+        sign_b = +1 if i >= k else -1
+        bit_expected = sk_partition.predict_mu_prime_pair(
+            p, alpha, sa, sb, sign_a=sign_a, sign_b=sign_b,
+        )
+        assert int(mu_pred[i]) == bit_expected, f"i={i}"
+
+
 def test_chunkify_smaug1_21_chunks() -> None:
     p = params.SMAUG1
     ct = chosen.build_mu_constant(p, mu_bit=0)

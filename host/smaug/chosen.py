@@ -118,6 +118,139 @@ def build_monomial_c1(
     return Ciphertext(c1=c1, c2=c2, params=params)
 
 
+def build_multi_term_c1(
+    params: SmaugParams,
+    coefs: dict[tuple[int, int], int],
+) -> Ciphertext:
+    """c1[m, l] = α for each (m, l) → α 매핑. 나머지 0. c2 = 0.
+
+    coefs : {(component, coef_idx): alpha}. component ∈ [0, module_rank),
+    coef_idx ∈ [0, n), alpha ∈ U_p. 한 component 의 한 자리만 비어있어도
+    build_monomial_c1 과 동치.
+
+    범용 빌더 — Phase H 의 multi-term chosen-CT 에 사용.
+    """
+    fp = fixed_point_set(params.log_p, params.log_q)
+    fp_set = set(int(x) for x in fp.tolist())
+
+    c1 = np.zeros((params.module_rank, params.n), dtype=np.int64)
+    for (m, l), alpha in coefs.items():
+        if not (0 <= m < params.module_rank):
+            raise IndexError(f"component {m} ∉ [0, {params.module_rank})")
+        if not (0 <= l < params.n):
+            raise IndexError(f"coef_idx {l} ∉ [0, {params.n})")
+        if int(alpha) not in fp_set:
+            raise ValueError(
+                f"alpha={alpha} ∉ U_p (size {fp.size}, sample "
+                f"{fp[:3].tolist()}…{fp[-2:].tolist()}) at (m={m}, l={l})"
+            )
+        c1[m, l] = int(alpha)
+    c2 = np.zeros(params.n, dtype=np.int64)
+    return Ciphertext(c1=c1, c2=c2, params=params)
+
+
+def build_combined_c1(
+    params: SmaugParams,
+    coefs0: dict[int, int] | None = None,
+    coefs1: dict[int, int] | None = None,
+) -> Ciphertext:
+    """R^2 cross-component multi-term c1 — eprint25 OT-FDA-CK 영감.
+
+    coefs0 = {l: α_l}  →  c1[0] = Σ_l α_l · X^l
+    coefs1 = {k: α_k}  →  c1[1] = Σ_k α_k · X^k
+
+    예시:
+        build_combined_c1(params, {10: 64}, {50: 64})
+            → c1[0] = 64·X^10, c1[1] = 64·X^50.
+            → ⟨c1, s⟩_i = 64·(s[0]_(i-10) + s[1]_(i-50))  (sign flip on wrap)
+
+    한 chosen-CT 가 두 component 를 동시에 probe.
+    """
+    coefs0 = coefs0 or {}
+    coefs1 = coefs1 or {}
+    if params.module_rank < 2 and coefs1:
+        raise ValueError(
+            f"coefs1 non-empty but module_rank={params.module_rank} < 2"
+        )
+    coefs: dict[tuple[int, int], int] = {}
+    for l, a in coefs0.items():
+        coefs[(0, l)] = a
+    for k, a in coefs1.items():
+        coefs[(1, k)] = a
+    return build_multi_term_c1(params, coefs)
+
+
+def predict_mu_prime(
+    params: SmaugParams,
+    c1: np.ndarray,
+    sk: np.ndarray,
+    c2: np.ndarray | None = None,
+) -> np.ndarray:
+    """spec 정의로 µ′ 256 비트를 직접 계산 (보드 응답과 round-trip 검증용).
+
+    µ′_i = ⌊ (t/p)·⟨c1, s⟩_i + (t/p′)·c2_i ⌉ mod t
+
+    R = Z_q[X]/(X^n+1) 안 곱:
+        ⟨c1, s⟩(X) = Σ_m c1[m](X) · sk[m](X)  mod (X^n + 1)
+
+    coefficient i:
+        ⟨c1, s⟩_i = Σ_(m, l) c1[m, l] · sk[m]_((i-l) mod n) · sign_l(i)
+    여기서 sign_l(i) = +1 if i ≥ l else -1 (anticyclic wrap 부호).
+
+    반환: shape (n,), dtype int64, 값 ∈ [0, t).
+
+    사용:
+        sk = unpack_sx(board_X_response)  # ternary
+        c1 = build_multi_term_c1(params, {...}).c1
+        mu_predicted = predict_mu_prime(params, c1, sk)
+        # board: 'I' inject + 'Z' indcpa_dec → mu_board (32B → 256 bits)
+        # 합격: np.array_equal(mu_predicted, mu_board)
+    """
+    if c1.shape != (params.module_rank, params.n):
+        raise ValueError(f"c1.shape={c1.shape} != ({params.module_rank}, {params.n})")
+    if sk.shape != (params.module_rank, params.n):
+        raise ValueError(f"sk.shape={sk.shape} != ({params.module_rank}, {params.n})")
+
+    n = params.n
+    inner = np.zeros(n, dtype=np.int64)
+
+    for m in range(params.module_rank):
+        # 일반 다항식 곱 (Z 위) → negacyclic reduce.
+        full = np.convolve(
+            c1[m].astype(np.int64),
+            sk[m].astype(np.int64),
+        )
+        # full.shape = (2n-1,). Reduce: result[i] = full[i] - full[i+n] for i<n.
+        # full[i+n] 가 존재하는 i 범위: i < n-1.
+        head = full[:n].copy()
+        tail = np.zeros(n, dtype=np.int64)
+        tail_len = full.size - n  # = n - 1
+        if tail_len > 0:
+            tail[:tail_len] = full[n:n + tail_len]
+        inner += head - tail
+
+    # mod q 후 signed range (-q/2, q/2] 로 변환 — round 정의가 signed 대상.
+    inner_mod = inner % params.q
+    half = params.q // 2
+    inner_signed = ((inner_mod + half) % params.q) - half
+
+    if c2 is None:
+        c2 = np.zeros(n, dtype=np.int64)
+    else:
+        if c2.shape != (n,):
+            raise ValueError(f"c2.shape={c2.shape} != ({n},)")
+        c2 = np.asarray(c2, dtype=np.int64) % params.p2
+
+    # µ′_i = round_half_up( (t/p)·inner_signed + (t/p′)·c2 ) mod t
+    #      = floor( (numerator) / (2·p·p′) ) mod t
+    # numerator = 2·t·(p′·inner + p·c2) + p·p′
+    t, p, p2 = params.t, params.p, params.p2
+    numerator = 2 * t * (inner_signed * p2 + c2 * p) + p * p2
+    denom = 2 * p * p2
+    rounded = numerator // denom
+    return (rounded % t).astype(np.int64)
+
+
 def chunkify(ct_bytes: bytes, chunk_size: int = 32) -> list[tuple[int, bytes]]:
     """보드 'I' 명령을 위해 ct 를 (idx, chunk) 리스트로 자른다.
 

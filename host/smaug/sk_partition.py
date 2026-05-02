@@ -188,6 +188,87 @@ class OraclePair:
         return (self.pos_row[col], self.neg_row[col])
 
 
+def predict_mu_prime_pair(
+    params: SmaugParams,
+    alpha: int,
+    s_a: int,
+    s_b: int,
+    *,
+    sign_a: int = +1,
+    sign_b: int = +1,
+) -> int:
+    """Phase H — 2-term c1 = α·(sign_a·X^l + sign_b·X^k) 일 때 µ′_i ∈ {0, 1}.
+
+    s_a = sk[m]_((i-l) mod n), s_b = sk[m']_((i-k) mod n) 의 effective ternary
+    값. sign_a/b 는 anticyclic wrap 의 부호 (l 또는 k 가 i 보다 크면 -1).
+    같은 component 두 항이든 다른 component 든 같은 식으로 동작 (host 가
+    어떤 (m, m') 에서 가져왔는지에 따라 호출 측이 결정).
+
+    µ′_i = round_half_up( (t/p) · α · (sign_a·s_a + sign_b·s_b) ) mod t
+    """
+    if s_a not in (-1, 0, 1) or s_b not in (-1, 0, 1):
+        raise ValueError(f"s_a, s_b must be -1/0/+1, got ({s_a}, {s_b})")
+    if sign_a not in (-1, +1) or sign_b not in (-1, +1):
+        raise ValueError(f"sign_a, sign_b must be ±1, got ({sign_a}, {sign_b})")
+    t, p = params.t, params.p
+    raw = int(alpha) * (sign_a * s_a + sign_b * s_b)
+    num = 2 * t * raw + p
+    den = 2 * p
+    return int((num // den) % t)
+
+
+def build_partition_table_2term(
+    params: SmaugParams,
+    *,
+    sign_a: int = +1,
+    sign_b: int = +1,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Phase H — 2-term partition table.
+
+    각 α ∈ U_p 에 대해 9 outcomes (s_a × s_b ∈ {-1, 0, +1}^2) 의 µ′ bit.
+
+    Returns:
+        alphas (M,): U_p (smaug1: 256 개)
+        matrix (M, 9): row 순서 = lexicographic on (s_a, s_b):
+            col 0 = (-1, -1), 1 = (-1, 0), 2 = (-1, +1),
+            col 3 = ( 0, -1), 4 = ( 0, 0), 5 = ( 0, +1),
+            col 6 = (+1, -1), 7 = (+1, 0), 8 = (+1, +1)
+        값 ∈ {0, 1}.
+    """
+    Up = fixed_point_set(params.log_p, params.log_q)
+    alphas = Up.copy()
+    pairs = [(sa, sb) for sa in (-1, 0, 1) for sb in (-1, 0, 1)]
+    matrix = np.zeros((alphas.size, len(pairs)), dtype=np.int8)
+    for ai, a in enumerate(alphas.tolist()):
+        for ci, (sa, sb) in enumerate(pairs):
+            matrix[ai, ci] = predict_mu_prime_pair(
+                params, int(a), int(sa), int(sb),
+                sign_a=sign_a, sign_b=sign_b,
+            )
+    return alphas, matrix
+
+
+def classify_2term_alphas(matrix: np.ndarray) -> dict[str, np.ndarray]:
+    """2-term matrix 의 행을 *binary outcome split* 카테고리로 분류.
+
+    matrix shape = (M, 9), 값 ∈ {0, 1}. n_ones[ai] = matrix[ai].sum() ∈ [0, 9].
+
+    카테고리:
+      "split_k_of_9" — 9 outcomes 중 k 개가 µ′=1 (나머지 9-k 가 0).
+
+    high-entropy split (4_of_9 또는 5_of_9) 가 정보 함량 가장 큼. 1_of_9 또는
+    8_of_9 는 specific (s_a, s_b) detector — query 효율적으로 사용 가능.
+    0_of_9, 9_of_9 는 trivial (모든 (s_a, s_b) 가 같은 µ′ — α 자체가 정보 없음).
+    """
+    if matrix.ndim != 2 or matrix.shape[1] != 9:
+        raise ValueError(f"expected (M, 9) shape, got {matrix.shape}")
+    n_ones = matrix.sum(axis=1)
+    cats: dict[str, np.ndarray] = {}
+    for k in range(10):
+        cats[f"split_{k}_of_9"] = np.where(n_ones == k)[0].astype(np.int64)
+    return cats
+
+
 def find_oracle_pairs(stats: PartitionStats) -> list[OraclePair]:
     """ternary 분류용 (α_pos, α_neg) 쌍을 모두 찾는다.
 

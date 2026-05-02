@@ -7,6 +7,9 @@
 오프라인 호스트에서도 그대로 동작한다 (캡처는 host.capture, 분석은 여기).
 """
 
-from . import e3c, group, io, labelmix, tvla, validate, viz  # noqa: F401
+from . import e3c, group, io, labelmix, sparse_recover, tvla, validate, viz  # noqa: F401
 
-__all__ = ["e3c", "group", "io", "labelmix", "tvla", "validate", "viz"]
+__all__ = [
+    "e3c", "group", "io", "labelmix", "sparse_recover",
+    "tvla", "validate", "viz",
+]
