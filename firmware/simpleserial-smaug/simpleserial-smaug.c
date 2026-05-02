@@ -73,6 +73,33 @@ extern void indcpa_dec_namespaced(uint8_t delta[32],
 // `T sha3_256` 으로 잡힘.
 extern void sha3_256(uint8_t *output, const uint8_t *input, size_t inputByteLen);
 
+// Phase F — isolated poly_mul_acc (Toom-Cook 4-way + Karatsuba) + sub-trigger.
+// 'T' 명령에서 host 가 sparse host_b 다항식 (한 위치만 nonzero) 을 보내고
+// firmware 가 trigger 감싸 poly_mul_acc(sk[0], host_b, out) 호출. 256-coef
+// poly mul 한 번만 isolated 하게 캡처 → HW template 학습용.
+//
+// poly_mul_acc signature (toomcook.h):
+//   void poly_mul_acc(const int16_t a[256], const int16_t b[256], int16_t res[256]);
+// res 는 *accumulate* (out += a*b mod (X^n+1)) 라 init=0 필요.
+//
+// sk PKE 부분은 packed 형태 (Sx_to_bytes 로 4 ternary coef/byte). 우리가 직접
+// poly_mul_acc 호출하려면 unpacked int16_t 형태로 변환해야 한다 — bytes_to_Sx
+// 가 archive 안에 export 됨.
+//
+//   void bytes_to_Sx(poly *data, const uint8_t *bytes);
+//   typedef struct { int16_t coeffs[256]; } poly;
+//
+// SMAUG_NAMESPACE 매크로로 smaug1 prefix 자동 적용.
+
+#define poly_mul_acc_namespaced  SMAUG_NAMESPACE(poly_mul_acc)
+extern void poly_mul_acc_namespaced(const int16_t a[256],
+                                    const int16_t b[256],
+                                    int16_t res[256]);
+
+#define bytes_to_Sx_namespaced   SMAUG_NAMESPACE(bytes_to_Sx)
+typedef struct { int16_t coeffs[256]; } poly_t_local;
+extern void bytes_to_Sx_namespaced(poly_t_local *data, const uint8_t *bytes);
+
 // ---- 정적 버퍼 -------------------------------------------------------------
 // pk/sk/ct 는 보드에 상주. host 는 SimpleSerial 64 B/프레임 한도 때문에
 // 전체를 받아오지 않고, 명령마다 16 B 지문/응답만 받는다.
@@ -297,6 +324,75 @@ static uint8_t cmd_dump_sk_chunk(uint8_t *buf, uint8_t len)
     return 0x00;
 }
 
+// 'T' : isolated poly_mul_acc(sk_unpacked[0], host_b, out) + sub-trigger.
+//
+//   payload = 5B :
+//      buf[0]    = component (0 또는 1) — sk 의 어느 polynomial 사용
+//      buf[1..2] = idx   (big-endian uint16, 0..255) — host_b sparse 자리
+//      buf[3..4] = alpha (big-endian uint16, signed int16 코딩) — host_b[idx] 값
+//
+//   응답: 32B = out 의 첫 32 byte (= int16_t out[0..15] little-endian).
+//
+//   동작:
+//      1. sk_pke_unpacked[0..MODULE_RANK] = bytes_to_Sx(sk_pke[component])
+//      2. host_b 모두 0, host_b[idx] = (int16_t)alpha
+//      3. out 모두 0
+//      4. trigger_high → poly_mul_acc(sk_pke_unpacked[component], host_b, out) → trigger_low
+//
+//   chosen-CT attack 의 sparse c1 와 같은 input pattern → HW template 학습용.
+//
+//   'T' 가 동작하려면 'F' (영속 keypair) 를 먼저 호출해 sk 가 채워져 있어야 한다.
+//   호출 시점 sk_pke_unpacked 를 매번 다시 unpack 해서 stale state 방지.
+#define POLYMUL_PAYLOAD_LEN 5u
+
+static int16_t  t_host_b[256];
+static int16_t  t_out[256];
+static poly_t_local t_sk_unpacked[MODULE_RANK];
+
+static uint8_t cmd_isolated_poly_mul(uint8_t *buf, uint8_t len)
+{
+    if (len != POLYMUL_PAYLOAD_LEN) {
+        uint8_t status = 2;
+        simpleserial_put('r', 1, &status);
+        return 0x00;
+    }
+    uint8_t component = buf[0];
+    uint16_t idx = ((uint16_t)buf[1] << 8) | (uint16_t)buf[2];
+    uint16_t alpha_u = ((uint16_t)buf[3] << 8) | (uint16_t)buf[4];
+
+    if (component >= MODULE_RANK) {
+        uint8_t status = 1;
+        simpleserial_put('r', 1, &status);
+        return 0x00;
+    }
+    if (idx >= 256u) {
+        uint8_t status = 3;
+        simpleserial_put('r', 1, &status);
+        return 0x00;
+    }
+
+    /* sk PKE 영역 unpack — sk[0..PKE_SECRETKEY_BYTES) 가 Sx packed.
+       SKPOLY_BYTES = 256 / 4 = 64. component 별 64B chunk. */
+    for (unsigned m = 0; m < MODULE_RANK; m++) {
+        bytes_to_Sx_namespaced(&t_sk_unpacked[m], &sk[m * 64u]);
+    }
+
+    /* host_b 다항식 = 0, sparse 자리만 alpha (signed int16) */
+    memset(t_host_b, 0, sizeof(t_host_b));
+    t_host_b[idx] = (int16_t)alpha_u;
+
+    /* poly_mul_acc 가 res 에 *accumulate* 라 init=0 필수 */
+    memset(t_out, 0, sizeof(t_out));
+
+    trigger_high();
+    poly_mul_acc_namespaced(t_sk_unpacked[component].coeffs, t_host_b, t_out);
+    trigger_low();
+
+    /* 응답 = out 의 첫 32 byte (little-endian int16 16개) */
+    simpleserial_put('r', 32, (uint8_t *)t_out);
+    return 0x00;
+}
+
 int main(void)
 {
     platform_init();
@@ -317,6 +413,11 @@ int main(void)
     simpleserial_addcmd('D', 0,                   cmd_decap_inject);
     simpleserial_addcmd('Z', 0,                   cmd_indcpa_dec_inject);
     simpleserial_addcmd('X', DUMPSK_PAYLOAD_LEN,  cmd_dump_sk_chunk);
+    // (C) Phase F — isolated poly_mul_acc 시도. 응답 byte 가 SMAUG-T archive 의
+    //     internal storage form (q-modular?) 로 와서 host round-trip 매칭 어려움.
+    //     일단 명령 등록은 유지 (수정 시 빌드 영향 없음), F3 부터는 'Z' 의
+    //     전체 indcpa_dec trace 의 *영역 windowing* 으로 진행.
+    simpleserial_addcmd('T', POLYMUL_PAYLOAD_LEN, cmd_isolated_poly_mul);
 
     while (1) {
         simpleserial_get();
