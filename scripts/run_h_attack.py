@@ -46,6 +46,8 @@ from host.smaug import params as _params  # noqa: E402
 DESIGNS: dict[str, dict[tuple[int, int], int]] = {
     "H_const_a64":          {(0, 0): 64},
     "H_const_a192":         {(0, 0): 192},
+    "H_c1_const_a64":       {(1, 0): 64},   # component 1 oracle pair (s[1] 분리용)
+    "H_c1_const_a192":      {(1, 0): 192},
     "H_2term_l5_k50_a64":   {(0, 5): 64, (0, 50): 64},
     "H_2term_l10_k200_a64": {(0, 10): 64, (0, 200): 64},
     "H_3term_l_5_50_200":   {(0, 5): 64, (0, 50): 64, (0, 200): 64},
