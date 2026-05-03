@@ -1,33 +1,78 @@
 %% SMAUG-T smaug1 chosen-CT SCA — 한글 paper draft
-%% main2_v1.tex 양식 차용 + kotex 추가
-\documentclass{article}
+%% main2_v1.tex 양식 + example.tex 의 한글 LaTeX 패키지 구성 차용.
+%%
+%% Compile (한글 출력 위해 XeLaTeX 또는 LuaLaTeX 필수):
+%%   xelatex main.tex
+%%   bibtex main
+%%   xelatex main.tex
+%%   xelatex main.tex
+%%
+%% pdflatex 는 한글 폰트 매핑 (kotex + nanum) 가 깨지므로 사용 X.
+\documentclass[11pt]{article}
 
-\usepackage{neurips_2024}            % NeurIPS style
-\usepackage[utf8]{inputenc}
-\usepackage{kotex}                   % 한글 본문 처리 (XeLaTeX 도 호환)
-\usepackage[T1]{fontenc}
-\usepackage{microtype}
-\usepackage{graphicx}
-\usepackage{subcaption}
-\usepackage{booktabs}
-\usepackage{hyperref}
+% 한글 (kotex; xelatex 또는 lualatex 로 컴파일)
+\usepackage{kotex}
+
+% 수식
 \usepackage{amsmath}
 \usepackage{amssymb}
-\usepackage{mathtools}
 \usepackage{amsthm}
-\usepackage[capitalize,noabbrev]{cleveref}
-\usepackage{xspace}
+\usepackage{mathtools}
+
+% 표
+\usepackage{booktabs}
 \usepackage{multirow}
-\usepackage{float}
+\usepackage{array}
+
+% 그림 / 색상 / 캡션
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}             % [H] specifier
+\usepackage[section]{placeins} % \FloatBarrier
+
+% 페이지 / 여백 (NeurIPS 양식 제거했으므로 명시)
+\usepackage[margin=1in]{geometry}
+
+% 코드 블록 (verbatim 외)
+\usepackage{listings}
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  showstringspaces=false,
+}
+
+% 알고리즘
 \usepackage{algorithm}
 \usepackage{algpseudocode}
-\usepackage{enumitem}
-\usepackage{placeins}
 
+% 인용 (natbib + author-year style; \citep 등 활성화)
+\usepackage[round,authoryear]{natbib}
+
+% 항목
+\usepackage{enumitem}
+\usepackage{xspace}
+
+% 하이퍼링크 (마지막에 로드 권장)
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!50!black,
+  citecolor=blue!50!black,
+  urlcolor=blue!50!black,
+}
+\usepackage[capitalize,noabbrev]{cleveref}
+
+% Float 배치 완화
 \renewcommand{\topfraction}{0.9}
 \renewcommand{\bottomfraction}{0.8}
 \renewcommand{\textfraction}{0.1}
 \renewcommand{\floatpagefraction}{0.7}
+\setcounter{topnumber}{3}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{5}
 
 %% Theorem 환경
 \theoremstyle{plain}
