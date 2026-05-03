@@ -1,21 +1,31 @@
 #!/usr/bin/env python3
-"""profile + attack 트레이스로 full sk 복구 + ground truth 정확도 계산.
+"""[STEP 4a] Profile-PoI baseline 분류 (NEGATIVE result, ~56% chance level).
+
+Paper Section 5.1 (profile-PoI cross-domain transfer fail). 표준 PQC SCA
+pipeline 의 *first attempt* 분석 — random-µ profile (Step 3) 위 학습 PoI 를
+chosen-CT attack data 에 transfer.
 
 흐름:
-  1) Profile (random µ × N) → per-bit Welch t-test → per-i PoI map.
-  2) Attack (4 chosen-CT, c1=α 상수, α=64/192 × component=0/1) → per-CT mean trace.
-  3) 각 i ∈ [0, n) 에 대해:
-       d_i = (mean_α=64 - mean_α=192) at PoI_i × sign_per_i
-       d_i > +threshold → s_i = +1
-       d_i < -threshold → s_i = -1
-       |d_i| < threshold → s_i = 0
-  4) X dump 의 ground truth 와 비교.
+  1) Profile (random µ × N) → per-bit Welch t-test → per-i PoI[i] + sign[i]
+  2) Attack (4 chosen-CT, c1=α 상수, α=64/192 × component=0/1) → mean trace
+  3) 각 i: d_i = sign[i] * (mean_α=64 - mean_α=192) at PoI[i]
+     threshold (1σ) 으로 ternary 분류
+  4) 'X' dump ground truth 와 비교
 
-용법:
-    scripts/analyze_attack.py \\
+핵심 발견 (negative):
+    - bit_acc 56% — *zero-baseline 73% 미달*. 즉 chance level 도 안 됨.
+    - profile 학습 sign 이 chosen-CT 에 sign 반전 (corr -0.086).
+    - paper 의 *direct attack PoI* (Section 5) 가 이걸 우회 (corr +0.99).
+
+Note (history/):
+    super-seded by `scripts/attack_direct_poi.py` (single-seed) +
+    `scripts/analyze_multi_seed.py` (multi-seed). 이 코드는 negative finding
+    *원천 evidence*.
+
+용법 (legacy):
+    history/scripts/analyze_step4a_profile_PoI_NEGATIVE.py \\
         --profile traces/profile_random_mu_n1000.npz \\
-        --attack traces/attack_const_c1.npz \\
-        [--png results/attack_full_sk.png]
+        --attack traces/attack_const_c1.npz
 """
 
 from __future__ import annotations

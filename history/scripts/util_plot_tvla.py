@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
-"""Welch-t TVLA 분석: 두 .npz (또는 한 .npz + 응답분기) → PNG.
+"""[UTIL] Welch-t TVLA 2-class plot dev tool.
 
-사용 모드:
+Paper Section 8.1 (SNR phase transition) 의 |t| 곡선 시각화 dev tool. 두
+.npz (또는 한 .npz + 응답분기) 의 클래스간 Welch-t 결과 PNG.
 
-  (a) 두 캡처 비교 (fixed-vs-fixed 또는 fixed-vs-random):
-      scripts/plot_tvla.py traces/A.npz traces/B.npz \\
-          --png results/E2_tvla_A_vs_B.png
+Note (history/):
+    분석 라이브러리는 host/analysis/tvla.py (main flow). 이 plot 은 dev
+    visualization. paper figure 생성 시 별도 작성.
 
-  (b) 단일 캡처를 응답 바이트로 분기 (예: SMAUG mismatch flag):
+사용 모드 (legacy):
+  (a) 두 캡처 비교: scripts/util_plot_tvla.py A.npz B.npz --png out.png
+  (b) 단일 캡처 + 응답 분기:
       scripts/plot_tvla.py traces/X.npz --split-response-byte 0 \\
           --split-value 0 --png results/E2_tvla_X.png
 

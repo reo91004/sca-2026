@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
-"""'Z' (indcpa_dec only) 와 'X' (sk dump) 명령 검증 + throughput.
+"""[UTIL] Firmware 'Z' / 'X' 명령 검증 dev tool.
+
+Phase W2.5 에서 'Z' (indcpa_dec + 32B µ′ 응답) 와 'X' (sk PKE dump)
+firmware 명령 추가 후 *동작 검증* 도구. host 의 unpack_sx 가 ternary HS=70
+balanced 분포 매칭하는지 확인.
 
 흐름:
-  1) F (keygen) → pk_fp16 출력
-  2) X 4번 호출 → sk PKE 영역 (128B) 받아 ternary 디코드 (예상: HS=70, balanced)
-  3) M (μ=zero) → ct_inj 채움
-  4) D 50 회 → throughput (full crypto_kem_dec)
-  5) Z 50 회 → throughput (indcpa_dec only) + µ' 비트 검증
-  6) D vs Z throughput ratio 출력
+  1) F → pk_fp16
+  2) X×4 → sk PKE (128B), unpack_sx → ternary 분포 출력
+  3) M(μ=zero) → ct_inj
+  4) D × 50 → throughput
+  5) Z × 50 → throughput + µ′ ground truth 검증
+
+Note (history/):
+    paper main attack 과 무관. dev-time firmware verification.
 """
 
 from __future__ import annotations

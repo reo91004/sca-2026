@@ -1,18 +1,19 @@
-"""E3c (oracle pair) 트레이스 → ternary 비밀 계수 추정.
+"""[UTIL] E3c (oracle pair pilot) trace → ternary 분류 helper.
 
-run_e3c.py 가 저장한 .npz 의 형식:
-    traces[i]                — (samples,) float32
-    responses[i, 0]          — 'D' mismatch flag
-    meta.label_alpha[i]      — chosen-CT 의 α (= alpha_pos 또는 alpha_neg)
-    meta.label_k[i]          — c1 component (0 또는 1)
-    meta.label_j[i]          — 단항 X^j 의 j
+Step 2 (`history/scripts/capture_step2_convention_pilot.py`) 의 trace 분석.
+원래 컨벤션 발견 *전* 의 single-PoI threshold 분류 도구 — 각 (k, j) 위치 에서
+alpha_pos/alpha_neg 두 그룹 평균 → PoI 위 amplitude 임계로 µ′ 추정 → 두 응답
+join 으로 ternary 결정.
 
-분석 절차:
-  1) trace 를 (alpha, k, j) 로 그룹핑.
-  2) 같은 (k, j) 위에서 alpha_pos / alpha_neg 두 그룹의 trace 평균.
-  3) 각 그룹에서 PoI (외부 입력 또는 휴리스틱) 의 평균 amplitude →
-     이진 결정 (µ′ = 0 or 1).
-  4) (µ_pos, µ_neg) join 으로 ternary {-1, 0, +1} 결정.
+Note (history/):
+    컨벤션 정정 후 무용 (모든 j 가 같은 답이라 sweep 자체가 redundancy).
+    Super-seded by `host/analysis/sparse_recover.py` (HW=70 MAP, paper main
+    flow) + `scripts/attack_direct_poi.py` (cross-design Welch-t).
+
+기존 .npz 형식 (legacy):
+    traces[i] (samples,) — float32
+    meta.label_alpha[i], label_k[i], label_j[i] — chosen-CT 라벨
+"""
 
 PoI 가 외부에서 안 주어진 경우 (이 모듈의 default) 휴리스틱:
     각 (k, j) 의 alpha_pos vs alpha_neg 트레이스의 sample-wise 차분

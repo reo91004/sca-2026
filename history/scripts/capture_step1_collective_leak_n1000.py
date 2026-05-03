@@ -1,12 +1,29 @@
 #!/usr/bin/env python3
-"""E3b 캡처: 같은 sk 위에 μ=zero / μ=one PKE-labeled ct 두 클래스 트레이스.
+"""[STEP 1] Collective µ flip leakage 첫 측정 (TVLA, N=1000).
 
-핵심: 'F' (keygen 한 번) → 'M(μ_zero)' → capture N trace → 'M(μ_one)'
-→ capture N trace → 두 .npz 저장. 같은 sk 라 두 클래스 차분이 *순수
-message-leakage* (+ measurement noise) 만 남는다.
+Paper Section 8.1 (SNR phase transition) 에서 인용된 첫 evidence — "SMAUG-T
+trace 에 SCA-readable 신호 가 존재" 라는 사실의 시드 측정.
 
-용법:
-    scripts/run_e3b.py -n 1000 [--gain 25] [--samples 24400]
+목적:
+    같은 sk 위 *알려진 µ pattern* (μ=all-zero vs μ=all-one) 의 PKE-labeled
+    ciphertext 를 'M' 명령으로 만들고, 'D' (full crypto_kem_dec) 로 N=1000
+    trace 두 클래스 캡처. 클래스간 mean diff TVLA → max|t|=8.99, leaky 221
+    points. 같은 sk 라 차분이 *순수 message-leakage* (+ noise) 만 남음.
+
+핵심 발견:
+    - SMAUG-T smaug1 trace 에 µ flip 의 collective leakage 가 분명히 존재
+    - 다만 *single-bit µ′_i flip* 분리는 noise floor 미달 (E3p 단계 확인)
+      → paper 의 *direct attack PoI* 가 이 한계 우회
+
+Note (history/):
+    paper main attack (8 traces, 100% recovery) 은 이 데이터 안 씀. 결과 만
+    paper 에 인용 (max|t|=8.99 수치). 발견 과정 evidence 로 보존.
+
+용법 (legacy):
+    history/scripts/capture_step1_collective_leak_n1000.py -n 1000
+
+산출물 (legacy):
+    traces/E3b_zero.npz, traces/E3b_one.npz
 """
 
 from __future__ import annotations

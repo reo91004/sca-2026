@@ -1,14 +1,17 @@
-"""여러 .npz 를 외부 라벨로 한 컨테이너에 합치고 그룹별로 split.
+"""[UTIL] 여러 .npz 를 외부 라벨로 합치는 labelmix helper.
 
-E3b 는 두 클래스 (μ=zero, μ=one) 를 각자 .npz 로 저장 — 단순 비교는
-이미 plot_tvla.py 가 받는다. labelmix 는 *세 개 이상의 sweep* 또는
-*외부 라벨 (예측 µ′ 계급, oracle 응답 등)* 로 클래스를 합칠 때 쓴다.
+Step 1 (`history/scripts/capture_step1_collective_leak_n1000.py`) 와 같은
+multi-class sweep (μ=zero/one/55/AA 등) 의 trace 합치기 + 그룹별 split.
 
-핵심 함수:
-    LabelMix.from_npz_files(items)   여러 .npz + 라벨 → 한 객체
-    .traces(label)                   특정 라벨의 트레이스 행렬
-    .group_pair(label_a, label_b)    plot_tvla 가 받을 (a, b) 튜플
-    .summary()                       라벨별 N, samples
+Note (history/):
+    paper main flow 와 무관. main flow 는 `host/analysis/group.py` 의 단순한
+    응답 byte 분기로 충분. labelmix 는 dev tool.
+
+API (legacy):
+    LabelMix.from_npz_files(items) — 여러 .npz + 라벨 → 컨테이너
+    .traces(label) — 특정 라벨의 trace 행렬
+    .group_pair(a, b) — TVLA 입력 (traces_a, traces_b) 튜플
+    .summary() — 라벨별 N / samples
 """
 
 from __future__ import annotations

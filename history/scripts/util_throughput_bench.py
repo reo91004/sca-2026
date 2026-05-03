@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
-"""ADC 윈도우 크기별 throughput 비교.
+"""[UTIL] Z 명령 throughput 측정 (paper Setup section 의 2.5 tr/s 출처).
 
-같은 보드 상태 (이전 'F'/'M' 결과 영속) 위에서 'D' n 회를 두 윈도우 설정으로
-캡처. tr/s 와 추정 full-sweep 시간 출력.
+Paper Setup section 의 throughput 수치 (Z 2.65 tr/s, D 0.77 tr/s) 의 측정
+도구. 같은 보드 상태 위 D/Z n 회 캡처 → tr/s 측정.
+
+Note (history/):
+    paper 의 main attack 자체와 무관 (수치만 인용). dev-time benchmark.
 """
 
 from __future__ import annotations

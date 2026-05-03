@@ -1,16 +1,31 @@
 #!/usr/bin/env python3
-"""Chosen-CT attack 캡처: c1 = α 상수 4 trace family 로 full sk 복구.
+"""[MAIN] Chosen-CT attack 캡처 — paper main result reproducer.
 
-새 attack 설계 (2026-05-02 컨벤션 발견):
-  c1 = α (j=0 의 상수 chosen-CT) 일 때 ⟨c1, s⟩_i = α·s_i 가 모든 i 에 성립.
-  → µ′_i = predict_mu_prime_bit(α, s_i) 가 256 비밀 계수를 한 번에 leak.
-  → 4 chosen-CTs (s[0]+s[1] × α=64/192) 면 full PKE sk.
+Paper Section 4 (Method overview), Section 7 (N curve). 4 chosen-CT × N trace
+캡처 — paper main attack 의 *데이터 캡처* 부분.
 
-분석은 별도 (`scripts/analyze_attack.py`) — profile-learned per-i PoI 적용 후
-ground truth (X dump) 와 비교.
+Chosen-CT 디자인 (Paper Section 3 컨벤션 정정 결과):
+  c1 = α (j=0 의 상수 다항식) → ⟨c1, s⟩_i = α·s_i 가 모든 i 에 성립
+  → µ′_i = round_t(α·s_i) 가 256 비밀 계수를 한 번에 leak.
 
-용법:
-    scripts/run_attack.py -n 64
+4 chosen-CT (oracle pair × 2 component):
+  s[0]: c1[0]=α=64 (+det), c1[0]=α=192 (-det)
+  s[1]: c1[1]=α=64,        c1[1]=α=192
+
+호출 흐름 (per call):
+  F (영속 keygen) → X×4 (sk PKE ground truth dump, attack 자체엔 불필요지만
+  검증용) → 4 chosen-CT × N trace (각각 'I'×21 inject + 'L' fingerprint +
+  'Z'×N indcpa_dec capture).
+
+용법 (paper main):
+    scripts/run_attack.py -n 2     # 8 traces, 3.2 sec — paper main result
+    scripts/run_attack.py -n 128   # multi-seed evaluation 용 (5 seeds × N=128)
+
+산출물:
+    traces/attack_const_c1.npz (default, 또는 --out 으로 지정)
+
+다음 단계: scripts/attack_direct_poi.py (single-seed) 또는
+          scripts/analyze_multi_seed.py (multi-seed paper main analyzer).
 """
 
 from __future__ import annotations

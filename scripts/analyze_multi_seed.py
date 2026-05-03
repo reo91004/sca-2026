@@ -1,17 +1,36 @@
 #!/usr/bin/env python3
-"""Multi-seed evaluation — Direct attack PoI + sparse_recover 위 5+ seeds 통계.
+"""[MAIN ★] Multi-seed evaluation — paper main result generator.
 
-각 attack_seed*.npz (run_attack.py 매 호출마다 새 keypair 'F') 분석:
-  - direct attack PoI (cross-design Welch-t)
-  - oracle pair attack per component
-  - sparse_recover (HW=70 MAP)
-  - accuracy metrics (bit/support/sign per component)
-  → mean ± std / min / max table.
+Paper Section 7 (Minimum trace cost) + Section 8.4 (9-seed evaluation).
+**paper 의 핵심 표 산출** — 5+ seeds × N regimes 의 mean/std/min/max table.
 
-용법:
-    scripts/analyze_multi_seed.py traces/attack_seed*.npz \\
-        [--out-prefix results/multi_seed]
-    # glob 안 되면 explicit 경로 나열.
+Method (paper Section 6 — component-specific PoI):
+  각 attack_seed*.npz 별:
+    1. *Component-specific* direct PoI 학습 (default, paper main):
+       s[c] 학습 시 component=c oracle pair (label_comp==c) 만 사용 →
+       다른 component 의 trace 영향 제거 → cleaner Welch-t.
+       (component_specific=False 옵션이 cross-component baseline)
+    2. Oracle pair attack per component (α=64 vs α=192)
+    3. sparse_recover.greedy(hs=70) — HW=70 MAP recovery
+    4. accuracy(bit, support, sign) per component + full sk
+
+핵심 결과 (paper main, 9 seeds 종합):
+  full_sk_acc: mean=100%, std=0% (zero variance across 9 keypairs × 3 N regimes)
+  s[0] / s[1] sparse bit + sign: 100% / 100%
+  valid_bits: 120 ± 2.5 (= 2 × HW=70 - overlap)
+
+비교 (paper Table):
+  Cross-component PoI: mean 95.6% ± 5.6%, min 87.1%
+  Component-specific PoI (paper main): mean 100% ± 0%
+
+용법 (paper reproducer):
+    # 1. 각 seed 캡처: scripts/run_attack.py -n 128 --out traces/attack_seed${s}.npz
+    # 2. 분석:
+    scripts/analyze_multi_seed.py traces/attack_seed{1..5}.npz \\
+        --out-prefix results/multi_seed_n128
+
+산출물:
+    results/<prefix>_summary.txt — per-seed + aggregate mean/std/min/max
 """
 
 from __future__ import annotations

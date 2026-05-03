@@ -1,14 +1,32 @@
 #!/usr/bin/env python3
-"""µ' per-i PoI 프로파일링 캡처.
+"""[STEP 3] random-µ profile 캡처 — cross-domain transfer 시도 (NEGATIVE).
 
-같은 sk 위에서 random 32-byte µ 를 N 번 생성 → M (indcpa_enc with random µ) →
-Z (indcpa_dec → µ' = µ trace + 32B 응답).
+Paper Section 5.1 (profile-PoI cross-domain transfer fail). 표준 PQC SCA
+pipeline 의 *first attempt* — random µ × N=200/1000 trace 로 profile-PoI 학습
+→ chosen-CT attack 에 transfer. **결국 sign 반전 + 56% 정확도** (zero-baseline
+73% 미달) 로 fail. paper 의 *direct attack PoI* (Section 5) method 가 이걸
+우회 (chosen-CT data 자체에서 PoI 학습).
 
-Z 응답이 µ' = µ (1-δ correctness) 이므로 각 trace 의 256 µ'_i 비트 ground truth
-가 즉시 확보됨 → 각 i 별 PoI 를 Welch t-test 로 식별.
+목적:
+    같은 sk 위 random 32-byte µ × N → M (indcpa_enc, seed=zero fixed) → Z
+    (indcpa_dec). Z 응답이 µ′ = µ (1-δ correctness) 라 각 trace 의 256 µ′_i
+    ground truth 즉시 확보 → 각 i 별 Welch t PoI 학습.
 
-용법:
-    scripts/run_profile.py -n 200
+핵심 발견 (negative):
+    - per-bit |t|: N=200 → 1000 (5×) 했는데 4.97 → 5.19 (변화 적음)
+    - √N 스케일링 안 따라감 → noise peak 만 봄 (signal 미달)
+    - profile 학습 PoI 가 chosen-CT attack 에 sign 반전 (corr -0.086)
+    - Direct attack PoI (paper Section 5) 가 이걸 회피 (corr +0.99 ~ +1.00)
+
+Note (history/):
+    paper main result 는 random-µ profile 안 씀. 이 캡처는 *negative finding
+    evidence*. 결과만 paper Section 5.1 에 인용.
+
+용법 (legacy):
+    history/scripts/capture_step3_random_mu_profile.py -n 1000
+
+산출물 (legacy):
+    traces/profile_random_mu_n1000.npz (30 MB, 1000 trace)
 """
 
 from __future__ import annotations

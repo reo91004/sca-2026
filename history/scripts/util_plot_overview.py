@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""캡처 .npz 한 개를 받아 overview PNG 생성 + sanity validation.
+"""[UTIL] .npz 단일 캡처 overview plot (mean ± σ + random subset overlay).
 
-scripts/smoke.sh 의 [E/F] 단계를 모듈로 분리한 thin wrapper. 단독 실행도
-가능 (재시각화, 새 캡처 산출물 검증).
+dev-time visualization. 캡처 sanity check 용. paper figure 별도 작성.
 
-사용법:
-    scripts/plot_overview.py traces/smoke_smaug1.npz \\
-        --png results/E1_overview_smaug1.png
+Note (history/):
+    main flow 와 무관. paper figure 생성 시 새 plot 스크립트 별도 작성.
+
+용법 (legacy):
+    history/scripts/util_plot_overview.py traces/smoke_smaug1.npz \\
+        --png results/overview.png
 
     scripts/plot_overview.py traces/foo.npz --kem-match-check \\
         --expected-n 1000 --expected-samples 24400

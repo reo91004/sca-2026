@@ -210,15 +210,13 @@ else
     esac
 fi
 
-# --------------------------------------------------------- E. validate + F. viz
-# host/analysis/ 패키지가 SSOT — scripts/plot_overview.py 만 호출한다.
-# 캡처를 건너뛴 경우(SKIP_CAPTURE=1) N/S 검증은 생략 (기존 .npz 그대로 시각화).
-hdr "[E/F] validate + visualize  ($NPZ -> $PNG)"
-plot_args=("$NPZ" --png "$PNG")
-if [[ "$SKIP_CAPTURE" != "1" ]]; then
-    plot_args+=(--expected-n "$NUM_TRACES" --expected-samples "$SAMPLES")
-fi
-[[ "$DO_MATCH_CHECK" == "1" ]] && plot_args+=(--kem-match-check)
-
-python3 "$SCRIPTS_DIR/plot_overview.py" "${plot_args[@]}"
-ok "smoke test 통과 — $NPZ / $PNG"
+# --------------------------------------------------------- E. summary
+# smoke 는 build + flash + capture 까지가 SSOT — paper main flow 와 분리.
+# Visualization 은 history/scripts/util_plot_overview.py (legacy) 또는 inline
+# 분석 권장. paper main reproducer 는 scripts/run_attack.py + analyze_multi_seed.py.
+hdr "[E] summary"
+ok "smoke 캡처 완료: $NPZ"
+info "다음 단계 — paper main reproducer:"
+info "  python3 scripts/run_attack.py -n 2     # 8 traces (paper main, 3.2 sec)"
+info "  python3 scripts/analyze_multi_seed.py traces/attack_const_c1.npz"
+info "또는 자세한 dev plot 은 history/scripts/util_plot_overview.py 참조"

@@ -1,21 +1,33 @@
 #!/usr/bin/env python3
-"""Phase H/F — Direct attack PoI learning (cross-domain transfer 우회).
+"""[MAIN] Direct attack PoI — paper Section 5 의 single-seed analyzer.
 
-기존 analyze_attack.py 가 random-µ profile 의 PoI 를 chosen-CT attack 에 transfer
-하다 sign 반전 + signal weak 문제가 있었다.
+Paper Section 5 (Direct attack PoI). chosen-CT attack data *자체* 에서
+cross-design Welch-t 로 PoI 학습 — profile (random-µ) transfer 의 sign 반전
+문제 (Section 5.1) 우회.
 
-이 스크립트는 *chosen-CT attack data 자체* 위에서 PoI 학습:
-  - 여러 design 의 µ′ 가 deterministic per-design but design 간 변화 → 각 비트 i 의
-    µ′_i 가 design 별 0 또는 1 분포.
-  - 그 cross-design split 위에서 trace sample t × bit_i 의 Welch t-test → PoI.
+Method (paper Section 5.2):
+  1. 각 trace 의 µ′ 가 deterministic per-design, design 간 µ′_i 분포 0/1 split
+  2. bit_i × trace[t] 의 Welch t-test → PoI[i] + sign[i] 학습
+  3. oracle pair (α=64, α=192) 의 mean diff at PoI → per-i signed score d
+  4. d → sigmoid posterior → sparse_recover.greedy(hs=70) → ŝ
 
-이게 paper 의 핵심 contribution: 'cross-domain transfer 문제 우회 + direct attack
-PoI 학습 → sk recovery 정확도 향상'.
+핵심 결과 (paper Table 1):
+  - oracle pair (α=64+α=192) 의 cross-design split 이 sk ternary 별 자동 분리:
+      sk_i=0  → 둘 다 µ′_i=0 (cross-design 차이 없음, invalid bit, 자동 0)
+      sk_i=±1 → α=64 µ′=±?, α=192 µ′=∓? (cross-design split valid)
+  - 따라서 valid bits = 정확히 sk nonzero positions (HW=70)
+  - sparse_recover 의 HW=70 constraint 가 *디자인 자체* 에 implicit
+
+비교 (multi-seed 평가는 analyze_multi_seed.py):
+  Profile-PoI baseline (Step 4a, history): 56% (chance)
+  Direct PoI (이 script): 100% on N=2 traces (5/5 seeds, paper Section 7)
 
 용법:
-    scripts/attack_direct_poi.py traces/H_attack_n512.npz \\
+    scripts/attack_direct_poi.py traces/H_attack_n1024_oracle_pair.npz \\
         --design-pos H_const_a64 --design-neg H_const_a192 \\
-        --component 0 --out-prefix results/direct_poi_n512
+        --component 0 --out-prefix results/direct_poi_n1024
+
+다음 단계: scripts/analyze_multi_seed.py (5+ seeds 통계, paper main result).
 """
 
 from __future__ import annotations

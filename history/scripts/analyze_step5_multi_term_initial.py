@@ -1,16 +1,25 @@
 #!/usr/bin/env python3
-"""Phase H — multi-term chosen-CT 캡처 분석.
+"""[STEP 5] Multi-term chosen-CT 첫 분석 (paper Section 3.4 검증).
 
-Steps:
-1. Round-trip 검증: 보드 µ′ vs host predict_mu_prime(c1, sk) — 모든 디자인.
-2. µ′ HW 분포 비교 (단항 vs 2-term vs 3-term vs combined) — leak amp 정량.
-3. per-i Welch t-test (design A 의 random vs fixed sk 위 collective µ flip).
-4. (옵션) profile-PoI 적용 → 각 design 의 SCA 분류 정확도.
-5. sparse_recover 적용 (HW=70 MAP) → sk recovery 정확도.
+Paper Section 3.4 (Multi-term + R^2 cross-component). H_attack.npz (7 designs:
+const/2-term/3-term/combined R^2) 의 *first analyzer*. round-trip 100% +
+HW gain 1.6-2.2× 측정 후, *cross-design split* idea 발생 → paper Section 5
+의 *direct attack PoI* method 도출.
 
-용법:
-    scripts/analyze_h_attack.py traces/H_attack.npz
-    scripts/analyze_h_attack.py traces/H_attack.npz --poi results/per_i_poi_n1000.npz
+분석:
+  1. Round-trip 검증: 보드 µ′ vs host predict_mu_prime(c1, sk)
+     → 모든 7 designs 256/256 일치 (paper 의 multi-term 수학 검증)
+  2. µ′ HW 분포 비교 (단항 36 → 2-term 58-68 → 3-term 80) — leak amp 1.6-2.2×
+  3. per-i Welch t-test (design pair) — N=64 max|t|=4.03 (noise floor 미달)
+  4. sparse_recover (Z µ′ oracle) — s[0] 100% (artificial oracle 검증)
+
+Note (history/):
+    super-seded by `scripts/analyze_multi_seed.py` (5 seeds × N=128, paper
+    main result). 이 스크립트는 H_attack 의 *single-seed first analyzer*.
+    Round-trip 100% 검증은 tests/test_chosen.py 에서도 자동 검증.
+
+용법 (legacy):
+    history/scripts/analyze_step5_multi_term_initial.py traces/H_attack.npz
 """
 
 from __future__ import annotations

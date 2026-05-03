@@ -1,15 +1,25 @@
 #!/usr/bin/env python3
-"""Phase H/F 통합 — analyze_attack 결과 위 sparse_recover (HW=HS MAP) 후처리.
+"""[STEP 4b] Profile-PoI 위 sparse_recover 후처리 (NEGATIVE — raw 보다 나빠짐).
 
-기존 analyze_attack.py 가 ternary 분류 결과 (s_pred ∈ {-1, 0, +1}) 만 제공.
-이 스크립트는 *signed score d_i* (raw) 를 추출 → posterior π_i ∈ Δ^3 →
-sparse_recover.greedy 로 HW=HS constraint MAP 복구.
+Paper Section 5.1 *sparse_recover 의 한계* 시연. profile-PoI baseline (Step
+4a, 56% chance) 위에 HW=70 sparse constraint MAP (host/analysis/sparse_recover.py)
+적용 → **raw 58% → sparse 55%** (오히려 감소).
 
-용법:
-    scripts/analyze_attack_with_sparse.py \\
+이유 (paper Section 5.1):
+    sparse_recover 는 *raw classifier 가 chance level 이상* 일 때만 도움.
+    raw 가 chance 면 noise 만 분류 → HW=70 강제로 *zero positions 를 nonzero
+    로 잘못 강제* → 정확도 감소.
+
+Note (history/):
+    sparse_recover 자체는 paper main attack 의 핵심 (`host/analysis/
+    sparse_recover.py`). 이 *profile transfer 위 적용* 만 negative —
+    *direct attack PoI* (paper Section 5-6) 위 적용 시 100%. 이 스크립트는
+    "왜 profile transfer 가 안 되는지" 의 evidence.
+
+용법 (legacy):
+    history/scripts/analyze_step4b_sparse_on_profile_NEGATIVE.py \\
         --profile traces/profile_random_mu_n1000.npz \\
-        --attack traces/attack_const_c1.npz \\
-        [--out-prefix results/sparse_v1]
+        --attack traces/attack_const_c1.npz
 """
 
 from __future__ import annotations

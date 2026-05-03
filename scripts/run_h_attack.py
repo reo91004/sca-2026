@@ -1,22 +1,31 @@
 #!/usr/bin/env python3
-"""Phase H — Multi-term chosen-CT 캡처 + Z oracle round-trip 검증.
+"""[MAIN] Multi-term + R^2 cross-component chosen-CT 캡처 (paper Section 3.4).
 
-E_H 매트릭스 (docs/experiments.md):
-    H_const_a64           c1[0] = 64
-    H_const_a192          c1[0] = 192
-    H_2term_l5_k50_a64    c1[0] = 64·(X^5 + X^50)
-    H_2term_l10_k200_a64  c1[0] = 64·(X^10 + X^200)
-    H_3term_l_5_50_200    c1[0] = 64·(X^5 + X^50 + X^200)
-    H_combined_l10_k50    c1[0] = 64·X^10, c1[1] = 64·X^50
-    H_combined_l0_k0      c1[0] = 64,       c1[1] = 64
+Paper Section 3.4 (Multi-term + R^2 cross-component). multi-term chosen-CT
+의 보드 round-trip 검증 (predict_mu_prime ≡ Z 응답) + HW gain 측정 (paper
+Section 8.1 SNR phase transition 의 *원천 데이터*).
 
-각 디자인 × N trace (Z 명령, indcpa_dec only). 응답 = 32B µ′ ground truth.
-저장 .npz 의 meta 가 디자인 spec + sk PKE dump 를 보존해 후속 분석에서
-호스트 predict_mu_prime(c1, sk) 와 보드 µ′ 의 round-trip 검증 가능.
+디자인 카탈로그 (`DESIGNS` dict):
+    H_const_a64           c1[0] = 64                    # 단항 baseline
+    H_const_a192          c1[0] = 192                   # 단항 baseline
+    H_c1_const_a64        c1[1] = 64                    # s[1] oracle pair (+det)
+    H_c1_const_a192       c1[1] = 192                   # s[1] oracle pair (-det)
+    H_2term_l5_k50_a64    c1[0] = 64·(X^5 + X^50)       # 2-term
+    H_2term_l10_k200_a64  c1[0] = 64·(X^10 + X^200)     # 2-term diff
+    H_3term_l_5_50_200    c1[0] = 64·(X^5 + X^50 + X^200) # 3-term
+    H_combined_l10_k50    c1[0]=64·X^10, c1[1]=64·X^50  # R^2 cross
+    H_combined_l0_k0      c1[0]=64,       c1[1]=64       # R^2 const
+
+각 design × N trace (Z 명령). 응답 32B µ′ + sk PKE dump → host 측 round-trip
+검증.
 
 용법:
     scripts/run_h_attack.py -n 64
-    scripts/run_h_attack.py -n 64 --designs H_2term_l5_k50_a64,H_combined_l10_k50
+    scripts/run_h_attack.py -n 512 --designs H_const_a64,H_const_a192 \\
+        --out traces/H_attack_n512.npz
+
+산출물:
+    traces/H_attack.npz (default), 또는 --out 지정.
 """
 
 from __future__ import annotations

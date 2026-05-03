@@ -1,21 +1,32 @@
 #!/usr/bin/env python3
-"""E3c 캡처: oracle pair (α_pos, α_neg) 단항 chosen-CT 로 secret coefficient
-ternary 분류 (보드 측, 같은 sk).
+"""[STEP 2] Chosen-CT 컨벤션 발견 의 trigger pilot.
 
-핵심:
-  α=64+256k → +1 detector  (µ′_i = 1 iff s = +1)
-  α=192+256k → -1 detector  (µ′_i = 1 iff s = -1)
+Paper Section 3 (Chosen-CT 컨벤션 정정). 컨벤션 정정의 *수학 재검토를 부른
+의문* 의 원천 데이터.
 
-각 (k, j) 위치에서 두 chosen-CT 를 dec → 두 응답을 join 해 ternary.
+목적:
+    원래 가정 (c1 = α·X^j → µ′_j 가 s_j 를 leak) 으로 sweep — j ∈ {0, 1, 5,
+    10, 50, 100, 200}, α ∈ {64, 192} 의 14 chosen-CT 캡처. Z µ′ 응답을 'X'
+    sk dump 와 비교 시 **모든 j 가 같은 secret coefficient (s_0) 만 측정**
+    → 가정 의 수학적 결함 발견.
 
-사용:
-  scripts/run_e3c.py --positions 0,1,5,10,50 --component 0 \\
-      --alpha-pos 64 --alpha-neg 192 -n 4
+핵심 발견 (paper Section 3.2-3.3):
+    - 정확한 매핑: ⟨c1, s⟩_i = α · s_(i-j mod n) · sign_l(i)  (anticyclic
+      wrap 부호)
+    - 새 설계: c1 = α 상수 (j=0) → 모든 256 비밀 동시 leak
+    - 4 chosen-CT 만으로 full sk (32k+ → 4 chosen-CT, **4400× 효율**)
+    - 14 (j × α) 그룹 × Z 응답 vs X dump = 128/128 = 100% 매칭 검증
 
-저장 형식:
-  traces/E3c_<αp>_<αn>_<comp>.npz — 모든 위치 트레이스 concat
-  responses 의 첫 byte = 'D' 의 mismatch (참고용)
-  meta.position_labels = (alpha, k, j) tuple 리스트, trace[i] 의 라벨
+Note (history/):
+    컨벤션 정정 후 이 코드 무용. 결과 (128/128 검증) 만 paper Section 3.3
+    에 인용.
+
+용법 (legacy):
+    history/scripts/capture_step2_convention_pilot.py \\
+        --positions 0,1,5,10,50,100,200 --component 0 -n 4
+
+산출물 (legacy):
+    traces/E3c_<αp>_<αn>_<comp>.npz
 """
 
 from __future__ import annotations

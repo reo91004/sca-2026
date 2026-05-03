@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
-"""E3a partition table 을 PNG 로 — host-only, 보드 없음.
+"""[UTIL] E3a partition table heatmap plot (host-only).
 
-각 α ∈ U_p (smaug1: 256 개) 위에서 c1=αX^j 단항 + c2=0 chosen-CT 를
-넣었을 때, 비밀 계수 s ∈ {-1, 0, +1} 별로 µ′_i 가 어떤 bit 가 되는지를
-spec 정의대로 직접 numpy 로 계산하고 (α × class) 행렬을 그린다.
+Paper Section 3.1 (E3a partition table) 의 시각화 dev tool. 256 α × 3 class
+ternary partition matrix 의 heatmap. paper Section 3 의 oracle pair 분석
+근거.
 
-분류 카테고리:
-  fully separating (3-way) : 셋 다 다른 µ′    — 가장 강함, message-only 키 복구
-  sign separating          : +1 ≠ -1, 0 어디 한쪽에 붙음 — 부분 sign 정보
+Note (history/):
+    분석 결과는 host/smaug/sk_partition.py 의 build_partition_table /
+    find_oracle_pairs 함수가 main flow 에 보존. 이 plot 은 dev visualization.
+
+용법 (legacy):
+    history/scripts/util_plot_partition.py
   support only             : ±1 같고 0 만 다름 — zero/nonzero oracle
   trivial                  : 셋 다 같음
 
