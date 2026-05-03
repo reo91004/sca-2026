@@ -1,0 +1,954 @@
+%% SMAUG-T smaug1 chosen-CT SCA — 한글 paper draft
+%% main2_v1.tex 양식 차용 + kotex 추가
+\documentclass{article}
+
+\usepackage{neurips_2024}            % NeurIPS style
+\usepackage[utf8]{inputenc}
+\usepackage{kotex}                   % 한글 본문 처리 (XeLaTeX 도 호환)
+\usepackage[T1]{fontenc}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+\usepackage[capitalize,noabbrev]{cleveref}
+\usepackage{xspace}
+\usepackage{multirow}
+\usepackage{float}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{enumitem}
+\usepackage{placeins}
+
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.8}
+\renewcommand{\textfraction}{0.1}
+\renewcommand{\floatpagefraction}{0.7}
+
+%% Theorem 환경
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+%% Notation macros
+\newcommand{\Zq}{\mathbb{Z}_q}
+\newcommand{\Rq}{\mathcal{R}_q}
+\newcommand{\Rp}{\mathcal{R}_p}
+\newcommand{\Rt}{\mathcal{R}_t}
+\newcommand{\HW}{\mathrm{HW}}
+\newcommand{\HS}{\mathrm{HS}}
+\newcommand{\sign}{\mathrm{sign}}
+\newcommand{\round}[1]{\lfloor #1 \rceil}
+
+\title{8개 트레이스로 SMAUG-T smaug1 의 비밀키 복구:\\
+       Chosen-Ciphertext 부채널 공격의 단일 단계 접근}
+
+\author{%
+  익명 저자 \\
+  이중 익명 심사 진행 중
+}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+본 논문은 2025년 KpqC 우승 후보로 선정된 격자 기반 KEM \textbf{SMAUG-T smaug1}
+에 대한 첫 통계적 부채널 공격을 제시한다. 우리의 공격은 ChipWhisperer-Lite +
+Vcc 션트 + STM32F415 환경에서 \textbf{4개의 chosen-ciphertext $\times$ N=2 =
+8개의 전력 트레이스 (약 3.2초의 측정)} 만으로 long-term secret key 를 복구하며,
+\textbf{무작위로 생성된 9개의 키쌍 모두에서 100\%의 정확도 (분산 0)} 를 달성한다.
+이 공격은 단일 단계 온라인 절차이다: \emph{오프라인 템플릿 학습 없음}, 보조
+훈련 데이터 없음, EM 프로브 없음.
+
+세 가지 방법론적 기여가 이 결과를 가능하게 한다.
+첫째, \emph{chosen-CT 컨벤션 정정} — $R = \Zq[X]/(X^n+1)$ 환의 다항식 곱 구조에서
+$c_1 = \alpha \cdot X^j$ 는 $\mu'_j$ 가 아니라 $\mu'_i$ 에서 $s_{(i-j) \mod n}$
+을 누설시킨다. 이로 인해 $c_1 = \alpha$ 상수 chosen-CT 한 번에 256개의 비밀
+계수가 동시에 노출되며, 4개의 chosen-CT 만으로 full sk 가 가능하다 (4400배 효율).
+둘째, \emph{Direct attack PoI 학습} — 기존 random-µ profile 에서 학습된
+PoI 가 chosen-CT 에 transfer 되지 않는다는 부정적 결과를 정량적으로 보이고,
+대신 chosen-CT 데이터 자체에서 cross-design Welch-t 로 PoI 를 직접 학습하는
+방법을 제안한다. 셋째, \emph{component-specific PoI + sparse 복구} — 각
+component 에 해당하는 oracle pair 만으로 학습을 격리해 노이즈를 제거하고,
+HW=70 sparse ternary 제약 MAP 으로 후처리한다.
+
+부정적 발견들 — profile transfer 의 sign 반전, multi-term TVLA 의 noise floor
+한계 (N=64, 256), 'T' isolated multiplier 의 round-trip 실패 — 도 정량화하여
+그림 전체를 완성한다. 본 결과는 SMAUG-T smaug1 unmasked 참조 구현에
+대한 SOTA 수준의 부채널 공격이다.
+\end{abstract}
+
+%=============================================================================
+\section{서론 (Introduction)}
+\label{sec:intro}
+%=============================================================================
+
+양자 컴퓨터의 위협에 대비한 PQC (post-quantum cryptography) 표준화는
+이미 진행 중이다. 미국 NIST 는 2024년 ML-KEM (CRYSTALS-Kyber) 을
+FIPS 203 으로 표준화하였으며~\citep{nist-fips203}, 한국 KpqC 컴페티션은
+2025년 \textbf{SMAUG-T} 를 격자 기반 KEM 후보로 선정했다~\citep{smaugt-v4}.
+이러한 표준화 후 단계에서 가장 시급한 보안 평가는 \emph{구현 보안} (implementation
+security) — 특히 부채널 분석 (side-channel analysis, SCA) 에 대한 평가이다.
+ML-KEM (Kyber) 는 2017년 이후 여러 SASCA 연구 (Primas et al.~\citep{primas17},
+Pessl \& Primas~\citep{pessl19}, Hamburg et al.~\citep{hamburg21},
+Xu et al.~\citep{xu21}) 와 mismatch 기반 공격 (Ravi et al.~\citep{ravi20})
+의 대상이 되어 왔으며, HQC 에 대해서도 TCHES~24--25 의 일련의 OT-PCA / FD
+oracle 공격 (Goy et al.~\citep{goy24}, Dong \& Guo~\citep{donggu025otpca,
+donggu025mvfd}) 이 발표되었다.
+
+이에 비해 SMAUG-T 에 대한 부채널 분석 문헌은 매우 빈약하다. 우리가 조사한 한
+KCI 한국어 논문~\citep{smaugt-spa-kci} 은 \emph{단순 전력 분석 (SPA)} 만을
+수행했으며, chosen-CT 통계 공격이나 full key recovery 는 보고되지 않았다.
+본 논문은 이 공백을 \emph{first-of-kind} 결과로 채우는 동시에 \emph{SOTA
+수준의 trace 비용} 을 달성한다.
+
+\paragraph{기여 요약.}
+
+\begin{enumerate}[leftmargin=*]
+\item \textbf{Chosen-CT 컨벤션 정정 (\cref{sec:convention}).}
+   기존 chosen-CT 문헌에서 묵시적으로 가정하던 $c_1 = \alpha \cdot X^j \to
+   \mu'_j$ 가 $s_j$ 를 누설시킨다는 가정이 negacyclic 환에서 잘못됨을
+   수학적으로 도출하고 14개의 (j$\times\alpha$) 그룹에서 128/128 비트
+   round-trip 일치로 검증한다. 정정된 매핑은 $c_1 = \alpha$ 상수 한 번에
+   256개의 비밀 계수를 동시 누설시키므로 4개의 chosen-CT 로 full sk 가 가능하다.
+
+\item \textbf{Direct attack PoI (\cref{sec:directpoi}).}
+   기존 PQC SCA pipeline 인 \emph{profile $\to$ transfer to attack} 가
+   SMAUG-T chosen-CT 에서 sign 반전을 일으켜 zero-baseline 미달 (56\%) 임을
+   보이고, 대신 chosen-CT 데이터 자체에서 cross-design Welch-t 로 PoI 를
+   학습하는 \emph{single-stage} 방법을 제안한다.
+
+\item \textbf{Component-specific PoI + Sparse 복구 (\cref{sec:component}).}
+   $R^2$ 모듈 구조의 각 component 에 oracle pair 를 따로 둠으로써 학습을
+   격리하고, sparse ternary $\HS=70$ 제약 MAP (greedy + 1-swap) 으로 후처리한다.
+   Cross-component 95.6\% $\pm$ 5.6\% $\to$ component-specific 100\% $\pm$ 0\%.
+
+\item \textbf{Minimum trace cost (\cref{sec:exp}).}
+   N=128 캡처를 부분 추출 (sub-sampling) 하여 N=1$\sim$128 곡선을 측정,
+   N=2 ($=$ 8 traces total, 3.2초 측정) 부터 5/5 keypair 모두 100\%
+   복구를 달성함을 보인다. N=512 multi-seed 와 합쳐 9 datasets 9/9 키 모두
+   100\% (분산 0).
+
+\item \textbf{부정적 발견의 정량화 (\cref{sec:discussion}).}
+   profile transfer 의 sign 반전 (정량 r=$-0.086$), multi-term TVLA 의 N=64,256
+   noise regime ($|t| < 4.5$), N=512 phase transition ($|t|=15.20$), 'T'
+   isolated multiplier 명령의 round-trip 0/6 실패 (q-modular storage 추정) 를
+   모두 보고하여 \emph{honest engineering} 측면에서 그림을 완성한다.
+\end{enumerate}
+
+%=============================================================================
+\section{관련 연구 (Related Work)}
+\label{sec:related}
+%=============================================================================
+
+\paragraph{ML-KEM (Kyber) 부채널 공격.}
+Primas et al.~\citep{primas17} 이 NTT 다항식 곱의 butterfly 구조를 SASCA
+(soft analytical SCA + belief propagation) 의 factor graph 로 모델링한 첫
+연구를 제시하였다. Pessl \& Primas~\citep{pessl19} 는 1M개의 Hamming weight
+템플릿을 213개로 압축하고 short-cycle reduction 으로 BP 의 수렴성을 향상시켰다.
+Hamburg et al.~\citep{hamburg21} 는 chosen-CT 와 sparse 입력 트릭을 결합해
+masked Kyber 구현에서 2--4 traces 만으로 long-term secret key 를 복구하였다.
+Xu et al.~\citep{xu21} 는 pqm4 ARM 구현에 대한 chosen-CT SPA 를 제안하여
+$-O0$ reference 에서 8 traces, $-O3$ pqm4 에서 960 traces 의 성능을 보고하였다.
+Bronchain \& Cassiers~\citep{bronchain20masked} 는 마스크 적용 Kyber 의
+template attack 을 분석한다.
+
+\paragraph{HQC 부채널 공격.}
+Goy et al.~\citep{goy24} (TCHES~24) 는 HQC 의 RS decoder 와 RS encoder 의
+Galois field multiplication 을 BP-based SASCA 로 분석하여 codeword masking
+과 fine/coarse shuffling 을 모두 통과한다. Dong \& Guo~\citep{donggu025otpca}
+의 OT-PCA (TCHES~25) 는 offline templates 를 활용해 hqc-128 에서 460개의
+oracle calls 만으로 키 복구를 달성하며, MV-PC + FD oracle~\citep{donggu025mvfd}
+은 hqc-128 에서 2개의 oracle query 로 키 복구를 보고한다.
+Dong et al.~\citep{donggu025singletrace} (eprint~25) 의 single-trace 공격은
+codeword 마스킹된 HQC 에 대한 1 trace 키 복구를 달성한다.
+
+\paragraph{SMAUG-T 부채널 분석.}
+우리가 조사한 한 (KCI ART003175038)~\citep{smaugt-spa-kci} 은 SMAUG-T 의
+다항식 곱셈 연산에 대한 \emph{단순 전력 분석 (SPA)} 만을 수행했으며,
+시각적 패턴 식별 외의 통계적 chosen-CT 공격, 전체 키 복구, masked
+또는 shuffled 구현 공격은 보고되지 않았다.
+
+\paragraph{본 연구의 위치.}
+
+\begin{table}[h!]
+\centering
+\caption{PQC 부채널 공격 비교: trace 비용 vs 오프라인 비용.}
+\label{tab:related}
+\small
+\begin{tabular}{lllll}
+\toprule
+연구 & 대상 & 트레이스 & 오프라인 & 비고 \\
+\midrule
+Dong et al. eprint25~\citep{donggu025singletrace} & hqc-1 (codeword masked) & 1 & 작음 & single-trace \\
+Hamburg et al. 21~\citep{hamburg21} & Kyber512 (masked) & 2--4 & 작음 & chosen-CT + sparse \\
+Dong \& Guo MV-FD 25~\citep{donggu025mvfd} & hqc-128 & 2 & 큼 (offline templates) & — \\
+\textbf{본 논문} & \textbf{SMAUG-T smaug1} & \textbf{8} & \textbf{0} & chosen-CT + direct PoI \\
+Xu et al. 21~\citep{xu21} & Kyber512 (-O0 ref) & 8 & 0 & chosen-CT SPA \\
+Xu et al. 21~\citep{xu21} & Kyber512 (-O3 pqm4) & 960 & 0 & 최적화된 구현 \\
+Dong \& Guo OT-PCA 25~\citep{donggu025otpca} & hqc-128 & 460 & 큼 & offline templates \\
+Goy et al. 24~\citep{goy24} & hqc-128 (codeword masked) & $<$ 20k EM & 작음 & RS BP-SASCA \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+본 연구의 위치는 (i) 트레이스 측면에서 SOTA 수준 (Hamburg21, eprint25, Xu21
+와 동급), (ii) 오프라인 비용이 0 인 점에서 \emph{유일하게 단일 단계
+온라인}, (iii) 대상 대수 구조가 격자 기반이지만 NTT 가 아닌 Toom-Cook 인
+점에서 \emph{first-of-kind} 이다.
+
+%=============================================================================
+\section{사전 지식 (Preliminaries)}
+\label{sec:prelim}
+%=============================================================================
+
+\subsection{격자 기반 KEM 의 일반 구조}
+
+격자 기반 KEM 은 일반적으로 두 단계로 구성된다.
+\textbf{IND-CPA PKE} 가 다항식 환 $\Rq = \Zq[X]/(X^n+1)$ 에서 module-LWE
+또는 module-LWR 의 hardness 를 기반으로 IND-CPA 보안을 제공하며,
+\textbf{Fujisaki-Okamoto (FO) transform}~\citep{fo99,hhk17} 이 이를 IND-CCA
+KEM 으로 lifting 한다. FO 의 핵심 단계는:
+
+\begin{enumerate}[leftmargin=*]
+\item Decapsulation 시 PKE 의 \texttt{indcpa\_dec} 를 호출하여 메시지
+   $\mu'$ 을 복호화한다.
+\item 복호화된 $\mu'$ 으로 \emph{re-encryption} 을 수행하여
+   $\mathit{ct}' = \texttt{indcpa\_enc}(pk, \mu', \mathit{seed})$ 를 만든다.
+\item 입력 ciphertext 와 $\mathit{ct}'$ 을 비교 (verify) 하고, 일치 여부에 따라
+   $\mathit{cmov}$ 로 shared secret 을 결정한다.
+\end{enumerate}
+
+이 구조에서 \emph{chosen-CT 공격} 은 적이 의도적으로 만든 ciphertext 를
+decapsulator 에 보내고, 디코딩된 $\mu'$ 또는 mismatch flag 가 비밀키에 의존하는
+정보를 누설하는지를 관찰한다.
+
+\subsection{ML-KEM (Kyber) — NIST FIPS 203 표준}
+
+ML-KEM 은 module-LWE 기반 KEM 이다. 핵심 파라미터 (Kyber512):
+$n=256$, $k=2$ (module rank), $q=3329$ (\emph{prime}), centered binomial
+분포 $\beta_\mu$ 의 secret key, 메시지 길이 $\delta = 32$ byte.
+
+\paragraph{핵심 연산: NTT 다항식 곱.}
+$q = 3329$ 가 $2n$-th root of unity 를 갖도록 선택되어 있어
+\textbf{Number Theoretic Transform (NTT)} 가 사용된다.
+키 생성과 암복호화의 모든 다항식 곱이 NTT 도메인에서 점별 곱 (point-wise
+multiplication) 으로 계산된다. NTT 의 \emph{butterfly} 구조 (각 단계
+$\ell$ 의 $2^\ell$-radix butterfly) 는 SASCA 의 factor graph 모델에 매우
+적합하다 — 이것이 ML-KEM SASCA 문헌이 풍부한 이유이다.
+
+\paragraph{지원 단계.}
+$\mathrm{Kyber}\texttt{-512}/\texttt{-768}/\texttt{-1024}$ 가 각각 AES-128/192/256
+에 해당하는 보안 수준을 제공한다.
+
+\subsection{SMAUG-T smaug1 — KpqC 2025 우승}
+
+SMAUG-T 는 module-LWR (Module Learning With Rounding) 기반의 KEM 으로,
+\emph{ML-KEM 과 다른 단단함 가정} 을 사용한다. LWR 에서는 LWE 의 small noise
+대신 \emph{rounding} 을 통해 정보 손실 (lossy) 을 만든다. 이로 인해 SMAUG-T 의
+설계는 다음과 같이 구별된다:
+
+\begin{itemize}[leftmargin=*]
+\item $q = 2^{10} = 1024$ — \emph{2의 거듭제곱} (NTT-friendly prime 이 아님)
+\item 다항식 곱이 \textbf{Toom-Cook 4-way + Karatsuba} (NTT 안 씀)
+\item secret key 가 \emph{sparse ternary} ($s \in \{-1, 0, +1\}^n$) 이며 $\HS = 70$
+\item Compress 후 ciphertext modulus $p = 256, p' = 32$, 메시지 modulus $t = 2$
+\end{itemize}
+
+\paragraph{smaug1 파라미터 (\cref{tab:smaug1}).}
+
+\begin{table}[h!]
+\centering
+\caption{SMAUG-T smaug1 vs Kyber512 매개변수 비교.}
+\label{tab:smaug1}
+\small
+\begin{tabular}{lll}
+\toprule
+파라미터 & SMAUG-T smaug1 & Kyber512 (ML-KEM 비교) \\
+\midrule
+타입 & MLWR & MLWE \\
+$n$ (poly degree) & 256 & 256 \\
+$k$ (module rank) & 2 & 2 \\
+$q$ & 1024 ($=2^{10}$) & 3329 (prime) \\
+$p$ (ct mod) & 256 & — (compress) \\
+$p'$ (c2 mod) & 32 & — \\
+$t$ (msg mod) & 2 & 2 \\
+sk 분포 & sparse ternary $\{-1,0,+1\}$, $\HS=70$ & $\beta_2$ (centered binomial $\{-2..+2\}$) \\
+다항식 곱 & Toom-Cook 4-way + Karatsuba & NTT \\
+표준화 상태 & KpqC 2025 우승 & NIST FIPS 203 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Decapsulation 핵심.}
+SMAUG-T 의 \texttt{indcpa\_dec} 는 다음을 계산한다:
+\begin{equation}
+\mu'_i = \round{\frac{t}{p}\langle c_1, sk \rangle_i + \frac{t}{p'} c_{2,i}} \mod t
+\label{eq:dec}
+\end{equation}
+여기서 $\langle c_1, sk \rangle$ 은 negacyclic 환 $R = \Zq[X]/(X^n+1)$
+안의 내적이다. \emph{이 식이 본 논문의 모든 chosen-CT 분석의 출발점} 이다.
+
+\subsection{부채널 분석 기초}
+
+\paragraph{Welch t-test 기반 TVLA.}
+Test Vector Leakage Assessment 는 두 클래스 (예: 고정 µ vs 임의 µ) 의
+trace 평균 차이를 normalized 한 t-statistic 으로 측정한다.
+sample 수 $T$ 의 multi-comparison 보정을 고려한 noise floor 는
+$\sqrt{2 \ln T} \approx 4.5$ 이며, $|t| > 4.5$ 인 sample 을 \emph{leaky point}
+로 분류한다.
+
+\paragraph{Profile-based vs profile-free 분류기.}
+\emph{Profile-based} (template) 공격은 알려진 sk 위에서 학습 단계 (offline)
+와 알려지지 않은 sk 위 공격 단계 (online) 를 분리한다. \emph{Profile-free}
+공격은 attack 데이터 자체에서 정보를 추출한다. 본 논문은 profile-free 의
+극단적 사례이다.
+
+\paragraph{Chosen-CT 공격 framework.}
+적이 만든 ciphertext 를 decapsulator 에 보내고 다음 중 하나를 관찰:
+(i) µ' 의 비트 (FD oracle), (ii) mismatch flag (PCO oracle), (iii) trace
+(SCA oracle). 일반적으로 sk 의 한 비트당 1 query 이상을 요구하지만, 본 논문의
+컨벤션 정정 결과는 \emph{1 query 로 256 비트 동시 노출} 을 가능케 한다.
+
+\subsection{측정 setup}
+
+본 연구의 측정 환경:
+
+\begin{itemize}[leftmargin=*]
+\item ChipWhisperer-Lite (CW1173, NewAE Technology), Vcc 션트 + 25\,dB LNA
+\item CW308T-STM32F4 도터보드 (STM32F415RGTx), HCLK $= 7.38$\,MHz
+\item ADC samples per trace: 24\,400 at clkgen\_x4 ($= 29.5$\,MS/s)
+\item 펌웨어: SimpleSerial v1.1 기반, SMAUG-T smaug1 ROM 33\,683 byte
+\item Throughput: $\mathrm{D} \approx 0.77$ tr/s (full kem\_dec),
+   $\mathrm{Z} \approx 2.65$ tr/s (indcpa\_dec only).
+\end{itemize}
+
+펌웨어는 다음 SimpleSerial 명령을 노출한다: \texttt{F} (지속 keygen),
+\texttt{I} (chosen-CT chunk inject), \texttt{L} (무결성 fingerprint),
+\texttt{M} (PKE-labeled enc), \texttt{D} (full kem\_dec),
+\texttt{Z} (indcpa\_dec only $+$ 32B µ' 응답), \texttt{X} (sk PKE dump,
+ground truth verification only).
+
+%=============================================================================
+\section{Chosen-CT 컨벤션 정정 (Convention Correction)}
+\label{sec:convention}
+%=============================================================================
+
+\subsection{원래 가정 (잘못됨)}
+
+기존 SMAUG-T chosen-CT 공격 설계 시도에서 다음과 같은 매핑을 묵시적으로 가정해
+왔다:
+\begin{quote}
+\textbf{(가정 — 잘못됨)} $c_1 = \alpha \cdot X^j$ chosen-CT 는 $\mu'_j$ 에서
+$s_j$ 를 누설시킨다.
+\end{quote}
+이 가정 하에서는 256개의 위치 $j$ 마다 별개의 chosen-CT 가 필요하며 (oracle
+pair $\alpha \in \{64, 192\}$ 와 component $\in \{0,1\}$ 적용 시) 약 $32$k 이상의
+trace 가 요구된다.
+
+\subsection{수학적 정정}
+
+$R = \Zq[X]/(X^n+1)$ 안의 negacyclic 환 곱:
+\begin{equation}
+\langle c_1, sk \rangle(X) = \alpha \cdot X^j \cdot sk(X) =
+   \alpha \sum_{k=0}^{n-1} s_k \cdot X^{j+k}.
+\label{eq:rawmul}
+\end{equation}
+$X^n + 1$ 으로 reduction 하면 (anticyclic wrap, sign flip):
+
+\begin{proposition}[chosen-CT 매핑 정정]
+\label{prop:convention}
+$c_1 = \alpha \cdot X^j$, $c_2 = 0$ 인 chosen-CT 의 decapsulation 결과 $\mu'$
+의 $i$ 번째 비트는 다음을 만족한다:
+\begin{equation}
+\mu'_i = \round{\frac{t}{p} \alpha \cdot s_{(i-j) \mod n} \cdot \sigma_l(i)} \mod t
+\label{eq:correct-mapping}
+\end{equation}
+여기서 $\sigma_l(i) = +1$ if $i \geq j$ else $-1$ 은 negacyclic wrap 부호이다.
+\end{proposition}
+
+즉, $\mu'_i$ 는 $s_j$ 가 아니라 $s_{(i-j)}$ 를 누설시킨다. 우리가 $\mu'_j$
+한 비트만을 본다면 (즉 $i = j$ 이면 $i - j = 0$) \emph{모든 $j$ 에서 동일하게
+$s_0$ 만 측정} 된다 — 이것이 14개의 (j$\times\alpha$) 그룹 pilot 캡처에서
+"왜 모든 $j$ 가 같은 답을 주는가?" 라는 의문을 낳은 결정적 단서였다.
+
+\subsection{새로운 chosen-CT 디자인}
+
+식~\eqref{eq:correct-mapping} 을 $j = 0$ 에 적용:
+\begin{equation}
+\mu'_i = \round{\frac{t}{p} \alpha \cdot s_i} \mod t \quad \forall i \in [0, n).
+\label{eq:const-c1}
+\end{equation}
+
+즉 \textbf{$c_1 = \alpha$ (상수 다항식, $j=0$) 인 \emph{단 하나의} chosen-CT 가
+모든 256개의 비밀 계수 $s_0, \ldots, s_{255}$ 를 동시에 $\mu'$ 으로 누설시킨다}.
+
+oracle pair $(\alpha_{\mathrm{pos}}=64, \alpha_{\mathrm{neg}}=192)$ 와 module rank
+$k=2$ 의 두 component 를 결합하면 \textbf{4개의 chosen-CT} 로 full sk 가 가능하다:
+
+\begin{table}[h!]
+\centering
+\caption{4개의 chosen-CT 디자인.}
+\label{tab:4ct}
+\small
+\begin{tabular}{lll}
+\toprule
+chosen-CT 라벨 & $c_1$ & 측정하는 정보 \\
+\midrule
+$D_0^+$ & $c_1[0] = 64,\; c_1[1]=0$ & component 0 의 $+1$ detector \\
+$D_0^-$ & $c_1[0] = 192,\; c_1[1]=0$ & component 0 의 $-1$ detector \\
+$D_1^+$ & $c_1[0] = 0,\; c_1[1]=64$ & component 1 의 $+1$ detector \\
+$D_1^-$ & $c_1[0] = 0,\; c_1[1]=192$ & component 1 의 $-1$ detector \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Multi-term 과 $R^2$ cross-component 일반화}
+
+일반화된 multi-term chosen-CT 정의:
+$$
+c_1[m] = \sum_l \alpha_{m,l} \cdot X^l \quad (m \in \{0, 1\}, l \in [0, n)).
+$$
+\begin{proposition}[일반화 매핑]
+\label{prop:multi-term}
+$c_1$ 의 일반 형태에서 decapsulation 결과의 $i$ 번째 계수는:
+\begin{equation}
+\mu'_i = \round{ \frac{t}{p} \sum_{m, l} \alpha_{m, l} \cdot s_m^{(i-l) \mod n}
+   \cdot \sigma_l(i) + \frac{t}{p'} c_{2,i} } \mod t
+\label{eq:multi-term}
+\end{equation}
+\end{proposition}
+이 일반 매핑은 $c_1[0] = 64 \cdot X^l, c_1[1] = 64 \cdot X^k$ 같은
+\emph{$R^2$ cross-component} 디자인 (eprint~25 OT-FDA-CK 영감)~\citep{donggu025singletrace}
+도 포함한다.
+
+\subsection{보드 round-trip 검증}
+
+본 논문의 \texttt{host/smaug/chosen.py::predict\_mu\_prime} 가 식~\eqref{eq:multi-term}
+을 구현하며, 7개의 다양한 design (\texttt{H\_const\_a64, H\_const\_a192,
+H\_2term, H\_3term, H\_combined\_l10\_k50, ...}) 의 보드 'Z' 응답과 비교 시
+\textbf{모든 256/256 비트 일치 (round-trip 100\%)}.
+또한 14개의 (j $\times \alpha$) pilot 그룹의 Z 응답을 'X' sk dump 와
+식~\eqref{eq:correct-mapping} 으로 재해석할 때 \textbf{128/128 비트 일치}.
+이 검증은 \texttt{tests/test\_chosen.py} (15 tests) + \texttt{test\_partition.py}
+(14 tests) 에 자동화되어 있다.
+
+%=============================================================================
+\section{Direct Attack PoI 학습}
+\label{sec:directpoi}
+%=============================================================================
+
+\subsection{Profile-PoI 의 한계 (negative result)}
+
+표준 PQC SCA pipeline 은 두 단계이다: (i) \emph{profile} 단계에서 알려진 sk
+위에서 random µ 의 trace 를 모아 per-bit Welch t-test 로 PoI[$i$] 와 sign[$i$]
+를 학습, (ii) \emph{attack} 단계에서 알려지지 않은 sk 위에서 chosen-CT 의
+trace 에 학습한 PoI 를 적용. 우리는 이 pipeline 을 1000개의 random µ profile
+trace 로 시도하였다.
+
+\paragraph{결과 (negative).} bit accuracy 56\% — \emph{zero-baseline (모두 0
+예측) 73\%에 미달}. 자세한 진단:
+\begin{itemize}[leftmargin=*]
+\item $d_i$ (signed score) 와 ground-truth $sk_i$ 의 correlation $r = -0.086$
+   (\emph{부호 반전!}).
+\item Sign flip 후 sign accuracy 35\% $\to$ 65\% 향상되지만 bit accuracy 는
+   여전히 chance level.
+\end{itemize}
+
+원인 분석: profile (random µ, binomial(0.5)) 와 chosen-CT (deterministic µ
+per design) 의 trace 가 서로 다른 \emph{baseline power offset} 을 갖는다.
+Profile 에서 학습된 sign 은 \emph{cross-domain transfer} 에서 안정적이지
+않다.
+
+\subsection{Direct attack PoI: 핵심 method}
+
+핵심 통찰: 각 chosen-CT design 의 µ' 은 \emph{deterministic per-design} 이며
+(같은 sk + 같은 input → 같은 µ'), 4개의 design 이 모이면 각 비트 $i$ 에 대해
+서로 다른 0/1 split 을 만든다. 이 \emph{cross-design split} 위에서 직접
+Welch-t 를 계산할 수 있다.
+
+\begin{algorithm}[h!]
+\caption{Direct attack PoI 학습 (component-specific)}
+\label{alg:directpoi}
+\begin{algorithmic}[1]
+\Require attack traces $T \in \mathbb{R}^{N \times S}$, µ' bits per trace $B \in \{0,1\}^{N \times 256}$,
+   trace label $\mathit{comp} \in \{0, 1\}^N$, target component $c$, min class size $m$
+\Ensure PoI $p \in \{-1\} \cup [0, S)^{256}$, sign $\sigma \in \{-1, +1\}^{256}$
+\State $T_c \gets T[\mathit{comp} = c]$,\; $B_c \gets B[\mathit{comp} = c]$
+\For{$i = 0$ to $255$}
+\State $n_0 \gets |\{j: B_c[j, i] = 0\}|$,\; $n_1 \gets |\{j: B_c[j, i] = 1\}|$
+\If{$n_0 < m$ or $n_1 < m$}
+   \State $p[i] \gets -1$ \Comment{invalid bit (insufficient cross-design split)}
+\Else
+   \State $\mu_0 \gets \mathrm{mean}(T_c[B_c[:, i] = 0]),\; \mu_1 \gets \mathrm{mean}(T_c[B_c[:, i] = 1])$
+   \State $\mathrm{Var}_0, \mathrm{Var}_1 \gets$ pooled variances
+   \State $t[\cdot] \gets (\mu_1 - \mu_0) / \sqrt{\mathrm{Var}_0 / n_0 + \mathrm{Var}_1 / n_1}$
+   \State $p[i] \gets \arg\max_s |t[s]|,\; \sigma[i] \gets \mathrm{sgn}(t[p[i]])$
+\EndIf
+\EndFor
+\Return $(p, \sigma)$
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{왜 valid bits = sk nonzero positions 인가?}
+
+oracle pair $(\alpha=64, \alpha=192)$ 에서 식~\eqref{eq:const-c1} 의 round
+함수에 의해:
+\begin{itemize}[leftmargin=*]
+\item $s_i = 0 \Rightarrow$ 두 design 모두 $\mu'_i = 0$ (cross-design split 비어
+   있음, invalid bit).
+\item $s_i = +1 \Rightarrow \alpha=64$ 가 $\mu'_i = 1$, $\alpha=192$ 가 $\mu'_i = 0$.
+\item $s_i = -1 \Rightarrow$ 반대.
+\end{itemize}
+즉 \emph{Direct attack PoI 의 valid bit 집합은 정확히 $sk$ 의 support
+(nonzero positions)} 이며, 이는 $\HS = 70$ 이다. 따라서 sparse ternary
+$\HS = 70$ 제약은 \emph{디자인 자체에 implicit} 으로 들어 있다.
+
+%=============================================================================
+\section{Component-specific PoI 와 Sparse 복구}
+\label{sec:component}
+%=============================================================================
+
+\subsection{Cross-component 노이즈 제거}
+
+4개의 chosen-CT 모두에서 PoI 를 학습하는 \emph{cross-component} 방식은
+component 1 design 의 trace 가 component 0 의 PoI 학습에 노이즈를 추가한다
+(반대도 마찬가지). 실제 측정에서 N=128 cross-component PoI 의 평균 정확도는
+95.6\% $\pm$ 5.6\% 이며 worst-case seed 가 87.1\% 까지 떨어진다.
+
+\paragraph{개선 — Component isolation.} $s_c$ 를 공격할 때, label$\_$comp == $c$
+인 두 oracle pair 만 사용해 PoI 를 학습한다. 이 isolation 으로 N=128 평균
+정확도가 \textbf{100\% $\pm$ 0\% (5/5 seeds)} 로 향상된다.
+
+\subsection{Sparse Ternary 복구 (HW=HS MAP)}
+
+$d_i = \sigma_i \cdot (\bar{T}_{\alpha=64}[\mathrm{PoI}_i] -
+\bar{T}_{\alpha=192}[\mathrm{PoI}_i])$ 의 signed score 를 다음과 같이 ternary
+posterior 로 변환:
+\begin{equation}
+\pi_i(s) \propto \exp\left( -\frac{1}{2 \sigma^2} (d_i - \mu \cdot s)^2 \right)
+\quad s \in \{-1, 0, +1\}
+\end{equation}
+여기서 $\mu$ 는 $|d|$ 의 추정 magnitude.
+
+\begin{algorithm}[h!]
+\caption{Greedy sparse ternary recovery (HW=HS MAP)}
+\label{alg:sparse-recover}
+\begin{algorithmic}[1]
+\Require posterior $\pi \in \Delta^{n \times 3}$, sparse constraint $\HS$
+\Ensure $\hat{s} \in \{-1, 0, +1\}^n$ with $|\{i: \hat{s}_i \neq 0\}| = \HS$
+\State $r_i \gets \pi_i(-1) + \pi_i(+1)$ for all $i$ \Comment{support score}
+\State $\mathit{Top} \gets \arg\mathrm{topk}(r, \HS)$ \Comment{stable sort, top-HS positions}
+\State $\hat{s} \gets \mathbf{0}$
+\For{$i \in \mathit{Top}$}
+   \State $\hat{s}_i \gets +1$ if $\pi_i(+1) > \pi_i(-1)$ else $-1$
+\EndFor
+\Return $\hat{s}$
+\end{algorithmic}
+\end{algorithm}
+
+\paragraph{1-swap neighborhood.} 정확도가 부족한 경우 top-$\HS$ 결과의
+1-swap 변종 (in-support 하나를 빼고 out-of-support 하나를 대체) 을 enumerate
+하고 log-prob 정렬한다. 이 방법은 \texttt{enumerate\_top\_candidates} 로
+구현되어 있다.
+
+\paragraph{$\sigma$ 정확도.} 4 chosen-CT design 의 cross-design split 이 sk
+support 와 정확히 일치하는 점 (\cref{sec:directpoi}) 때문에, sparse\_recover
+의 \emph{선택된 support 안에서 sign 정확도는 9개 keypair 모두에서 100\%}
+이다.
+
+%=============================================================================
+\section{실험 평가 (Experiments)}
+\label{sec:exp}
+%=============================================================================
+
+\subsection{측정 setup 요약}
+
+ChipWhisperer-Lite + Vcc 션트 + STM32F415, ADC 24\,400 samples,
+clkgen\_x4 (29.5\,MS/s), gain 25\,dB. 펌웨어는 SimpleSerial v1.1, 'Z'
+명령으로 trace + 32 byte $\mu'$ 응답 수신. 자세한 명령 셋과 환경은
+\cref{sec:prelim}, repository \texttt{README.md} 참조.
+
+\subsection{N curve — minimum trace cost}
+
+\begin{table}[h!]
+\centering
+\caption{N curve (5 seeds × N=128 캡처를 부분 추출). 4 chosen-CT 의 각각
+처음 $N$ trace 만 사용. Phase transition 이 $N=1 \to N=2$ 에서 발생.}
+\label{tab:ncurve}
+\small
+\begin{tabular}{rrrrr}
+\toprule
+$N$ (per CT) & total traces & 캡처 시간 & full sk acc (5 seeds) & std \\
+\midrule
+1 & 4 & 1.6 s & 57.3\% & 0.015 \\
+\textbf{2} & \textbf{8} & \textbf{3.2 s} & \textbf{100\%} & \textbf{0\%} \\
+4 & 16 & 6.4 s & 100\% & 0\% \\
+16 & 64 & 25.6 s & 100\% & 0\% \\
+128 & 512 & 204.8 s & 100\% & 0\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+$N=1$ 은 Welch t-statistic 의 variance 추정 (ddof=1) 에 최소 2 sample 이
+필요하기 때문에 실패한다. $N \geq 2$ 부터 모든 5개의 keypair 에서 full sk
+복구가 100\% 달성된다.
+
+\subsection{9-seed grand evaluation}
+
+5 seeds $\times$ N=128 와 3 seeds $\times$ N=512 와 1 seed $\times$ N=256 을
+합쳐 \textbf{9 dataset 평가}:
+
+\begin{table}[h!]
+\centering
+\caption{9 dataset multi-seed 평가 (component-specific PoI + sparse\_recover).}
+\label{tab:9seed}
+\small
+\begin{tabular}{lrrrrr}
+\toprule
+metric & mean & std & min & max & median \\
+\midrule
+\textbf{full\_sk\_acc} & \textbf{1.000} & \textbf{0.000} & \textbf{1.000} & \textbf{1.000} & \textbf{1.000} \\
+n\_valid\_bits & 120.3 & 2.8 & 116 & 125 & 122 \\
+$\max|t|$ & 10.56 & 3.04 & 6.7 & 15.3 & 9.2 \\
+$s_0$ corr & +1.000 & 0.000 & +1.000 & +1.000 & +1.000 \\
+$s_1$ corr & +1.000 & 0.000 & +1.000 & +1.000 & +1.000 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{SNR phase transition (negative finding)}
+
+\paragraph{Cross-component PoI 의 한계.} component 격리 없이 4 design 모두를
+사용한 PoI 학습:
+
+\begin{table}[h!]
+\centering
+\caption{Cross-component PoI 의 SNR phase transition.}
+\label{tab:snr-phase}
+\small
+\begin{tabular}{lrrr}
+\toprule
+비교 & $N=64\;\max|t|$ & $N=256\;\max|t|$ & $N=512\;\max|t|$ \\
+\midrule
+const\_a64 vs const\_a192 & — & — & 13.88 \\
+const\_a64 vs 3term & 4.03 & 3.64 & 15.20 \\
+const\_a64 vs combined & — & — & 13.80 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+$N=64 \to N=256$ (4배 증가) 에서 $|t|$ 가 4.03 $\to$ 3.64 로 \emph{역행}
+(noise regime, random walk). $N=256 \to N=512$ (2배) 에서 $|t|$ 가
+3.64 $\to$ 15.20 (4.2배 증가, $\sqrt{2} \approx 1.41$ 보다 큼) — \emph{noise
+$\to$ signal regime phase transition}.
+
+\subsection{비교 method 와 차이}
+
+\begin{table}[h!]
+\centering
+\caption{Cross-component PoI vs Component-specific PoI (5 seeds, N=128).}
+\label{tab:methods}
+\small
+\begin{tabular}{lrrrr}
+\toprule
+metric & Cross-component & \textbf{Component-specific (paper main)} \\
+\midrule
+full sk mean & 95.6\% & \textbf{100\%} \\
+full sk std & 5.6\% & \textbf{0\%} \\
+full sk min & 87.1\% & \textbf{100\%} \\
+$s_0$ mean & 98.8\% & \textbf{100\%} \\
+$s_1$ mean & 92.5\% & \textbf{100\%} \\
+sign acc & 100\% & 100\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%=============================================================================
+\section{토의 (Discussion)}
+\label{sec:discussion}
+%=============================================================================
+
+\subsection{무엇이 작동했고 무엇이 안 했나}
+
+\paragraph{성공 요인.}
+(i) chosen-CT 컨벤션 정정으로 query 효율 4400배 향상. (ii) Direct attack PoI
+가 cross-domain transfer 문제 우회. (iii) Component-specific learning 이
+cross-component 노이즈 제거. (iv) sparse\_recover 의 $\HS$ 제약이 design
+자체에 implicit.
+
+\paragraph{실패 시도 (negative results, 정량).}
+\begin{enumerate}[leftmargin=*]
+\item \textbf{Random-µ profile transfer} (\cref{sec:directpoi}). Sign 반전,
+   bit accuracy 56\% (zero-baseline 73\% 미달). $r=-0.086$, sign flip 후
+   $r=+0.086$ 으로 호전되나 여전히 chance.
+\item \textbf{Per-bit FD attack at noise floor.} Profile $N=200 \to 1000$ (5배)
+   에서 max$|t|$ 가 4.97 $\to$ 5.19 — $\sqrt{5} \approx 2.24$ 의 기대 증가량
+   (예측 11.1) 보다 훨씬 작음, noise peak 만 측정.
+\item \textbf{'T' isolated multiplier 명령 round-trip.} $\texttt{poly\_mul\_acc}$ 를
+   firmware 의 'T' 명령으로 isolated 호출 + sub-trigger. host 의 numpy 시뮬레이션과
+   board 의 응답이 \emph{0/6 round-trip 매치}. 패턴 분석:
+   board=$0\mathrm{x}7\mathrm{FC}0$ vs expected $0\mathrm{xFFC}0$ — high bit
+   차이. SMAUG-T archive 가 q-modular unsigned (또는 NTT-friendly variant) 의
+   internal storage 사용 추정. 이 issue 우회를 위해 'Z' 명령 (전체
+   indcpa\_dec) trace windowing 으로 pivot.
+\end{enumerate}
+
+\subsection{Threat model 정직 평가}
+
+본 공격은 다음 능력을 가진 적을 가정한다:
+\begin{itemize}[leftmargin=*]
+\item Decapsulator 에 임의의 ciphertext 를 보낼 수 있음 (chosen-CT capability)
+\item Decapsulation 동안 Vcc 션트 또는 EM 위에서 power trace 측정 가능
+\item Trace 측정 transparency (트리거 동기화) — 일반적인 SCA 가정
+\end{itemize}
+적은 \emph{오프라인 템플릿} 을 학습할 필요가 \emph{없으며}, target sk 의 다른
+복사본이나 alternative 정보 통로도 필요 없다. 이는 \emph{single-stage online}
+공격이며 PCO/MV-PC 등의 offline-heavy 공격과 차별점이다.
+
+%=============================================================================
+\section{대응 방안 분석 (Countermeasures)}
+\label{sec:countermeasures}
+%=============================================================================
+
+본 공격에 대한 표준 PQC SCA 대응 방안의 정량적 효과를 분석한다.
+실측 구현은 향후 연구로 남기되, 기존 문헌 (HQC TCHES~24 의 shuffling
+breakdown, masked Kyber 평가 결과) 에 기반한 분석은 다음과 같다.
+
+\subsection{Masking}
+
+\paragraph{1차 masking (codeword 또는 arithmetic).}
+$\langle c_1, sk \rangle_i$ 를 두 share 로 분할 ($\mathrm{share}_a + \mathrm{share}_b
+\equiv \langle c_1, sk \rangle_i \mod q$). $\mu'$ 응답 자체는 unmask 후 출력되어
+변하지 않으나, trace-level signal 은 두 share 의 incoherent 합으로 약 $\sqrt{2}$
+배 감소한다.
+\textbf{예상 trace 비용}: $N=2 \to N \approx 4-8$, 즉 16--32 traces, 약 10--15초.
+
+\paragraph{2차 masking.}
+3 share 분할 후 univariate t-test 의 SNR 이 약 3--4배 감소, bivariate Welch-t
+의 multi-comparison floor 가 $\sqrt{2 \ln T^2}$ 으로 증가. 추가로 sample
+pair search 의 계산 비용이 $T^2$.
+\textbf{예상 trace 비용}: $N \approx 16-32$.
+
+\paragraph{3차 이상 masking.}
+First-order Welch-t method 가 fail. BP-SASCA / template attack 영역으로 진입.
+
+\subsection{Shuffling}
+
+\paragraph{Sample-level (random delay).}
+PoI 가 fixed sample 이 아닌 window 안의 임의 sample 로 spread.
+window 폭 $w$ 에 대해 SNR 이 $\sqrt{w}$ 배 감소. $w=8$ 이면 $N \approx 16$
+(64 traces), $w=32$ 이면 $N \approx 64$ (256 traces).
+
+\paragraph{Coefficient-level shuffling (Ravi-Roy 2020 RPBC).}
+Compress$_t$ 의 비트 처리 순서를 random permute. PoI 가 fixed sample
+대응 안 됨. 강한 방어.
+
+\paragraph{Full shuffling (Goy-Maillard 24 영감)~\citep{goy24}.}
+Sample + coefficient-level 결합. \textbf{본 method 직접 fail}. Resync
++ BP-SASCA 가 필요.
+
+\subsection{종합 권고}
+
+\begin{table}[h!]
+\centering
+\caption{대응 방안 별 본 공격의 비용 추정.}
+\label{tab:counter}
+\small
+\begin{tabular}{lrl}
+\toprule
+방어 & 예상 trace & 추가 method change \\
+\midrule
+없음 (현재) & \textbf{8} & — \\
+1차 masking & 16--32 & 없음 \\
+2차 masking & 64+ & bivariate Welch-t \\
+Sample shuffle ($w=8$) & 64 & 없음 \\
+Coefficient shuffle & 큼 & PoI rebalancing \\
+\textbf{Full shuffling} & \textbf{fail} & resync + BP-SASCA 필요 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+권장 defense: \textbf{1차 masking + sample-shuffle ($w \geq 16$) +
+coefficient-shuffle 결합}. 각각 individually 우회 가능하나 결합 시 본
+method 가 BP-SASCA 영역으로 강제됨 (SMAUG-T 에는 prior work 없음).
+
+%=============================================================================
+\section{결론 (Conclusion)}
+\label{sec:conclusion}
+%=============================================================================
+
+본 논문은 KpqC 2025 우승 KEM SMAUG-T smaug1 에 대한 first-of-kind
+통계적 부채널 공격을 제시한다. \textbf{ChipWhisperer-Lite + Vcc 션트 +
+STM32F415 unmasked 참조 구현 위에서 4개의 chosen-CT $\times$ N=2 = 8개의
+power trace (3.2초 측정) 만으로 long-term secret key 의 100\% 복구를 9개의
+무작위 keypair 모두에서 분산 0 으로 달성한다}.
+
+세 method 기여 (chosen-CT 컨벤션 정정, Direct attack PoI, Component-specific
+PoI + Sparse 복구) 와 정량화된 부정적 발견 (profile transfer fail, SNR
+phase transition, 'T' isolated multiplier round-trip fail) 이 결과를 가능케
+하였다. 본 method 는 module-LWR 또는 module-LWE 의 임의의 KEM 으로
+일반화 가능하며, 향후 연구는 (i) masked SMAUG-T 구현 평가, (ii) smaug3 /
+smaug5 (모듈 rank 3 / 5) 확장, (iii) Toom-Cook BP-SASCA 의 결합으로
+single-trace ($N=1$) 가능성 확인이다.
+
+%=============================================================================
+\section*{재현성 (Reproducibility)}
+\label{sec:repro}
+%=============================================================================
+
+본 논문의 모든 실험은 다음으로 재현 가능하다:
+
+\begin{verbatim}
+# 1. firmware 빌드 + 플래시
+make -C firmware/simpleserial-smaug PLATFORM=CW308_STM32F4 SMAUG_LEVEL=1
+python3 host/upload.py firmware/simpleserial-smaug/\
+    simpleserial-smaug-CW308_STM32F4.hex
+
+# 2. multi-seed 캡처 (5 keypairs × N=128, ~25분)
+for s in 1 2 3 4 5; do
+    python3 scripts/run_attack.py -n 128 \
+        --out traces/attack_seed${s}.npz
+done
+
+# 3. paper main 결과 분석
+python3 scripts/analyze_multi_seed.py traces/attack_seed{1..5}.npz
+# 출력: full_sk_acc mean=1.000 std=0.000
+
+# 4. minimum cost 데모 (8 traces, 3.2초)
+python3 scripts/run_attack.py -n 2 --out traces/attack_quick.npz
+python3 scripts/analyze_multi_seed.py traces/attack_quick.npz
+\end{verbatim}
+
+코드는 \texttt{<repository>} 에서 다운로드 가능하며, 64개의 unit test
+(\texttt{tests/}) 가 chosen-CT 빌더, predict\_mu\_prime 의 round-trip,
+sparse\_recover 의 합성 SNR 곡선을 자동 검증한다.
+
+%=============================================================================
+\bibliographystyle{plainnat}
+\bibliography{mybib}
+
+%=============================================================================
+\appendix
+%=============================================================================
+
+\section{SMAUG-T 매개변수 상세}
+\label{app:params}
+
+\subsection{smaug1, smaug3, smaug5}
+
+\begin{table}[h!]
+\centering
+\caption{SMAUG-T 모든 보안 수준의 파라미터.}
+\label{tab:smaug-all}
+\small
+\begin{tabular}{lrrr}
+\toprule
+파라미터 & smaug1 & smaug3 & smaug5 \\
+\midrule
+$n$ & 256 & 256 & 256 \\
+$k$ (module rank) & 2 & 3 & 5 \\
+$\log q$ & 10 & 10 & 11 \\
+$\log p$ & 8 & 8 & 8 \\
+$\log p'$ & 5 & 8 & 6 \\
+$\log t$ & 1 & 1 & 1 \\
+$\HS$ (per poly) & 70 & 88 & 152 \\
+ciphertext bytes & 672 & 1088 & 1472 \\
+공개키 bytes & 672 & 992 & 1632 \\
+보안 수준 (target) & AES-128 & AES-192 & AES-256 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+본 논문의 모든 실험은 smaug1 위에서 수행되었다. smaug3 / smaug5 의 module
+rank 3 / 5 는 더 많은 chosen-CT design (module rank $\times$ 2 = 6 / 10 design)
+이 필요하지만 method 자체는 동일하다.
+
+\subsection{Toom-Cook 4-way layout (smaug1.a 분석)}
+
+\texttt{arm-none-eabi-objdump} 으로 \texttt{lib/crypto\_kem/smaug1.a} 를 분석한
+결과:
+
+\begin{table}[h!]
+\centering
+\caption{핵심 함수의 instruction 수와 cycle 추정 (Cortex-M4).}
+\label{tab:toom-cook}
+\small
+\begin{tabular}{lrrr}
+\toprule
+함수 & instructions & 추정 cycles & samples (clkgen\_x4) \\
+\midrule
+\texttt{karatsuba\_simple} (1회) & 601 & ~1500 & ~6000 \\
+\texttt{toom\_cook\_4way} (자체) & 651 & ~1000 & ~4000 \\
+\texttt{toom\_cook\_4way} (전체, +7 kara) & 5808 & ~11500 & ~46000 \\
+\texttt{poly\_mul\_acc} & 5882 & ~12000 & ~48000 \\
+\texttt{indcpa\_dec} (전체) & ~5000 & ~50000 & ~200000 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\texttt{poly\_mul\_acc} 는 \texttt{toom\_cook\_4way} 를 한 번 호출하며, 그
+내부에서 \texttt{karatsuba\_simple} 이 7번 호출되어 Toom-Cook-4 의 7개의
+evaluation point 별 sub-poly 곱을 수행한다. 24\,400 sample ADC 윈도우는
+\texttt{poly\_mul\_acc} 한 호출 (46\,000 samples) 의 절반만 포함하므로,
+\texttt{Z} 명령은 \texttt{indcpa\_dec} 의 시작 영역만 캡처한다.
+
+\section{추가 실험 디테일}
+\label{app:exp}
+
+\subsection{발견 과정 timeline}
+
+본 논문의 main flow 는 다음 과정을 거쳐 도출되었다:
+
+\begin{enumerate}[leftmargin=*]
+\item \textbf{Step 1.} Collective µ flip leakage 측정 (E3b TVLA, $N=1000$,
+   max$|t|=8.99$). \emph{paper main 에는 인용만}, 코드는
+   \texttt{history/scripts/capture\_step1\_collective\_leak\_n1000.py}.
+\item \textbf{Step 2.} 14개의 chosen-CT pilot 으로 컨벤션 발견 trigger
+   (j-sweep 이 모두 같은 $s_0$ 만 측정함을 발견). 코드는
+   \texttt{history/scripts/capture\_step2\_convention\_pilot.py}.
+\item \textbf{Step 3.} Random-µ profile 캡처 후 cross-domain transfer 시도
+   (negative). 코드는
+   \texttt{history/scripts/capture\_step3\_random\_mu\_profile.py}.
+\item \textbf{Step 4a/4b.} Profile-PoI baseline (56\%) + sparse 후처리 (55\%)
+   결과 정량화 (negative).
+\item \textbf{Step 5.} multi-term H 데이터의 cross-design split 첫 분석 →
+   direct attack PoI 도출 (paper Section 5).
+\end{enumerate}
+
+이 과정의 각 step 은 \texttt{history/scripts/} 에 보존되어 있으며 paper 의
+부정적 또는 prerequisite finding 의 evidence 역할을 한다.
+
+\subsection{재현성 file mapping}
+
+paper 의 각 section 은 다음 main script 로 재현된다:
+
+\begin{table}[h!]
+\centering
+\caption{Paper section \ ↔ \ reproducer script mapping.}
+\label{tab:repro}
+\small
+\begin{tabular}{ll}
+\toprule
+Paper Section & Reproducer \\
+\midrule
+Section 4 (Method overview) & \texttt{scripts/run\_attack.py} \\
+Section 4.4 (Multi-term + R\textsuperscript{2} 검증) & \texttt{scripts/run\_h\_attack.py} \\
+Section 5 (Direct attack PoI) & \texttt{scripts/attack\_direct\_poi.py} \\
+Section 6, 7 (\textbf{paper main result}) & \textbf{\texttt{scripts/analyze\_multi\_seed.py}} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\end{document}

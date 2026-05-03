@@ -1,0 +1,1816 @@
+pa%%%%%% NeurIPS 2026 SUBMISSION %%%%%%%%
+\documentclass{article}
+
+\usepackage{neurips_2024}            % NeurIPS style (local fallback; the
+                                     % official neurips_2026.sty, if
+                                     % available, will take precedence).
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+\usepackage[capitalize,noabbrev]{cleveref}
+\usepackage{xspace}
+\usepackage{multirow}
+\usepackage{float}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{enumitem}
+\usepackage{placeins}
+
+% Relax float placement parameters to let figures fit more easily,
+% reducing end-of-body float pileup.
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.8}
+\renewcommand{\textfraction}{0.1}
+\renewcommand{\floatpagefraction}{0.7}
+\setcounter{topnumber}{3}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{5}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% THEOREM ENVIRONMENTS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% S-IEC name: use a simple macro that is safe inside hboxes/captions and
+% also inside hyperref PDF-string contexts (section titles, etc.).
+\newcommand{\SIEC}{\texorpdfstring{S\mbox{-}IEC\xspace}{S-IEC }}
+
+\title{Decoding Efficient Diffusion: Syndrome-Guided Test-Time Error Correction}
+
+\author{%
+  Anonymous Authors \\
+  Paper under double-blind review
+}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Efficient diffusion models are typically deployed under approximation mechanisms
+such as quantization, feature caching, and step reduction. These mechanisms
+perturb the reverse dynamics, and the induced error is recursively propagated
+across timesteps. Existing test-time correction methods mitigate this
+degradation but largely treat approximation error as an unstructured local
+residual. In this work, we argue that deployed diffusion should instead be
+viewed as decoding over a noisy computational channel. Our starting point is a
+\emph{reverse-time consistency law}: in the exact diffusion process, the
+posterior mean of the clean sample forms a martingale-consistent process across
+timesteps. Approximate samplers violate this law, and we interpret the
+resulting martingale defect as a \emph{generalized syndrome}. We propose
+Syndrome-guided Test-Time Error Correction (\SIEC), a training-free
+decoder that extracts syndrome signals from redundant clean-signal estimates
+at adjacent timesteps and performs minimal consensus correction before the
+next reverse transition. We prove that the generalized syndrome is first-order
+sensitive to structure-breaking deployment error while being insensitive to
+tangent perturbations that preserve diversity; one decoding round selectively
+contracts the harmful normal component of the error; and cumulative
+post-correction syndrome energy controls excess denoising risk and
+upper-bounds the final sampling gap to the ideal sampler under standard
+discrete-time comparison conditions. These results recast efficient diffusion
+correction as continuous syndrome decoding and provide a reliability-theoretic
+foundation for approximate generative computation.
+\end{abstract}
+
+%=============================================================================
+\section{Introduction}
+\label{sec:introduction}
+%=============================================================================
+
+Denoising diffusion and score-based generative models have become a standard
+paradigm for high-fidelity generation \citep{ho2020ddpm,song2021sde}, but
+state-of-the-art systems are rarely deployed in their ideal form. To meet
+latency, memory, and energy constraints, deployed samplers typically rely on
+approximation mechanisms such as low-precision quantization, activation
+caching, and aggressive step reduction. These mechanisms perturb the reverse
+dynamics, and the induced error is recursively fed into subsequent denoising
+steps, causing cumulative drift away from the target reverse process
+\citep{zhong2026iec}. Existing test-time correction methods mitigate this
+phenomenon but largely treat the approximation error as an unstructured local
+perturbation to be iteratively refined \citep{zhong2026iec,yao2024tac}. This
+viewpoint is natural from a generative modeling perspective, yet it overlooks
+a central lesson from coding theory: reliable recovery exploits structure,
+redundancy, and checkable consistency relations \citep{shannon1948,gallager1962,
+berrou1993turbo}.
+
+A similar shift in perspective is emerging for diffusion models. Denoising
+Diffusion Error Correction Codes (DDECC) showed that diffusion can act as an
+iterative decoder for linear codes, with parity-aware conditioning and
+syndrome-guided step selection \citep{choukroun2023ddecc}. In parallel,
+information-theoretic analyses have clarified that diffusion is deeply
+connected to Bayesian denoising, belief propagation, and I-MMSE-type
+identities \citep{guo2005immse,kong2023itdiffusion,mei2025unetbp,
+reeves2025itproofs}. These lines suggest that diffusion sampling should be
+viewed not only as a sequence of denoising updates, but also as a
+\emph{structured decoding process}. What remains missing is a syndrome-like
+object for continuous diffusion under approximate inference: unlike the
+classical linear-code setting, there is no explicit parity-check matrix. If
+such a syndrome is to exist, it must be extracted from the internal
+consistency law of the reverse process itself.
+
+\paragraph{Our starting point.}
+Let \(m_t(x_t) = \mathbb{E}[X_0 \mid X_t = x_t]\) denote the posterior mean of
+the clean sample at time \(t\). Along the exact reverse diffusion chain, we
+show that \(m_t(X_t)\) is \emph{martingale-consistent}: the clean-signal
+estimate at time \(t\) equals, in conditional expectation, the estimate
+implied by the next reverse step. Efficient samplers violate this consistency,
+and we interpret the resulting defect as a generalized syndrome
+\begin{equation}
+s_t
+=
+W_t\!\left(\hat m_t(x_t)
+  - \mathbb{E}_{\tilde p_{t-1\mid t}(\cdot \mid x_t)}[\hat m_{t-1}(X_{t-1})]\right),
+\label{eq:intro_syndrome}
+\end{equation}
+where \(\hat m_t\) is the deployed clean-signal estimator and \(W_t\) is a
+preconditioning operator. In the ideal process, \(s_t = 0\); under
+quantization, caching, or step reduction, one typically has \(s_t \neq 0\).
+This recasts test-time correction as decoding: instead of suppressing all
+local deviations, one should correct precisely those components that violate
+the internal consistency law of the reverse process.
+
+\paragraph{\SIEC.}
+Based on this perspective, we propose \SIEC, a training-free
+decoder that, at each reverse step, computes redundant clean-signal estimates
+from adjacent timesteps, extracts the syndrome, and performs a minimal
+consensus update \emph{only} when the syndrome exceeds a tolerance. This
+turns test-time correction into a verifier-driven procedure: a small syndrome
+certifies that the approximate trajectory remains faithful to the target
+reverse process, whereas a large syndrome identifies structured deviation.
+This distinction separates diversity-preserving perturbations from
+manifold-violating error modes and lets us analyze correction as selective
+decoding rather than generic post-processing.
+
+\paragraph{Contributions.}
+\begin{itemize}[leftmargin=1.2em,itemsep=1pt,topsep=2pt]
+  \item We introduce a posterior-mean martingale view of reverse diffusion and
+    define a generalized syndrome that detects violations of cross-timestep
+    consistency under efficient inference.
+  \item We propose \SIEC (Algorithm~\ref{alg:siec}), a training-free
+    test-time correction method driven by the generalized syndrome.
+  \item We prove \emph{observability} and \emph{selective stabilization}:
+    syndrome-guided correction contracts the harmful manifold-violating error
+    mode while preserving diversity-preserving tangent modes to first order.
+  \item We establish information-theoretic bounds linking cumulative syndrome
+    energy to excess denoising risk and to the sampling gap between the
+    corrected sampler and the target distribution.
+\end{itemize}
+Compared with DDECC \citep{choukroun2023ddecc}, we do not assume an explicit
+code or discrete symbols; compared with IEC and TAC \citep{zhong2026iec,
+yao2024tac}, we do not iteratively reduce a generic residual but correct a
+specific structural defect. \SIEC is thus closer to continuous
+syndrome decoding than to heuristic refinement.
+
+%=============================================================================
+\section{Related Work}
+\label{sec:related_work}
+%=============================================================================
+
+\paragraph{Efficient diffusion and test-time correction.}
+A broad literature accelerates diffusion sampling through fewer denoising
+steps, distilled samplers, model compression, and feature reuse
+\citep{salimans2022pdistill,shang2023ptqdm,ma2024deepcache,song2023consistency}.
+Several methods introduce correction mechanisms during sampling:
+predictor--corrector samplers reduce discretization bias under an accurate
+score model \citep{song2021sde}; TAC observes that quantization error affects
+different timesteps unequally and proposes a timestep-aware correction for
+low-precision diffusion \citep{yao2024tac}; IEC studies a broader family of
+efficient samplers and shows that inference-time approximation errors can
+accumulate exponentially across timesteps, proposing an iterative refinement
+that provably reduces this growth to a linear one \citep{zhong2026iec}. These
+are our closest algorithmic baselines. Rather than starting from a generic
+local residual to be refined, we ask whether approximate reverse diffusion
+admits an internal, syndrome-like check relation to monitor and decode.
+
+\paragraph{Diffusion, decoding, and information theory.}
+DDECC bridges diffusion and coding by using diffusion as an iterative decoder
+for linear codes, with syndrome-guided step selection
+\citep{choukroun2023ddecc}; that setting assumes an explicit external code,
+discrete signal space, and a parity-check matrix supplied in advance. Another
+line interprets U-Nets as belief propagation on generative hierarchical
+models, suggesting that diffusion architectures already implement redundant
+hierarchical inference \citep{mei2025unetbp}. A third line studies diffusion
+through information theory: I-MMSE-type identities relate denoising objectives
+to data distributions \citep{guo2005immse,kong2023itdiffusion}, and
+discrete-time analyses control the divergence between an approximate chain
+and an ideal one through conditional-mean estimation error
+\citep{reeves2025itproofs}. These works supply the theoretical language
+(posterior means, MMSE, divergence control) most relevant to our paper but do
+not provide an online-computable syndrome for a deployed sampler.
+
+\paragraph{Positioning.}
+Relative to efficient-diffusion correction methods, our novelty is the
+\emph{definition of the error signal}: we seek a structural defect induced by
+the target process, not an undifferentiated residual
+\citep{yao2024tac,zhong2026iec}. Relative to DDECC, we lack an externally
+supplied code and derive the check relation from continuous reverse diffusion
+itself \citep{choukroun2023ddecc}. Relative to projection-based constrained
+synthesis \citep{christopher2024projected}, our verifier is endogenous: it is
+induced by the reverse diffusion we seek to preserve, not an exogenous
+constraint. This is the sense in which \SIEC should be understood
+as \emph{continuous syndrome decoding} for approximate reverse diffusion.
+
+%=============================================================================
+\section{Preliminaries}
+\label{sec:preliminaries}
+%=============================================================================
+
+\paragraph{Notation and setup.}
+\(X_0 \in \mathbb{R}^d\) is a clean sample from \(P_0\); \(X_t\) denotes its
+corrupted version at noise level \(t\in\{0,\dots,T\}\); \(\|\cdot\|\) is the
+Euclidean norm. We use the standard discrete-time variance-preserving
+formulation \citep{ho2020ddpm}: \(q(x_t \mid x_0) = \mathcal{N}(\alpha_t x_0,
+\sigma_t^2 I_d)\) with \(\alpha_0=1, \sigma_0=0\), typically
+\(\alpha_t^2+\sigma_t^2=1\); equivalently, \(X_t = \alpha_t X_0 +
+\sigma_t\varepsilon\) with \(\varepsilon \sim \mathcal{N}(0,I_d)\), so each
+step is an additive Gaussian channel. The ideal reverse kernels
+\(p^\star_{t-1 \mid t}\) transport \(P_T\approx\mathcal{N}(0,I_d)\) back to
+\(P_0^\star\); one ideal reverse update is
+\(X_{t-1}^\star = F_t^\star(X_t^\star;\omega_t)\), where \(\omega_t\) is the
+sampler's step randomness (degenerate for deterministic DDIM
+\citep{song2021ddim}; Gaussian or solver-induced otherwise). The same
+interface covers reverse-SDE and probability-flow ODE solvers
+\citep{song2021sde}. Throughout, ideal and deployed samplers are coupled by
+the same initial seed and same \(\omega_1,\dots,\omega_T\).
+
+\paragraph{Posterior mean and deployed channel.}
+The central object is the posterior mean
+\(m_t(x_t) = \mathbb{E}[X_0 \mid X_t = x_t]\). Networks often predict the
+noise \(\hat\varepsilon_\theta(x_t,t)\); the associated clean-signal estimate
+is \(\hat x_0(x_t,t) = (x_t - \sigma_t \hat\varepsilon_\theta(x_t,t))/\alpha_t\).
+For \(x_0\)- or \(v\)-prediction the model output converts to the same
+quantity, so our construction is parameterization-agnostic. Under
+quantization, caching, or reduced-step sampling
+\citep{shang2023ptqdm,ma2024deepcache,zhong2026iec}, the deployed update is
+\begin{equation}
+\tilde X_{t-1} = F_t(\tilde X_t;\omega_t)
+= F_t^\star(\tilde X_t;\omega_t) + \delta_t(\tilde X_t;\omega_t),
+\label{eq:approx_update}
+\end{equation}
+where \(\delta_t\) aggregates deployment-time approximation effects (the
+\emph{computational channel noise}). The pathwise error
+\(e_t = \tilde X_t - X_t^\star\) evolves by dynamical amplification through
+\(F_t^\star\) plus local channel noise, and \(\tilde P_0\) denotes the
+deployed output law.
+
+\paragraph{Deployment objective.}
+The deployed model, scheduler, and efficiency mechanism are fixed; we do
+\emph{not} allow retraining, fine-tuning, quantization-aware recalibration, or
+external supervision at deployment time. A test-time correction is a
+measurable map \(C_t\) acting on quantities already present in the reverse
+trajectory and producing a corrected trajectory \(\bar X_{T-1},\dots,\bar X_0\)
+with output law \(P_0^{\mathrm{corr}}\). We aim to make
+\(D_{\mathrm{KL}}(P_0^{\mathrm{corr}} \| P_0^\star)\) small subject to a bound
+on \(\mathrm{NFE}_{\mathrm{extra}}\), requiring \emph{training-free}
+compatibility, \emph{selectivity} (attenuate structurally harmful drift, not
+all variation), and \emph{local computability}. Conditional-mean estimation
+error is known to control denoising risk and the approximate-to-target
+sampling gap \citep{kong2023itdiffusion,reeves2025itproofs}; this motivates
+formulating correction in terms of \(\hat x_0\). All results assume standard
+local Lipschitz smoothness and bounded-moment regularity of the reverse
+maps, posterior means, and channel noise; the full list of regularity
+conditions is deferred to Appendix~\ref{app:reg}.
+
+%=============================================================================
+\section{Posterior-Mean Martingale and Generalized Syndrome}
+\label{sec:syndrome}
+%=============================================================================
+
+The relevant error variable for approximate reverse diffusion is not the raw
+denoiser discrepancy but the violation of a cross-timestep consistency law
+obeyed by posterior means, in line with the information-theoretic view that
+conditional-mean errors control denoising risk and the approximate-to-target
+sampling gap \citep{guo2005immse,kong2023itdiffusion,reeves2025itproofs}.
+
+\subsection{Reverse-time martingale consistency}
+
+Define \(M_t = m_t(X_t)\) for \(t=0,\dots,T\).
+
+\begin{proposition}[Reverse-time martingale consistency]\label{prop:martingale}
+For every \(t\in\{1,\dots,T\}\) and \(P_t^\star\)-a.e.\ \(x_t\),
+\(\mathbb{E}[M_{t-1} \mid X_t] = M_t\), i.e.\
+\(\mathbb{E}[m_{t-1}(X_{t-1}) \mid X_t = x_t] = m_t(x_t)\).
+\end{proposition}
+
+This one-step conservation law along the ideal chain is the source of our
+syndrome; a full proof via the Markov property, tower property, and
+Doob-martingale construction is in Appendix~\ref{app:prop_mart}.
+
+\subsection{Check operator and martingale defect}
+
+Define \((T_t^\star f)(x_t) = \mathbb{E}_{p^\star_{t-1 \mid t}(\cdot \mid
+x_t)}[f(X_{t-1})]\), so Proposition~\ref{prop:martingale} reads
+\(m_t = T_t^\star m_{t-1}\). In deployment, \(p^\star_{t-1 \mid t}\) is
+replaced by \(\tilde p_{t-1 \mid t}\) (Dirac for deterministic samplers),
+inducing the deployed operator \(\tilde T_t\), and \(m_t\) is replaced by
+\(\hat m_t = \hat x_0(\cdot,t)\).
+
+\begin{definition}[Martingale defect; generalized syndrome]\label{def:defect}
+The martingale defect is
+\(d_t(x_t) = \hat m_t(x_t) - (\tilde T_t \hat m_{t-1})(x_t)\); for a
+deterministic positive semidefinite \(W_t\in\mathbb{R}^{d\times d}\), the
+\emph{generalized syndrome} is
+\begin{equation}
+s_t(x_t) = W_t\, d_t(x_t)
+ = W_t\!\left(\hat m_t(x_t) - (\tilde T_t \hat m_{t-1})(x_t)\right).
+\label{eq:syndrome}
+\end{equation}
+\end{definition}
+
+\begin{proposition}[Zero-syndrome property]\label{prop:zero_syn}
+If \(\tilde p_{t-1 \mid t} = p^\star_{t-1 \mid t}\) and \(\hat m_t = m_t\)
+for all \(t\), then \(d_t \equiv s_t \equiv 0\) \(P_t^\star\)-a.e.
+\end{proposition}
+
+The syndrome is thus zero on the ideal process, endogenous, and
+MMSE-aligned; it plays the role of a parity test against the
+martingale-consistent family \(\{m_t\}_t\), induced endogenously by the
+reverse process rather than supplied by an external code
+\citep{choukroun2023ddecc}. The \emph{cumulative syndrome energy} is
+\(\mathcal{E}_{\mathrm{syn}} = \sum_{t=1}^T \mathbb{E}\|s_t(\tilde X_t)\|^2\).
+
+\subsection{A computable one-sample proxy}
+
+\begin{proposition}[Unbiased proxy]\label{prop:proxy}
+Let \(\hat s_t^{(1)} = W_t(\hat x_0(\tilde X_t,t) - \hat x_0(\tilde
+X_{t-1}^{\mathrm{tent}}, t-1))\), where \(\tilde X_{t-1}^{\mathrm{tent}}
+\sim \tilde p_{t-1\mid t}(\cdot \mid \tilde X_t)\). Then
+\(\mathbb{E}[\hat s_t^{(1)} \mid \tilde X_t] = s_t(\tilde X_t)\), with
+equality for deterministic samplers.
+\end{proposition}
+
+The \(K\)-sample average \(\hat s_t^{(K)}\) reduces variance; \(K=1\) is
+the default. Full proofs of Propositions~\ref{prop:zero_syn}--\ref{prop:proxy}
+and a variance bound for \(\hat s_t^{(K)}\) are in
+Appendix~\ref{app:prop_syn}.
+
+%=============================================================================
+\section{S-IEC: Syndrome-Guided Test-Time Error Correction}
+\label{sec:method}
+%=============================================================================
+
+\SIEC is a training-free decoder on top of a deployed efficient sampler. At
+each reverse step it performs a tentative transition, checks posterior-mean
+consistency, and only if the check fails applies a minimal correction.
+
+\paragraph{Correction interface.}
+Any deployed sampler factors as \(F_t(x_t;\omega_t) = \Psi_t(x_t, \hat
+x_0(x_t,t);\omega_t)\) where \(\Psi_t\) is the scheduler map (DDPM, DDIM,
+reverse-SDE \citep{ho2020ddpm,song2021ddim,song2021sde}); e.g.\
+\(\Psi_t^{\mathrm{DDIM}}(x,z) = \alpha_{t-1} z +
+(\sigma_{t-1}/\sigma_t)(x-\alpha_t z)\). \SIEC modifies neither the model
+nor the scheduler; it only replaces the clean-signal estimate supplied to
+\(\Psi_t\) when the syndrome signals inconsistency.
+
+\paragraph{Event-triggered consensus correction.}
+Given \(\tilde x_t\), compute \(\hat x_{0,t}\) and tentative next state
+\(\tilde x_{t-1}^{(0)} = \Psi_t(\tilde x_t,\hat x_{0,t};\omega_t)\); the
+lookahead estimate \(\hat x_{0,t-1}^{(0)} = \hat x_0(\tilde
+x_{t-1}^{(0)},t-1)\) yields the proxy \(\hat s_t^{(0)} = W_t(\hat x_{0,t} -
+\hat x_{0,t-1}^{(0)})\) and score \(r_t^{(0)} = \tfrac1d \|\hat s_t^{(0)}\|^2\).
+With threshold \(\tau_t\), the rule is: \emph{accept} \(\tilde x_{t-1}^{(0)}\)
+iff \(r_t^{(0)} \le \tau_t\). Accepted steps cache \(\hat x_{0,t-1}^{(0)}\)
+for the next step so the lookahead is not wasted. Otherwise a local correction
+activates.
+
+\paragraph{Consensus update in clean-estimate space.}
+Because the syndrome is a defect of posterior-mean consistency, correction
+happens in clean-estimate space. For weights \(\Sigma_t,\Sigma_{t-1}\succ 0\)
+and gain \(\lambda_t>0\), the consensus closed form is \(\bar x_{0,t} =
+(\Sigma_t^{-1} + \lambda_t\Sigma_{t-1}^{-1})^{-1}(\Sigma_t^{-1}\hat x_{0,t} +
+\lambda_t\Sigma_{t-1}^{-1}\hat x_{0,t-1})\). The isotropic
+\(\Sigma_t=\Sigma_{t-1}=I_d\) yields
+\begin{equation}
+\bar x_{0,t} = \hat x_{0,t} - \gamma_t\, \hat s_t,
+\qquad
+\gamma_t = \tfrac{\lambda_t}{1+\lambda_t} \in (0,1),
+\label{eq:iso_consensus}
+\end{equation}
+so the corrected scheduler transition reuses the same \(\omega_t\):
+\(\tilde x_{t-1}^{(1)} = \Psi_t(\tilde x_t, \bar x_{0,t}; \omega_t)\).
+Freezing \(\omega_t\) isolates structural error from sampling noise.
+
+\begin{algorithm}[t]
+\caption{\SIEC reverse step at time \(t\)}
+\label{alg:siec}
+\begin{algorithmic}[1]
+\Require \(\tilde x_t\); scheduler \(\Psi_t\), randomness \(\omega_t\);
+  \(W_t, \tau_t, \lambda_t\); max rounds \(L_t\).
+\State \(\hat x_{0,t} \gets \hat x_0(\tilde x_t,t)\);
+       \(\tilde x_{t-1}^{(0)} \gets \Psi_t(\tilde x_t,\hat x_{0,t};\omega_t)\)
+\For{\(\ell = 0,\dots,L_t-1\)}
+  \State \(\hat x_{0,t-1}^{(\ell)} \gets \hat x_0(\tilde x_{t-1}^{(\ell)},t-1)\);
+         \(\hat s_t^{(\ell)} \gets W_t(\hat x_{0,t} - \hat x_{0,t-1}^{(\ell)})\);
+         \(r_t^{(\ell)} \gets \tfrac1d\|\hat s_t^{(\ell)}\|^2\)
+  \If{\(r_t^{(\ell)} \le \tau_t\)}
+     \Return \(\bar x_{t-1} \gets \tilde x_{t-1}^{(\ell)}\);
+              cache \(\hat x_{0,t-1}^{(\ell)}\) \Comment{accept}
+  \EndIf
+  \State \(\bar x_{0,t}^{(\ell+1)} \gets \hat x_{0,t} - \gamma_t \hat s_t^{(\ell)}\);
+         \(\tilde x_{t-1}^{(\ell+1)} \gets \Psi_t(\tilde x_t, \bar x_{0,t}^{(\ell+1)};\omega_t)\)
+\EndFor
+\State \Return \(\bar x_{t-1} \gets \tilde x_{t-1}^{(L_t)}\)
+\end{algorithmic}
+\end{algorithm}
+
+\paragraph{Complexity and positioning.}
+Algorithm~\ref{alg:siec} requires no parameter updates, calibration data,
+or auxiliary network; extra compute is bounded by
+\(\sum_t L_t\mathbb{P}(r_t^{(0)}>\tau_t)\) (Corollary~\ref{cor:tradeoff}).
+In practice \(L_t=1\) suffices; multi-round decoding is needed only under
+severe approximation (e.g., low-bit quantization, aggressive caching)
+\citep{shang2023ptqdm,ma2024deepcache}. TAC and IEC correct under
+timestep-dependent accumulation but lack a process-induced zero-check
+\citep{yao2024tac,zhong2026iec}; DDECC decodes a code-supplied parity
+\citep{choukroun2023ddecc}. \SIEC is training-free and lightweight, but
+driven by a verifier derived endogenously from cross-timestep posterior-mean
+consistency.
+
+%=============================================================================
+\section{Main Theoretical Results}
+\label{sec:theory}
+%=============================================================================
+
+We identify the deployment-error component that is \emph{observable} through
+the reverse process, show that one \SIEC round \emph{selectively contracts}
+it, and connect cumulative syndrome energy to both excess denoising risk and
+the final sampling gap. Results are stated for deterministic schedulers and
+exact syndromes; by Proposition~\ref{prop:proxy} the expectation-level
+bounds carry over to \(\hat s_t^{(1)}\). Full proofs are in
+Appendix~\ref{app:thm_proofs}.
+
+\subsection{Geometric decomposition}
+
+Let \(x_t^\star\) be the ideal trajectory and \(\bar x_t\) the trajectory
+returned by \SIEC under the same seed; define \(e_t = \bar x_t - x_t^\star\).
+At the ideal trajectory let \(J_t = \nabla m_t(x_t^\star)\),
+\(B_t = \nabla_x\Psi_t^\star(x_t^\star,m_t(x_t^\star))\),
+\(C_t = \nabla_z\Psi_t^\star(x_t^\star,m_t(x_t^\star))\), and
+\(G_t = \nabla d_t(x_t^\star)\). The local tangent and normal subspaces of
+the posterior-mean level set are \(\mathcal{T}_t = \ker J_t\) and
+\(\mathcal{N}_t = \mathcal{T}_t^\perp\), with orthogonal projectors
+\(P_t^\parallel, P_t^\perp\). Every local error decomposes as
+\(e_t = e_t^\parallel + e_t^\perp\); \(e_t^\parallel\) leaves the posterior
+mean unchanged to first order, while \(e_t^\perp\) changes it to first order.
+
+\begin{assumption}[Local regularity]\label{asm:reg}
+There exists \(r_t>0\) such that on \(B(x_t^\star,r_t)\), the maps
+\(m_t, \hat m_t, \Psi_t^\star, \Psi_t\) are twice continuously differentiable;
+and there exist mismatch levels \(\zeta_t,\xi_t\ge 0\) with
+\(\|\hat m_t - m_t\|_{C^1(B)} \le \zeta_t\) and
+\(\|\Psi_t - \Psi_t^\star\|_{C^1(B)} \le \xi_t\).
+\end{assumption}
+
+\begin{assumption}[Syndrome observability]\label{asm:obs}
+There exist \(0 \le \beta_t < \kappa_t\) with
+\(\|W_t G_t u\| \le \beta_t\|u\|\) for \(u\in\mathcal{T}_t\) and
+\(\|W_t G_t v\| \ge \kappa_t\|v\|\) for \(v\in\mathcal{N}_t\).
+\end{assumption}
+
+\subsection{Syndrome observability}
+
+\begin{theorem}[First-order syndrome expansion]\label{thm:observability}
+Under Assumptions~\ref{asm:reg}--\ref{asm:obs}, there exist \(c_{t,1},c_{t,2}>0\)
+such that for every \(\bar x_t \in B(x_t^\star,r_t)\),
+\begin{equation}
+s_t(\bar x_t) = W_t G_t e_t + b_t + r_t,
+\label{eq:syn_expansion}
+\end{equation}
+with \(\|b_t\|\le c_{t,1}(\xi_t+\zeta_t)\) and
+\(\|r_t\|\le c_{t,2}(\|e_t\|^2 + (\xi_t+\zeta_t)\|e_t\| + (\xi_t+\zeta_t)^2)\).
+Consequently,
+\begin{equation}
+\|e_t^\perp\|
+\;\le\;
+\tfrac{1}{\kappa_t}\left(\|s_t(\bar x_t)\| + \beta_t\|e_t^\parallel\|
+  + \|b_t\| + \|r_t\|\right).
+\label{eq:obs_bound}
+\end{equation}
+\end{theorem}
+
+\emph{Proof sketch.} Taylor-expand \(d_t\) at \(x_t^\star\); the leading
+term is \(G_t e_t\), estimator/scheduler mismatch contribute \(b_t\), and
+the quadratic remainder is \(r_t\). Projecting onto
+\(\mathcal{T}_t\oplus\mathcal{N}_t\) and applying Assumption~\ref{asm:obs}
+gives~\eqref{eq:obs_bound}; see Appendix~\ref{app:thm_obs}. When
+\(\beta_t\) is small, a small syndrome certifies small \(e_t^\perp\) even if
+\(e_t^\parallel\) remains nonzero---the syndrome is a selective verifier of
+structurally damaging deviation.
+
+\subsection{Selective stabilization under one decoding round}
+
+In the isotropic regime \(W_t=\Sigma_t=\Sigma_{t-1}=I_d\), the consensus
+gain is \(\gamma_t=\lambda_t/(1+\lambda_t)\), the corrected clean estimate
+is \(\bar x_{0,t} = \hat x_{0,t} - \gamma_t\hat s_t\), and the linearized
+one-step corrected propagation is governed by
+\begin{equation}
+L_t(\gamma_t) = B_t + C_t J_t - \gamma_t\, C_t G_t.
+\label{eq:L_operator}
+\end{equation}
+
+\begin{assumption}[Selective decodability]\label{asm:decode}
+There exist \(\rho_t\in(0,1)\), \(\nu_t,\chi_t\ge 0\) with
+\(\|P_{t-1}^\perp L_t(\gamma_t) P_t^\perp\|\le \rho_t\),
+\(\|P_{t-1}^\parallel L_t(\gamma_t) P_t^\parallel\|\le 1+\nu_t\), and
+\(\|P_{t-1}^\perp L_t(\gamma_t) P_t^\parallel\|
+ +\|P_{t-1}^\parallel L_t(\gamma_t) P_t^\perp\|\le \chi_t\).
+\end{assumption}
+
+\begin{theorem}[Selective stabilization]\label{thm:stabilization}
+Under Assumptions~\ref{asm:reg}--\ref{asm:decode}, there exist
+\(c_{t,3},c_{t,4}>0\) such that one \SIEC round yields
+\begin{align}
+\|P_{t-1}^\perp e_{t-1}^{\mathrm{corr}}\| &\le \rho_t\|e_t^\perp\|
+  + \chi_t\|e_t^\parallel\| + c_{t,3}(\xi_t+\zeta_t+\|e_t\|^2),
+  \label{eq:stab_normal}\\
+\|P_{t-1}^\parallel e_{t-1}^{\mathrm{corr}}\| &\le (1+\nu_t)\|e_t^\parallel\|
+  + \chi_t\|e_t^\perp\| + c_{t,4}(\xi_t+\zeta_t+\|e_t\|^2).
+  \label{eq:stab_tangent}
+\end{align}
+\end{theorem}
+
+\emph{Proof sketch.} Linearize \(\bar x_{t-1} = \Psi_t(\bar x_t,\bar
+x_{0,t};\omega_t)\) around the ideal trajectory: the consensus update
+injects \(-\gamma_t C_t G_t e_t\)---exactly the term missing from the
+uncorrected dynamics---and Assumption~\ref{asm:decode} gives contraction on
+\(\mathcal{N}_t\) with weak crosstalk \(\chi_t\); see
+Appendix~\ref{app:thm_stab}. Without the correction term the normal
+contraction fails, recovering the accumulation regime of
+\citep{zhong2026iec}.
+
+\subsection{From syndrome energy to excess MMSE and KL gap}
+
+Let \(\bar m_t, \bar T_t\) denote the clean-signal estimator and one-step
+transition operator of the corrected sampler, and define the
+post-correction syndrome \(\bar s_t = W_t(\bar m_t - \bar T_t \bar m_{t-1})\)
+and the stepwise excess MMSE
+\(\Delta_t = \mathbb{E}\|\bar m_t(\bar X_t) - m_t(\bar X_t)\|^2\),
+\(\Delta_0 = 0\). The orthogonality principle gives that \(\Delta_t\) is
+exactly the excess denoising risk at step \(t\)
+\citep{guo2005immse,kong2023itdiffusion}.
+
+\begin{assumption}[Operator stability]\label{asm:op}
+There exists \(a\in[0,1)\) with
+\(\mathbb{E}\|(\bar T_t f)(\bar X_t)\|^2 \le a\,\mathbb{E}\|f(\bar X_{t-1})\|^2\)
+for all measurable \(f\); and constants \(0<\underline w\le\overline w<\infty\)
+with \(\underline w \le \lambda_{\min}(W_t^\top W_t) \le
+\lambda_{\max}(W_t^\top W_t) \le \overline w\).
+\end{assumption}
+
+\begin{theorem}[Excess MMSE from syndrome energy]\label{thm:mmse}
+Under Assumption~\ref{asm:op}, let
+\(\eta_t^2 = \mathbb{E}\|((\bar T_t - T_t^\star) m_{t-1})(\bar X_t)\|^2\). Then
+\begin{equation}
+\Delta_t \;\le\; \tfrac{3}{\underline w}\,\mathbb{E}\|\bar s_t(\bar X_t)\|^2
+ + 3 a \Delta_{t-1} + 3\eta_t^2,
+\label{eq:mmse_recursion}
+\end{equation}
+and with
+\(\mathcal{E}^{\mathrm{corr}}_{\mathrm{syn}} = \sum_{t=1}^T \mathbb{E}\|\bar
+s_t(\bar X_t)\|^2\),
+\begin{equation}
+\sum_{t=1}^T \Delta_t
+\;\le\;
+\tfrac{3}{(1-a)\underline w}\,\mathcal{E}^{\mathrm{corr}}_{\mathrm{syn}}
+ + \tfrac{3}{1-a}\sum_{t=1}^T \eta_t^2.
+\label{eq:mmse_sum}
+\end{equation}
+\end{theorem}
+
+\emph{Proof sketch.} Apply \(\bar m_t - m_t = \bar d_t + \bar T_t(\bar
+m_{t-1} - m_{t-1}) + (\bar T_t - T_t^\star)m_{t-1}\); squared norms with
+\(\|u+v+w\|^2 \le 3(\|u\|^2+\|v\|^2+\|w\|^2)\), Assumption~\ref{asm:op}, and
+weight conditioning; unroll. See Appendix~\ref{app:thm_mmse}.
+
+\begin{theorem}[Distributional control]\label{thm:kl}
+Under the schedule regularity of \citep{reeves2025itproofs}
+(Appendix~\ref{app:reeves}), there exists \(C_{\mathrm{diff}}>0\) depending
+only on the schedule with
+\begin{equation}
+D_{\mathrm{KL}}(P_0^{\mathrm{corr}} \,\|\, P_0^\star)
+\;\le\;
+C_{\mathrm{diff}}\!\sum_{t=1}^T \Delta_t
+\;\le\;
+\tfrac{3C_{\mathrm{diff}}}{(1-a)\underline w}\,\mathcal{E}^{\mathrm{corr}}_{\mathrm{syn}}
+ + \tfrac{3C_{\mathrm{diff}}}{1-a}\sum_{t=1}^T \eta_t^2.
+\label{eq:kl_bound}
+\end{equation}
+By Pinsker, \(\|P_0^{\mathrm{corr}} - P_0^\star\|_{\mathrm{TV}} \le
+\sqrt{\tfrac12 D_{\mathrm{KL}}}\): cumulative syndrome energy controls
+total-variation error.
+\end{theorem}
+
+\emph{Proof sketch.} The first inequality is the discrete-time comparison
+of \citep{reeves2025itproofs} specialized to the corrected chain; the
+second follows from Theorem~\ref{thm:mmse}. See Appendix~\ref{app:thm_kl}.
+Together, Theorems~\ref{thm:mmse}--\ref{thm:kl} make the syndrome a
+\emph{global accounting variable}.
+
+\subsection{Event-triggered trade-off}
+
+\begin{corollary}[Event-triggered trade-off]\label{cor:tradeoff}
+If whenever correction activates,
+\(\mathbb{E}[\|\bar s_t\|^2 \mid r_t^{(0)} > \tau_t] \le q_t\,\mathbb{E}[\|\hat
+s_t^{(0)}\|^2 \mid r_t^{(0)} > \tau_t]\) with \(q_t\in(0,1)\), then
+\begin{equation}
+\mathcal{E}^{\mathrm{corr}}_{\mathrm{syn}} \;\le\;
+d\sum_{t=1}^T \tau_t
++ \sum_{t=1}^T q_t\,\mathbb{E}\bigl[\|\hat s_t^{(0)}\|^2
+  \mathbf{1}\{r_t^{(0)}>\tau_t\}\bigr],
+\label{eq:triggered_energy}
+\end{equation}
+and \(\mathbb{E}[\mathrm{NFE}_{\mathrm{extra}}] \le
+\sum_t L_t\,\mathbb{P}(r_t^{(0)} > \tau_t)\).
+\end{corollary}
+
+Substituting into~\eqref{eq:kl_bound} gives an explicit upper bound on the
+final KL gap as a function of trigger thresholds, activation frequency, and
+per-step syndrome reduction; see Appendix~\ref{app:cor_tradeoff}.
+
+\section{Experiments: Theory Validation}
+\label{sec:experiments}
+%=============================================================================
+
+We validate four predictions under a paired coupling protocol (same initial
+seed, same \(\omega_t\) for ideal and deployed samplers): \emph{(i)} the
+syndrome is an observable of the harmful component
+(Theorem~\ref{thm:observability}); \emph{(ii)} one \SIEC round selectively
+contracts the unstable component (Theorem~\ref{thm:stabilization});
+\emph{(iii)} cumulative syndrome energy predicts excess MMSE and the
+sampling gap (Theorems~\ref{thm:mmse}--\ref{thm:kl}); \emph{(iv)}
+event-triggered correction yields a compute--quality trade-off
+(Corollary~\ref{cor:tradeoff}).
+
+\paragraph{Setup.}
+We use a low-rank Gaussian model \(X_0 = U Z\), \(Z \sim \mathcal{N}(0,\Lambda)\),
+\(U \in \mathbb{R}^{d\times k}\), \(U^\top U = I_k\), with \(d=1024\),
+\(k=32\), \(T=200\), cosine schedule, and \(\lambda_i \in [0.1,10]\) at
+log-spacing (condition number 100). The posterior mean is explicit
+(Appendix~\ref{app:exp_details}) and
+\(\mathcal{T}_t = \mathrm{span}(U)^\perp\), \(\mathcal{N}_t = \mathrm{span}(U)\),
+giving exact access to \(e_t^{\parallel/\perp}, \Delta_t, D_{\mathrm{KL}}\).
+Deployment error is injected via \(\hat m_t = m_t + \eta\, n\),
+\(n\sim\mathcal{N}(0,I_d)\), with variants for tangent/normal-projected
+noise, simulated 8-bit/4-bit uniform quantization, and SNR-dependent
+\(\eta_t = \eta_{\mathrm{base}}\sigma_t^2/(\alpha_t^2+\sigma_t^2)\). \SIEC
+uses \(W_t=I_d\), \(\lambda_t = c\sigma_t^2/(\alpha_t^2+\sigma_t^2)\) with
+\(c=1\), \(L_t=1\), and thresholds \(\tau_t\) calibrated from 100--128 pilot
+trajectories. We compare against uncorrected, always-on \SIEC,
+event-triggered \SIEC at percentiles \(\{50,70,80,90,95\}\), random-trigger
+(matched budget), uniform-periodic, and naive always-on refinement.
+
+\paragraph{Observability (Theorem~\ref{thm:observability}).}
+Equal-norm perturbations along \(\mathcal{T}_t\) or \(\mathcal{N}_t\) at five
+timesteps (80 trajectories each) confirm: \(\|s_t\|\) is linear in
+\(\|e_t^\perp\|\) (slope \(\approx\kappa_t\)) and essentially flat in
+\(\|e_t^\parallel\|\); the empirical ratio \(\kappa_t/\beta_t >50\) at all
+tests, strongly satisfying Assumption~\ref{asm:obs}
+(Figure~\ref{fig:observability}).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.65\linewidth]{fig1_observability.png}
+\caption{\textbf{Observability.} (a) \(\|s_t\|\) vs.\ \(\|e_t^\perp\|\):
+linear, slope \(\approx\kappa_t\). (b) vs.\ \(\|e_t^\parallel\|\):
+near-flat. (c) \(\kappa_t/\beta_t >50\).}
+\label{fig:observability}
+\end{figure}
+
+\paragraph{Selective stabilization (Theorem~\ref{thm:stabilization}).}
+Sweeping \(\eta\in\{0.02,0.05,0.1,0.2\}\), \(\lambda\in\{0.1,\dots,5\}\)
+(100 trajectories per setting), \SIEC reduces error in both components,
+with mean \(\hat\rho^\perp = 0.82\), \(\hat\rho^\parallel=0.79\); normal
+contraction improves monotonically in \(\lambda\) and saturates near
+\(\lambda\approx 2\) (Figure~\ref{fig:stabilization}).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.65\linewidth]{fig2_stabilization.png}
+\caption{\textbf{Stabilization.} Contraction ratios
+\(\hat\rho^\perp, \hat\rho^\parallel\) across all \((\eta,\lambda,t)\);
+both below~1. Right panels: dependence on \(\lambda\).}
+\label{fig:stabilization}
+\end{figure}
+
+\paragraph{Energy controls MMSE and KL
+(Theorems~\ref{thm:mmse}--\ref{thm:kl}).}
+Sweeping \(\eta \in [10^{-2},10^{-0.3}]\), \(c\in\{0,0.5,1,2\}\), and
+\(\tau\in\{70,90,100\}\) yields 60+ configurations (100 trajectories each):
+cumulative syndrome energy is monotonically related to both
+\(\sum_t\Delta_t\) and \(D_{\mathrm{KL}}\), validating
+\eqref{eq:mmse_sum}--\eqref{eq:kl_bound} (Figure~\ref{fig:mmse_kl} in
+Appendix~\ref{app:exp_details}).
+
+\paragraph{Compute--quality trade-off (Corollary~\ref{cor:tradeoff}).}
+At \(\eta=0.3\), event-triggered \SIEC traces a smooth Pareto front in
+\(\tau\) (Figure~\ref{fig:pareto} and Table~\ref{tab:pareto} in
+Appendix~\ref{app:exp_details}): at matched NFE \(\sim 240\),
+\SIEC(\(\tau\)=80th) attains final MSE \(0.0913\), beating random-trigger
+(\(0.0919\)) and uniform-periodic (\(0.0918\)); always-on correction cuts
+path error by \(\sim\!12\%\). In learned diffusion where errors concentrate
+at specific timesteps, the selective advantage is expected to be more
+pronounced.
+
+\paragraph{Robustness.}
+Across six deployment scenarios (mild/moderate/severe isotropic, 8-/4-bit
+quantization, SNR-dependent), \SIEC consistently reduces per-step error in
+proportion to perturbation severity and stabilizes the full trajectory,
+not just the final step (Figure~\ref{fig:trajectories} in
+Appendix~\ref{app:exp_details}).
+
+\section{Discussion and Limitations}
+\label{sec:discussion}
+%=============================================================================
+
+\SIEC reinterprets test-time correction as a decoding problem. Its control
+signal is a verifier derived endogenously from cross-timestep posterior-mean
+consistency, placing it between DDECC (which decodes an externally supplied
+code \citep{choukroun2023ddecc}) and IEC-style refinement (which reduces an
+undifferentiated residual \citep{zhong2026iec}); the redundancy comes from
+adjacent clean-signal beliefs, and the verifier is built from the same
+conditional-mean objects that govern denoising risk
+\citep{mei2025unetbp,kong2023itdiffusion,reeves2025itproofs}.
+
+\paragraph{Limitations.}
+\begin{itemize}[leftmargin=1.2em,itemsep=1pt,topsep=2pt]
+  \item \emph{Local guarantees.} Theorems~\ref{thm:observability}--\ref{thm:kl}
+    rely on local smoothness and observability near the ideal trajectory.
+  \item \emph{Estimator quality.} A severely mismatched \(\hat x_0\) mixes
+    deployment drift with denoiser bias; our mismatch terms separate
+    these only perturbatively.
+  \item \emph{Multistep redundancy.} Adjacent-step agreement weakens under
+    heavy distillation \citep{song2023consistency}; multi-branch or
+    multi-scale consistency is a natural extension.
+  \item \emph{Internal vs.\ semantic.} A small syndrome certifies internal
+    self-consistency, not prompt fidelity or safety; external verifiers
+    \citep{christopher2024projected} are complementary.
+  \item \emph{Average-case, not adversarial.} Our bounds control expected
+    bounded error, not worst-case adversarial perturbations.
+\end{itemize}
+
+\paragraph{Outlook.}
+Three directions stand out: \emph{(i)} an explicit \emph{computational channel
+model} with admissible fault classes and bounded-distance decoding, making
+the decodable approximation radius explicit; \emph{(ii)} richer syndromes
+across scales and skip states \citep{mei2025unetbp}; \emph{(iii)}
+\emph{adaptive protection}---unequal-error-protection for trajectories,
+timesteps, or semantic regions flagged by the syndrome.
+
+%=============================================================================
+\section{Conclusion}
+\label{sec:conclusion}
+%=============================================================================
+
+We identified posterior-mean martingale consistency as the internal
+conservation law of the exact reverse process and defined its violation as
+a generalized syndrome. Based on this object we proposed \SIEC, a
+training-free decoder that performs syndrome-guided consensus correction
+using redundant clean-signal estimates already present along the reverse
+trajectory: the syndrome is a first-order observable of the harmful
+component of deployment drift, one round selectively contracts it, and
+cumulative syndrome energy controls both excess denoising risk and the
+final sampling gap. The missing object in efficient diffusion was not
+another denoiser but an \emph{endogenous syndrome} induced by the target
+process itself.
+
+\section*{Impact Statement}
+
+\SIEC enables test-time error correction without retraining, lowering the
+computational cost, energy use, and carbon emissions of large-scale
+diffusion inference.
+
+\bibliographystyle{plainnat}
+\bibliography{mybib}
+
+\clearpage
+\appendix
+
+%=============================================================================
+%                              APPENDIX
+%=============================================================================
+
+\section{Regularity Conditions and Comparison Lemma}
+\label{app:reg}
+
+We collect here the regularity conditions referred to in the main text and
+restate the discrete-time comparison lemma of
+\citet{reeves2025itproofs} in a form suitable for our use.
+
+\subsection{Standing regularity conditions}
+\label{app:regconds}
+
+Throughout the paper we assume that the deployed model parameters and
+scheduler are fixed, and we compare the ideal and deployed samplers under
+the \emph{common-randomness coupling}: \(X_T^\star = \tilde X_T = \bar X_T
+\sim \mathcal{N}(0,I_d)\) and the same \(\omega_1,\dots,\omega_T\). Under
+this coupling, we impose the following four conditions.
+
+\paragraph{(R1) Local smoothness of reverse dynamics.}
+For each \(t\in\{1,\dots,T\}\), there exists a radius \(r_t>0\) such that on
+the Euclidean ball \(B(x_t^\star, r_t)\) centered at the ideal trajectory,
+the ideal reverse map \(F_t^\star\), the ideal scheduler \(\Psi_t^\star\),
+the deployed scheduler \(\Psi_t\), and the posterior mean \(m_t\) are
+twice continuously differentiable with uniformly bounded second derivatives.
+
+\paragraph{(R2) Bounded-moment channel noise.}
+The computational channel noise \(\delta_t\) in~\eqref{eq:approx_update}
+satisfies
+\begin{equation}
+\mathbb{E}\!\left[\|\delta_t(X_t^\star;\omega_t)\|^2 \mid X_t^\star\right]
+\;\le\; \eta_t^2
+\qquad\text{for all }t\in\{1,\dots,T\},
+\label{eq:app_bounded_noise}
+\end{equation}
+with \(\eta_t\ge 0\) deterministic.
+
+\paragraph{(R3) Coupled trajectory remains local.}
+With probability one, the coupled approximate trajectory
+\(\{\bar X_t\}_{t=T}^{0}\) stays in the local balls,
+\(\bar X_t \in B(x_t^\star, r_t)\) for all \(t\). This is the regime in
+which first-order linearization of the reverse dynamics is informative.
+
+\paragraph{(R4) Scheduler regularity.}
+\(\alpha_t>0\) for all \(t<T\), and the noise levels \(\sigma_t\) are
+monotone in \(t\). In addition, \(\alpha_T=0\) or \(\sigma_T\ge 1-\epsilon\)
+for some small \(\epsilon>0\), so that the starting distribution
+\(P_T\) is close to \(\mathcal{N}(0,I_d)\).
+
+Conditions (R1)--(R4) are standard for discrete-time stability analyses of
+diffusion sampling \citep{reeves2025itproofs,zhong2026iec} and are
+satisfied, in particular, by cosine and linear schedules on the
+low-rank Gaussian model used in our experiments.
+
+\subsection{Mismatch levels.}
+Assumption~\ref{asm:reg} in the main text introduces nonnegative mismatch
+levels \(\zeta_t\) and \(\xi_t\); for completeness, these are
+\begin{align*}
+\zeta_t &\;\ge\;
+  \sup_{x\in B(x_t^\star,r_t)}
+  \left[\|\hat m_t(x) - m_t(x)\| + \|\nabla \hat m_t(x) - \nabla m_t(x)\|\right],\\
+\xi_t &\;\ge\;
+  \sup_{(x,z)\in \mathcal{U}_t}
+  \left[\|\Psi_t(x,z;\omega_t) - \Psi_t^\star(x,z;\omega_t)\|
+   + \|\nabla \Psi_t(x,z;\omega_t) - \nabla \Psi_t^\star(x,z;\omega_t)\|\right],
+\end{align*}
+where \(\mathcal{U}_t\) is the local neighborhood of
+\((x_t^\star, m_t(x_t^\star))\) in the product space. These bounds are
+deterministic but allowed to be time-varying.
+
+\subsection{Discrete-time comparison lemma}
+\label{app:reeves}
+
+We restate \citet[Theorem~2]{reeves2025itproofs} in the specific form used
+to prove Theorem~\ref{thm:kl}. Let \(\bar P\) and \(P^\star\) be the laws on
+\((\mathbb{R}^d)^{T+1}\) of the corrected and ideal reverse chains
+respectively, sharing the initial distribution \(\mathcal{N}(0,I_d)\) at
+\(t=T\) and the same noise schedule.
+
+\begin{lemma}[Discrete-time comparison]\label{lem:reeves}
+Under (R1)--(R4), there exists a constant \(C_{\mathrm{diff}}>0\) depending
+only on the noise schedule \(\{(\alpha_t,\sigma_t)\}_{t=1}^T\) such that the
+marginals \(\bar P_0\) and \(P_0^\star\) at \(t=0\) satisfy
+\begin{equation}
+D_{\mathrm{KL}}\!\left(\bar P_0 \,\|\, P_0^\star\right)
+\;\le\;
+C_{\mathrm{diff}} \sum_{t=1}^T
+\mathbb{E}\!\left[\,\|\bar m_t(\bar X_t) - m_t(\bar X_t)\|^2\,\right],
+\label{eq:lem_reeves}
+\end{equation}
+where \(\bar m_t\) is the clean-signal estimator used by the corrected
+chain at step \(t\), \(m_t\) is the ideal posterior mean, and the
+expectation is under \(\bar P\).
+\end{lemma}
+
+\begin{proof}[Proof sketch]
+The full derivation is in \citet{reeves2025itproofs}; we only recall the
+mechanism. First, the KL divergence between the two reverse chains decomposes
+as a sum of per-step conditional KL terms using the chain rule of relative
+entropy. Second, under (R1) and (R4) each per-step conditional KL is
+controlled by the squared \(L^2\) distance between the means of the two
+Gaussian (or Gaussian-limit) one-step transition kernels, which itself is
+controlled by the squared error in the clean-signal estimate. Third, the
+scheduler coefficients are absorbed into the single constant
+\(C_{\mathrm{diff}}\), which for the variance-preserving discretization
+takes the explicit form
+\(C_{\mathrm{diff}} = \sup_{t}\alpha_t^2/(2\sigma_t^2)\) up to a
+multiplicative constant depending on the schedule regularity window; see
+\citet[eq.~(14)]{reeves2025itproofs}.
+\end{proof}
+
+Under (R4), \(C_{\mathrm{diff}}\) is finite for standard cosine and linear
+schedules. In the main text we write
+\(\Delta_t = \mathbb{E}\|\bar m_t(\bar X_t) - m_t(\bar X_t)\|^2\), so
+\eqref{eq:lem_reeves} reads
+\(D_{\mathrm{KL}}(\bar P_0 \| P_0^\star) \le C_{\mathrm{diff}}\sum_t \Delta_t\),
+which is the form used in Theorem~\ref{thm:kl}.
+
+%=============================================================================
+\section{Proofs for Section~\ref{sec:syndrome}}
+\label{app:prop_mart}
+\label{app:prop_syn}
+
+%-----------------------------------------------------------------------------
+\subsection{Proof of Proposition~\ref{prop:martingale}
+            (Reverse-time martingale consistency)}
+
+Recall \(M_t = m_t(X_t) = \mathbb{E}[X_0 \mid X_t]\) and \(X_t\) is obtained
+from \(X_0\) through the Markov forward chain
+\(X_0 \to X_1 \to \cdots \to X_T\) defined by the transition kernels
+\(q(x_t\mid x_{t-1})\) (equivalently by
+\(X_t = \alpha_t X_0 + \sigma_t\varepsilon_t\) with independent standard
+Gaussian \(\varepsilon_t\)).
+
+\begin{proof}[Proof of Proposition~\ref{prop:martingale}]
+\textbf{Step 1 (Markov property).}
+By construction of the forward chain, the joint law of \((X_0,X_{t-1},X_t)\)
+factorizes as
+\(q(x_0)\,q(x_{t-1}\mid x_0)\,q(x_t\mid x_{t-1})\). In particular, given
+\(X_{t-1}\) the pair \((X_0, X_t)\) is conditionally independent:
+\begin{equation}
+X_0 \perp\!\!\!\perp X_t \;\big|\; X_{t-1}.
+\label{eq:app_mart_ci}
+\end{equation}
+
+\textbf{Step 2 (Conditional mean reduction).}
+By~\eqref{eq:app_mart_ci},
+\(\mathbb{E}[X_0 \mid X_{t-1}, X_t] = \mathbb{E}[X_0 \mid X_{t-1}] = M_{t-1}\)
+almost surely. Integrability of \(X_0\) (it is a square-integrable random
+vector by assumption on \(P_0\)) together with boundedness of the Gaussian
+transition kernels ensures that all conditional expectations exist and are
+\(L^2\).
+
+\textbf{Step 3 (Tower property).}
+Applying the tower property with respect to the conditioning on
+\((X_{t-1},X_t)\) and then on \(X_t\):
+\begin{align*}
+\mathbb{E}[M_{t-1} \mid X_t]
+&= \mathbb{E}\!\left[\mathbb{E}[X_0\mid X_{t-1}] \,\big|\, X_t\right] \\
+&= \mathbb{E}\!\left[\mathbb{E}[X_0 \mid X_{t-1}, X_t] \,\big|\, X_t\right]
+  \qquad\text{(by Step 2)} \\
+&= \mathbb{E}[X_0 \mid X_t]
+  \qquad\qquad\text{(tower property)} \\
+&= M_t.
+\end{align*}
+This holds \(P_t^\star\)-almost surely, proving the first form
+of~Proposition~\ref{prop:martingale}. The second form is obtained by disintegration:
+writing the above with the regular conditional distribution \(P(X_{t-1}\in
+\cdot \mid X_t = x_t)\), which exists because the forward kernels are
+Gaussian and hence Feller.
+
+\textbf{Step 4 (Doob-martingale justification of terminology).}
+Define the reverse-time filtration
+\(\mathcal{G}_t = \sigma(X_t, X_{t+1}, \dots, X_T)\) for
+\(t=0,1,\dots,T\), so \(\mathcal{G}_0 \supseteq \mathcal{G}_1 \supseteq \cdots
+\supseteq \mathcal{G}_T\). By the forward Markov property, for any
+\(t\in\{0,\dots,T-1\}\),
+\(\sigma(X_0,\dots,X_t)\) is conditionally independent of
+\(\sigma(X_{t+2},\dots,X_T)\) given \(X_{t+1}\); in particular,
+\(\mathbb{E}[X_0 \mid \mathcal{G}_t] = \mathbb{E}[X_0 \mid X_t] = M_t\).
+Hence \((M_t,\mathcal{G}_t)_{t=T}^{0}\) is precisely the Doob martingale of
+\(X_0\) against the reverse filtration, and the backward-martingale property
+\(\mathbb{E}[M_{t-1} \mid \mathcal{G}_t] = M_t\) specializes
+to~Proposition~\ref{prop:martingale} when conditioning is reduced to \(X_t\). This
+justifies calling \((M_t)\) a \emph{posterior-mean martingale}.
+\end{proof}
+
+%-----------------------------------------------------------------------------
+\subsection{Proof of Proposition~\ref{prop:zero_syn}
+            (Zero-syndrome property)}
+
+\begin{proof}
+Assume \(\tilde p_{t-1 \mid t}(\cdot\mid x_t) = p^\star_{t-1\mid t}(\cdot\mid
+x_t)\) and \(\hat m_{t-1} = m_{t-1}\). For any measurable
+\(f:\mathbb{R}^d\to\mathbb{R}^d\) with \(\mathbb{E}\|f(X_{t-1})\|<\infty\),
+the operators defined by integration against these kernels coincide:
+\((\tilde T_t f)(x_t) = (T_t^\star f)(x_t)\) for \(P_t^\star\)-a.e.\ \(x_t\).
+Substituting \(f = \hat m_{t-1} = m_{t-1}\) and using the defect definition,
+\begin{align*}
+d_t(x_t)
+&= \hat m_t(x_t) - (\tilde T_t \hat m_{t-1})(x_t)
+\;=\; m_t(x_t) - (T_t^\star m_{t-1})(x_t).
+\end{align*}
+By Proposition~\ref{prop:martingale}, \(m_t = T_t^\star m_{t-1}\)
+\(P_t^\star\)-a.e.\ (the pointwise form of~Proposition~\ref{prop:martingale}). Therefore
+\(d_t(x_t) = 0\) \(P_t^\star\)-a.e. Since \(W_t\) is a deterministic matrix,
+\(s_t(x_t) = W_t\,d_t(x_t) = 0\) on the same set.
+\end{proof}
+
+%-----------------------------------------------------------------------------
+\subsection{Proof of Proposition~\ref{prop:proxy}
+            (Unbiasedness of the one-sample proxy)}
+
+\begin{proof}
+Write
+\(\hat s_t^{(1)} = W_t\bigl(\hat x_0(\tilde X_t,t) - \hat x_0(\tilde
+X_{t-1}^{\mathrm{tent}},t-1)\bigr)\), where
+\(\tilde X_{t-1}^{\mathrm{tent}} \sim \tilde p_{t-1\mid t}(\cdot \mid
+\tilde X_t)\).
+
+\textbf{Step 1 (Integrability for Fubini).}
+By assumption on \(P_0\) and the Gaussian forward channel, \(\tilde X_t\)
+and \(\tilde X_{t-1}^{\mathrm{tent}}\) are square-integrable, and under
+(R1) the estimator \(\hat x_0(\cdot,t)\) is locally Lipschitz on the
+relevant local ball, hence
+\(\mathbb{E}\|\hat x_0(\tilde X_{t-1}^{\mathrm{tent}},t-1)\| < \infty\)
+conditionally on \(\tilde X_t\). This integrability allows us to move
+\(W_t\) and the conditional expectation through the defining integral.
+
+\textbf{Step 2 (Conditional expectation of the lookahead term).}
+Conditionally on \(\tilde X_t = x_t\), the distribution of \(\tilde
+X_{t-1}^{\mathrm{tent}}\) is precisely \(\tilde p_{t-1\mid t}(\cdot\mid
+x_t)\), so by definition of \(\tilde T_t\) applied to the vector-valued
+function \(\hat m_{t-1} = \hat x_0(\cdot,t-1)\),
+\begin{equation}
+\mathbb{E}\!\left[\hat x_0(\tilde X_{t-1}^{\mathrm{tent}}, t-1)
+  \,\big|\,\tilde X_t\right]
+\;=\; (\tilde T_t \hat m_{t-1})(\tilde X_t).
+\label{eq:app_proxy_step}
+\end{equation}
+
+\textbf{Step 3 (Assemble).}
+Since \(W_t\) is deterministic and \(\hat x_0(\tilde X_t, t)\) is
+\(\tilde X_t\)-measurable,
+\begin{align*}
+\mathbb{E}[\hat s_t^{(1)} \mid \tilde X_t]
+&= W_t\!\left(\hat x_0(\tilde X_t,t) - \mathbb{E}[\hat x_0(\tilde
+    X_{t-1}^{\mathrm{tent}},t-1) \mid \tilde X_t]\right) \\
+&= W_t\!\left(\hat m_t(\tilde X_t) - (\tilde T_t\hat m_{t-1})(\tilde X_t)\right)
+\;=\; s_t(\tilde X_t).
+\end{align*}
+
+For deterministic samplers, \(\tilde p_{t-1\mid t}(\cdot\mid x_t) =
+\delta_{F_t(x_t;\omega_t)}\); the expectation in~\eqref{eq:app_proxy_step}
+is a Dirac evaluation and the equality holds pointwise without averaging.
+Hence \(\hat s_t^{(1)} = s_t(\tilde X_t)\) exactly.
+\end{proof}
+
+\paragraph{Variance bound for the \(K\)-sample proxy.}
+Let \(\tilde X_{t-1}^{(1)},\dots,\tilde X_{t-1}^{(K)}\) be i.i.d.\ draws from
+\(\tilde p_{t-1\mid t}(\cdot\mid\tilde X_t)\) and define
+\begin{equation}
+\hat s_t^{(K)}
+\;=\;
+W_t\!\left(\hat x_0(\tilde X_t,t) - \tfrac1K\sum_{k=1}^K \hat x_0(\tilde
+X_{t-1}^{(k)},t-1)\right).
+\label{eq:app_Ksample}
+\end{equation}
+
+\begin{lemma}[Variance of the \(K\)-sample proxy]\label{lem:Ksample}
+Conditionally on \(\tilde X_t\),
+\(\mathbb{E}[\hat s_t^{(K)} \mid \tilde X_t] = s_t(\tilde X_t)\) and
+\begin{equation}
+\mathbb{E}\!\left[\|\hat s_t^{(K)} - s_t(\tilde X_t)\|^2 \mid \tilde X_t\right]
+\;=\;
+\frac{1}{K}\,\mathrm{tr}\!\left(W_t\,\mathrm{Cov}_{\tilde p_{t-1\mid t}(\cdot\mid\tilde X_t)}[\hat x_0(\cdot,t-1)]\,W_t^\top\right).
+\label{eq:Ksample_var}
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+Unbiasedness is identical to Proposition~\ref{prop:proxy} since the sample
+mean is an unbiased estimator of the conditional mean. For the variance,
+let \(Y_k = \hat x_0(\tilde X_{t-1}^{(k)}, t-1)\) and
+\(\mu = \mathbb{E}[Y_1 \mid \tilde X_t] = (\tilde T_t\hat m_{t-1})(\tilde
+X_t)\). Then
+\(\hat s_t^{(K)} - s_t(\tilde X_t) = -W_t\bigl(\tfrac1K\sum_k Y_k -
+\mu\bigr)\). Since \(Y_1,\dots,Y_K\) are conditionally i.i.d.\ with
+covariance \(\Sigma_Y = \mathrm{Cov}[Y_1 \mid \tilde X_t]\),
+\(\tfrac1K\sum_k Y_k\) has conditional covariance \(\Sigma_Y/K\). Therefore
+\begin{align*}
+\mathbb{E}\!\left[\|\hat s_t^{(K)} - s_t(\tilde X_t)\|^2 \mid \tilde X_t\right]
+&= \mathrm{tr}\!\left(W_t \cdot \Sigma_Y/K \cdot W_t^\top\right)
+\;=\; \tfrac1K\,\mathrm{tr}(W_t \Sigma_Y W_t^\top).
+\end{align*}
+\end{proof}
+
+Lemma~\ref{lem:Ksample} shows that the \(K\)-sample proxy reduces syndrome
+estimator variance by a factor \(K\); for deterministic samplers \(\Sigma_Y=0\)
+and all \(K\ge 1\) give the exact syndrome.
+
+%=============================================================================
+\section{Proofs for Section~\ref{sec:theory}}
+\label{app:thm_proofs}
+
+Throughout this section we work under (R1)--(R4) and under the local error
+decomposition \(e_t = e_t^\parallel + e_t^\perp\) of the main text
+(Section~\ref{sec:theory}). Operator norms \(\|\cdot\|\) on matrices are
+spectral (largest singular value).
+
+%-----------------------------------------------------------------------------
+\subsection{Proof of Theorem~\ref{thm:observability}
+            (First-order syndrome expansion)}
+\label{app:thm_obs}
+
+\begin{proof}
+Let \(\bar x_t \in B(x_t^\star, r_t)\) and \(e_t = \bar x_t - x_t^\star\).
+We decompose the martingale defect along the deployed process as
+\begin{equation}
+d_t(\bar x_t)
+\;=\;
+\underbrace{d_t(x_t^\star)}_{=:\,b_t^{(0)}}
+\;+\;
+\underbrace{\bigl(d_t(\bar x_t) - d_t(x_t^\star)\bigr)}_{=:\,\Delta_t^d}.
+\label{eq:app_obs_split}
+\end{equation}
+
+\textbf{Step 1 (Bias term \(b_t^{(0)}\)).}
+Using \(\hat m_t = m_t + (\hat m_t - m_t)\) and
+\(\tilde T_t = T_t^\star + (\tilde T_t - T_t^\star)\),
+\begin{align}
+d_t(x_t^\star)
+&= \hat m_t(x_t^\star) - (\tilde T_t \hat m_{t-1})(x_t^\star) \nonumber\\
+&= \underbrace{\hat m_t(x_t^\star) - m_t(x_t^\star)}_{\text{(I)}}
+ + \underbrace{m_t(x_t^\star) - (T_t^\star m_{t-1})(x_t^\star)}_{\text{(II)}=\,0} \nonumber\\
+&\quad
+ + \underbrace{(T_t^\star m_{t-1})(x_t^\star) - (T_t^\star \hat m_{t-1})(x_t^\star)}_{\text{(III)}}
+ + \underbrace{(T_t^\star \hat m_{t-1})(x_t^\star) - (\tilde T_t \hat m_{t-1})(x_t^\star)}_{\text{(IV)}}.
+\label{eq:app_obs_four_terms}
+\end{align}
+Term (II) vanishes by Proposition~\ref{prop:martingale}. By (R1) and the
+definition of \(\zeta_t\), \(\|\text{(I)}\| \le \zeta_t\). Term (III) is
+\(-T_t^\star(\hat m_{t-1} - m_{t-1})(x_t^\star)\); since \(T_t^\star\) is an
+integration operator against a probability kernel, it is a contraction in
+\(\sup\)-norm, so
+\(\|\text{(III)}\| \le \|\hat m_{t-1}-m_{t-1}\|_\infty \le \zeta_{t-1}\).
+Term (IV) is \((\tilde T_t - T_t^\star)\hat m_{t-1}\) evaluated at
+\(x_t^\star\); under (R1) and the \(C^1\)-mismatch
+\(\|\Psi_t - \Psi_t^\star\|_{C^1} \le \xi_t\), total-variation distance between
+\(\tilde p_{t-1\mid t}\) and \(p^\star_{t-1\mid t}\) is
+\(O(\xi_t)\) locally, so \(\|\text{(IV)}\| \le L_{m}\,\xi_t\) with
+\(L_m = \|\hat m_{t-1}\|_{C^0(B)}\) finite by (R1). Collecting:
+\begin{equation}
+\|b_t^{(0)}\| \;\le\; (1+1)\zeta_t + L_m\,\xi_t
+   \;\le\; c_{t,1}^{(0)}(\xi_t + \zeta_t),
+\label{eq:app_obs_b0_bound}
+\end{equation}
+with \(c_{t,1}^{(0)} = \max(2, L_m)\). (For notational uniformity we
+identify \(\zeta_{t-1}\) with the worst of \(\zeta_{t-1},\zeta_t\); under
+(R1) both are uniformly bounded by a single \(\zeta_{\max}\), absorbed into
+\(c_{t,1}^{(0)}\).)
+
+\textbf{Step 2 (Linear term \(\Delta_t^d\) via Taylor's theorem).}
+Under (R1), \(d_t\) is twice continuously differentiable on
+\(B(x_t^\star,r_t)\) with bounded second derivatives. By Taylor's theorem,
+\begin{equation}
+d_t(\bar x_t) - d_t(x_t^\star)
+\;=\; G_t e_t \;+\; R_t^{(2)}(e_t),
+\label{eq:app_obs_taylor}
+\end{equation}
+where \(G_t = \nabla d_t(x_t^\star)\) and, with \(M_2\) a uniform bound on
+\(\|\nabla^2 d_t\|\) over the ball,
+\(\|R_t^{(2)}(e_t)\| \le \tfrac{M_2}{2}\|e_t\|^2\). Strictly speaking
+\(\nabla d_t\) at \(x_t^\star\) equals
+\(\nabla\hat m_t - \nabla(\tilde T_t \hat m_{t-1})\); writing
+\(\nabla\hat m_t = \nabla m_t + (\nabla\hat m_t - \nabla m_t)\) and
+similarly expanding the second term produces an extra
+\((\xi_t+\zeta_t)\)-order contribution to \(G_t\) itself. We absorb this
+into the first-order ``expansion around the exact process'':
+\begin{equation}
+d_t(\bar x_t) = G_t\, e_t \,+\, R_t^{(1)}(e_t),
+\qquad
+\|R_t^{(1)}(e_t)\| \le c'(\zeta_t + \xi_t)\|e_t\| + \tfrac{M_2}{2}\|e_t\|^2,
+\label{eq:app_obs_Rone}
+\end{equation}
+where \(c'\) depends on \(\|\nabla^2 m_t\|\), \(\|\nabla \hat m_t\|\),
+and the \(C^1\)-mismatch norms in (R1).
+
+\textbf{Step 3 (Apply \(W_t\) and aggregate).}
+Combining~\eqref{eq:app_obs_split},~\eqref{eq:app_obs_b0_bound},
+and~\eqref{eq:app_obs_Rone}, and left-multiplying by \(W_t\),
+\begin{equation}
+s_t(\bar x_t) = W_t d_t(\bar x_t) = W_t G_t e_t + b_t + r_t,
+\label{eq:app_obs_expansion_final}
+\end{equation}
+with \(b_t = W_t b_t^{(0)}\) and \(r_t = W_t R_t^{(1)}(e_t)\). Let
+\(\|W_t\|_{\mathrm{op}} \le \sqrt{\overline w}\) (Assumption~\ref{asm:op}
+in the main text; also recorded here). Then
+\(\|b_t\| \le \sqrt{\overline w}\,c_{t,1}^{(0)}(\xi_t+\zeta_t) =:
+c_{t,1}(\xi_t+\zeta_t)\) and
+\(\|r_t\| \le \sqrt{\overline w}\bigl(c'(\xi_t+\zeta_t)\|e_t\|
++ \tfrac{M_2}{2}\|e_t\|^2\bigr)\). Using \(ab \le a^2/2 + b^2/2\) to expand
+the cross term,
+\(\|r_t\| \le c_{t,2}\bigl(\|e_t\|^2 + (\xi_t+\zeta_t)\|e_t\| +
+(\xi_t+\zeta_t)^2\bigr)\) for a constant \(c_{t,2}\) depending on
+\(\overline w, c', M_2\). This proves~\eqref{eq:syn_expansion} with the
+claimed constants.
+
+\textbf{Step 4 (Observability bound~\eqref{eq:obs_bound}).}
+Decompose \(e_t = e_t^\parallel + e_t^\perp\) orthogonally; since
+\(W_t G_t\) is linear,
+\(W_t G_t e_t = W_t G_t e_t^\parallel + W_t G_t e_t^\perp\). By
+Assumption~\ref{asm:obs}, \(\|W_t G_t e_t^\parallel\| \le \beta_t
+\|e_t^\parallel\|\) and \(\|W_t G_t e_t^\perp\| \ge \kappa_t
+\|e_t^\perp\|\). Rearranging the triangle inequality
+applied to~\eqref{eq:app_obs_expansion_final},
+\begin{align*}
+\|s_t(\bar x_t)\|
+&\;\ge\; \|W_t G_t e_t^\perp\| - \|W_t G_t e_t^\parallel\| - \|b_t\| - \|r_t\| \\
+&\;\ge\; \kappa_t \|e_t^\perp\| - \beta_t \|e_t^\parallel\| - \|b_t\| - \|r_t\|,
+\end{align*}
+which gives
+\(\|e_t^\perp\| \le \kappa_t^{-1}\bigl(\|s_t(\bar x_t)\| + \beta_t
+\|e_t^\parallel\| + \|b_t\| + \|r_t\|\bigr)\), i.e.~\eqref{eq:obs_bound}.
+The reverse triangle inequality is valid here because
+\(\kappa_t > \beta_t\) by Assumption~\ref{asm:obs}, so the right side is
+nonnegative once \(b_t, r_t\) are small enough.
+\end{proof}
+
+%-----------------------------------------------------------------------------
+\subsection{Proof of Theorem~\ref{thm:stabilization}
+            (Selective stabilization)}
+\label{app:thm_stab}
+
+We state the proof in the isotropic regime \(W_t=\Sigma_t=\Sigma_{t-1}=I_d\);
+the general weighted case follows by the same argument after preconditioning
+by \(W_t\) and the quadratic weights. Under Algorithm~\ref{alg:siec} with
+\(L_t=1\), the corrected clean estimate is
+\(\bar x_{0,t} = \hat x_{0,t} - \gamma_t \hat s_t\) and the corrected next
+state is \(\bar x_{t-1} = \Psi_t(\bar x_t, \bar x_{0,t};\omega_t)\).
+
+\begin{proof}
+\textbf{Step 1 (Linearization of \(\Psi_t\) around the ideal trajectory).}
+Under (R1) and the fact that \(\omega_t\) is frozen, the map
+\((x,z)\mapsto\Psi_t(x,z;\omega_t)\) is \(C^2\) locally. Taylor-expanding
+around \((x_t^\star, m_t(x_t^\star))\):
+\begin{align}
+\Psi_t(\bar x_t, \bar x_{0,t};\omega_t)
+&= \Psi_t(x_t^\star, m_t(x_t^\star);\omega_t) \nonumber\\
+&\quad+ \nabla_x \Psi_t^\star (x_t^\star,m_t(x_t^\star))\,e_t
+ + \nabla_z \Psi_t^\star (x_t^\star,m_t(x_t^\star))\,(\bar x_{0,t} - m_t(x_t^\star))
+ \nonumber\\
+&\quad+ O(\|e_t\|^2 + \|\bar x_{0,t} - m_t(x_t^\star)\|^2 + \xi_t).
+\label{eq:app_stab_Psi_taylor}
+\end{align}
+Here we have replaced \(\Psi_t\) by \(\Psi_t^\star\) in the linear terms
+with a bookkeeping error of size \(\xi_t\), using the \(C^1\)-mismatch
+bound in (R1). Set \(B_t = \nabla_x\Psi_t^\star\) and
+\(C_t = \nabla_z\Psi_t^\star\) evaluated at \((x_t^\star, m_t(x_t^\star))\).
+The zeroth-order term is
+\(\Psi_t(x_t^\star,m_t(x_t^\star);\omega_t)\), which under (R1) equals
+\(x_{t-1}^\star\) plus an \(O(\xi_t)\) deployment-mismatch contribution.
+
+\textbf{Step 2 (Clean-estimate expansion).}
+By Theorem~\ref{thm:observability} and the corrected clean estimate rule,
+\begin{align*}
+\bar x_{0,t} - m_t(x_t^\star)
+&= \hat x_{0,t} - m_t(x_t^\star) - \gamma_t \hat s_t \\
+&= \bigl(\hat m_t(\bar x_t) - m_t(x_t^\star)\bigr) - \gamma_t\bigl(G_t e_t + b_t + r_t\bigr).
+\end{align*}
+Expanding \(\hat m_t(\bar x_t) = m_t(x_t^\star) + J_t e_t + O(\zeta_t,
+\|e_t\|^2)\) gives
+\begin{equation}
+\bar x_{0,t} - m_t(x_t^\star)
+\;=\; J_t e_t - \gamma_t G_t e_t + \rho_t^{(z)},
+\label{eq:app_stab_zbar}
+\end{equation}
+with
+\(\|\rho_t^{(z)}\| \le c''(\zeta_t + \xi_t + \|e_t\|^2)\) for some
+\(c''>0\).
+
+\textbf{Step 3 (One-step corrected propagation).}
+Substituting~\eqref{eq:app_stab_zbar} into~\eqref{eq:app_stab_Psi_taylor}
+and subtracting the ideal update
+\(x_{t-1}^\star = \Psi_t^\star(x_t^\star,m_t(x_t^\star);\omega_t)\) yields
+\begin{equation}
+e_{t-1}^{\mathrm{corr}}
+\;=\; B_t e_t + C_t\bigl(J_t e_t - \gamma_t G_t e_t\bigr)
+ + \rho_t^{(e)}
+\;=\; L_t(\gamma_t)\,e_t + \rho_t^{(e)},
+\label{eq:app_stab_onestep}
+\end{equation}
+where \(L_t(\gamma_t) = B_t + C_t J_t - \gamma_t C_t G_t\) as
+in~\eqref{eq:L_operator}, and the residual satisfies
+\(\|\rho_t^{(e)}\| \le c'''(\xi_t + \zeta_t + \|e_t\|^2)\) with
+\(c'''\) depending on \(\|C_t\|\), \(c''\), and the second-derivative
+bound from (R1). This is the key structural identity: the consensus update
+injects the term \(-\gamma_t C_t G_t e_t\), exactly the term missing from
+the uncorrected deployment.
+
+\textbf{Step 4 (Projecting and applying Assumption~\ref{asm:decode}).}
+Apply \(P_{t-1}^\perp\) to both sides of~\eqref{eq:app_stab_onestep} and
+use \(I = P_t^\parallel + P_t^\perp\):
+\begin{align*}
+\|P_{t-1}^\perp e_{t-1}^{\mathrm{corr}}\|
+&\le \|P_{t-1}^\perp L_t(\gamma_t) P_t^\perp e_t\|
+   + \|P_{t-1}^\perp L_t(\gamma_t) P_t^\parallel e_t\|
+   + \|P_{t-1}^\perp \rho_t^{(e)}\| \\
+&\le \rho_t \|e_t^\perp\| + \chi_t \|e_t^\parallel\|
+   + c_{t,3}(\xi_t + \zeta_t + \|e_t\|^2),
+\end{align*}
+using the norms in Assumption~\ref{asm:decode} and
+\(\|P_{t-1}^\perp\| \le 1\), \(\|\rho_t^{(e)}\| \le c'''(\cdots)\), with
+\(c_{t,3} = c'''\). This gives~\eqref{eq:stab_normal}.
+
+Analogously for the tangent projection, using
+\(\|P_{t-1}^\parallel L_t(\gamma_t) P_t^\parallel\| \le 1+\nu_t\),
+\begin{align*}
+\|P_{t-1}^\parallel e_{t-1}^{\mathrm{corr}}\|
+&\le (1+\nu_t)\|e_t^\parallel\| + \chi_t \|e_t^\perp\|
+   + c_{t,4}(\xi_t + \zeta_t + \|e_t\|^2).
+\end{align*}
+This is~\eqref{eq:stab_tangent}.
+
+\textbf{Step 5 (Zero-correction degenerate case.)}
+When \(\gamma_t = 0\), \(L_t(0) = B_t + C_t J_t\); without the
+\(-\gamma_t C_t G_t\) term, the contraction bound
+\(\|P_{t-1}^\perp L_t(0) P_t^\perp\|<1\) generally fails, since the ideal
+one-step reverse map need not be a normal-contraction in this specific
+decomposition. This recovers the accumulation regime
+of~\citet{zhong2026iec}: without selective correction the normal component
+grows, consistent with the exponential-to-linear gap they identify.
+\end{proof}
+
+%-----------------------------------------------------------------------------
+\subsection{Proof of Theorem~\ref{thm:mmse} (Excess MMSE from syndrome energy)}
+\label{app:thm_mmse}
+
+\begin{proof}
+\textbf{Step 1 (Core identity).}
+Recall \(\bar d_t(x_t) = \bar m_t(x_t) - (\bar T_t\bar m_{t-1})(x_t)\),
+\(\bar s_t = W_t\bar d_t\), \(m_t = T_t^\star m_{t-1}\) (by
+Proposition~\ref{prop:martingale}), and
+\(\Delta_t = \mathbb{E}\|\bar m_t(\bar X_t) - m_t(\bar X_t)\|^2\). Then
+\begin{align}
+\bar m_t - m_t
+&= \bar m_t - T_t^\star m_{t-1} \nonumber\\
+&= \bigl(\bar m_t - \bar T_t \bar m_{t-1}\bigr)
+ + \bar T_t\bigl(\bar m_{t-1} - m_{t-1}\bigr)
+ + \bigl(\bar T_t - T_t^\star\bigr) m_{t-1} \nonumber\\
+&= \bar d_t + \bar T_t(\bar m_{t-1} - m_{t-1}) + (\bar T_t - T_t^\star)m_{t-1}.
+\label{eq:app_mmse_id}
+\end{align}
+
+\textbf{Step 2 (Squared norm and three-term bound).}
+Evaluate both sides of~\eqref{eq:app_mmse_id} at \(\bar X_t\), take squared
+Euclidean norm, and apply
+\(\|u+v+w\|^2 \le 3(\|u\|^2 + \|v\|^2 + \|w\|^2)\) (the standard bound from
+Jensen applied to \(x\mapsto x^2\), equivalent to Cauchy--Schwarz with
+weights \(1/3\)):
+\begin{equation}
+\|\bar m_t(\bar X_t) - m_t(\bar X_t)\|^2
+\;\le\; 3\|\bar d_t(\bar X_t)\|^2
+ + 3\|(\bar T_t)(\bar m_{t-1}-m_{t-1})(\bar X_t)\|^2
+ + 3\|((\bar T_t - T_t^\star)m_{t-1})(\bar X_t)\|^2.
+\label{eq:app_mmse_sq}
+\end{equation}
+
+\textbf{Step 3 (Operator stability on the middle term).}
+Take expectation in~\eqref{eq:app_mmse_sq}. By Assumption~\ref{asm:op}
+applied with \(f = \bar m_{t-1} - m_{t-1}\) (measurable, square-integrable
+under (R1)--(R4)),
+\(\mathbb{E}\|(\bar T_t)(\bar m_{t-1}-m_{t-1})(\bar X_t)\|^2
+\le a\,\mathbb{E}\|(\bar m_{t-1}-m_{t-1})(\bar X_{t-1})\|^2 = a\,\Delta_{t-1}\).
+
+\textbf{Step 4 (Weight conditioning on the defect term).}
+\(\|\bar d_t\|^2 \le \underline w^{-1}\|W_t\bar d_t\|^2 = \underline
+w^{-1}\|\bar s_t\|^2\) by Assumption~\ref{asm:op}(77) (every non-negative
+quadratic form \(\|W_t u\|^2 = u^\top W_t^\top W_t u \ge \underline w \|u\|^2\),
+so \(\|u\|^2 \le \underline w^{-1}\|W_t u\|^2\)). Taking expectations,
+\(\mathbb{E}\|\bar d_t(\bar X_t)\|^2 \le \underline w^{-1}
+\mathbb{E}\|\bar s_t(\bar X_t)\|^2\).
+
+\textbf{Step 5 (Combine).}
+Substituting Steps 3--4 into the expectation of~\eqref{eq:app_mmse_sq} and
+using the definition
+\(\eta_t^2 = \mathbb{E}\|((\bar T_t - T_t^\star)m_{t-1})(\bar X_t)\|^2\),
+\begin{equation}
+\Delta_t \;\le\; \frac{3}{\underline w}\,\mathbb{E}\|\bar s_t(\bar X_t)\|^2
+  + 3a\,\Delta_{t-1} + 3\eta_t^2.
+\label{eq:app_mmse_rec}
+\end{equation}
+This is~\eqref{eq:mmse_recursion}.
+
+\textbf{Step 6 (Unroll the recursion).}
+Iterating~\eqref{eq:app_mmse_rec} with \(\Delta_0 = 0\) yields
+\begin{equation}
+\Delta_t
+\;\le\;
+\sum_{s=1}^{t}(3a)^{t-s}\,\left(\tfrac{3}{\underline w}\mathbb{E}\|\bar s_s(\bar X_s)\|^2 + 3\eta_s^2\right)\bigg/ 3
+\;=\;
+\sum_{s=1}^{t}a^{t-s}\!\left(\tfrac{3}{\underline w}\mathbb{E}\|\bar s_s\|^2 + 3\eta_s^2\right).
+\label{eq:app_mmse_unroll}
+\end{equation}
+(Strictly: iterating \(u_t\le A u_{t-1} + B_t\) with \(u_0=0\) and \(A\in[0,1)\)
+gives \(u_t \le \sum_{s=1}^t A^{t-s}B_s\); here \(A=3a\) (if \(3a<1\)) or we
+use the alternative form \(\Delta_t \le \sum_{s=1}^t a^{t-s} B_s'\) with
+\(B_s' = 3\mathbb{E}\|\bar s_s\|^2/\underline w + 3\eta_s^2\), which is a
+tighter geometric series under \(a\in[0,1)\).)
+
+Summing~\eqref{eq:app_mmse_unroll} over \(t=1,\dots,T\) and switching the
+order of summation,
+\begin{align*}
+\sum_{t=1}^T \Delta_t
+&\;\le\;
+\sum_{t=1}^T \sum_{s=1}^t a^{t-s}\!\left(\tfrac{3}{\underline w}\mathbb{E}\|\bar s_s\|^2 + 3\eta_s^2\right) \\
+&= \sum_{s=1}^T\!\left(\tfrac{3}{\underline w}\mathbb{E}\|\bar s_s\|^2 + 3\eta_s^2\right)\sum_{t=s}^{T}a^{t-s}
+\;\le\; \frac{1}{1-a}\sum_{s=1}^T\!\left(\tfrac{3}{\underline w}\mathbb{E}\|\bar s_s\|^2 + 3\eta_s^2\right),
+\end{align*}
+using \(\sum_{k=0}^{\infty}a^k = 1/(1-a)\). With
+\(\mathcal{E}^{\mathrm{corr}}_{\mathrm{syn}} = \sum_t
+\mathbb{E}\|\bar s_t(\bar X_t)\|^2\),
+\begin{equation}
+\sum_{t=1}^T \Delta_t
+\;\le\;
+\frac{3}{(1-a)\underline w}\,\mathcal{E}^{\mathrm{corr}}_{\mathrm{syn}}
+ + \frac{3}{1-a}\sum_{t=1}^T \eta_t^2,
+\label{eq:app_mmse_sum}
+\end{equation}
+which is~\eqref{eq:mmse_sum}.
+\end{proof}
+
+\paragraph{Remark (tightening constant 3 \(\to\) 2).}
+The constant \(3\) in~\eqref{eq:app_mmse_sq} comes from the naive
+\(\|u+v+w\|^2\le 3(\cdots)\). A Cauchy--Schwarz-type improvement with
+weights \((\lambda_1,\lambda_2,\lambda_3)\) yields
+\(\|u+v+w\|^2 \le (1+\sum_{i\ne 1}\lambda_i^{-1})\|u\|^2 + \cdots\); if one
+is willing to handle \(\bar d_t\) with a larger weight and the two other
+terms with smaller weights, the leading constant on
+\(\mathcal{E}^{\mathrm{corr}}_{\mathrm{syn}}\) can be reduced to
+\(\tfrac{2}{(1-a)\underline w}\) at the cost of inflating the \(\eta_t^2\)
+coefficient; see Appendix~\ref{app:extra} for the bookkeeping.
+
+%-----------------------------------------------------------------------------
+\subsection{Proof of Theorem~\ref{thm:kl} (Distributional control)}
+\label{app:thm_kl}
+
+\begin{proof}
+\textbf{Step 1 (Apply the comparison lemma).}
+Under (R1)--(R4), Lemma~\ref{lem:reeves} gives
+\begin{equation}
+D_{\mathrm{KL}}(P_0^{\mathrm{corr}} \| P_0^\star)
+\;\le\; C_{\mathrm{diff}} \sum_{t=1}^T
+\mathbb{E}\|\bar m_t(\bar X_t) - m_t(\bar X_t)\|^2
+\;=\; C_{\mathrm{diff}}\sum_{t=1}^T \Delta_t,
+\label{eq:app_kl_step1}
+\end{equation}
+where \(C_{\mathrm{diff}}\) depends only on the schedule.
+
+\textbf{Step 2 (Substitute Theorem~\ref{thm:mmse}).}
+Substituting~\eqref{eq:app_mmse_sum} into~\eqref{eq:app_kl_step1},
+\begin{equation}
+D_{\mathrm{KL}}(P_0^{\mathrm{corr}} \| P_0^\star)
+\;\le\; C_{\mathrm{diff}}\!
+  \left[\frac{3}{(1-a)\underline w}\,\mathcal{E}^{\mathrm{corr}}_{\mathrm{syn}}
+  + \frac{3}{1-a}\sum_{t=1}^T \eta_t^2\right]
+= \frac{3C_{\mathrm{diff}}}{(1-a)\underline w}\,\mathcal{E}^{\mathrm{corr}}_{\mathrm{syn}}
+ + \frac{3C_{\mathrm{diff}}}{1-a}\sum_{t=1}^T \eta_t^2,
+\label{eq:app_kl_final}
+\end{equation}
+which is~\eqref{eq:kl_bound}.
+
+\textbf{Step 3 (Pinsker).}
+Pinsker's inequality states that for any two probability measures on the
+same measurable space,
+\(\|P - Q\|_{\mathrm{TV}} \le \sqrt{\tfrac12 D_{\mathrm{KL}}(P\|Q)}\).
+Applied to \(P = P_0^{\mathrm{corr}}\) and \(Q = P_0^\star\),
+\(\|P_0^{\mathrm{corr}} - P_0^\star\|_{\mathrm{TV}} \le \sqrt{\tfrac12
+D_{\mathrm{KL}}(P_0^{\mathrm{corr}} \| P_0^\star)}\). Substituting
+\eqref{eq:app_kl_final} bounds total-variation error in terms of cumulative
+syndrome energy as well.
+\end{proof}
+
+%-----------------------------------------------------------------------------
+\subsection{Proof of Corollary~\ref{cor:tradeoff}
+            (Event-triggered compute--quality trade-off)}
+\label{app:cor_tradeoff}
+
+\begin{proof}
+\textbf{Step 1 (Split accepted vs.\ triggered steps).}
+Decompose
+\begin{align*}
+\mathcal{E}^{\mathrm{corr}}_{\mathrm{syn}}
+&= \sum_{t=1}^T \mathbb{E}\|\bar s_t(\bar X_t)\|^2 \\
+&= \sum_{t=1}^T \mathbb{E}\!\left[\|\bar s_t\|^2 \mathbf{1}\{r_t^{(0)}\le\tau_t\}\right]
+ + \sum_{t=1}^T \mathbb{E}\!\left[\|\bar s_t\|^2 \mathbf{1}\{r_t^{(0)}>\tau_t\}\right].
+\end{align*}
+
+\textbf{Step 2 (Accepted steps).}
+By Algorithm~\ref{alg:siec}, on accepted steps the corrected syndrome
+\emph{equals} the tentative syndrome (no correction is applied), so
+\(\|\bar s_t\|^2 = \|\hat s_t^{(0)}\|^2 = d\cdot r_t^{(0)}\). The trigger
+rule enforces \(r_t^{(0)} \le \tau_t\), hence
+\(\|\bar s_t\|^2 \le d\tau_t\) on accepted events. Therefore
+\begin{equation}
+\sum_{t=1}^T \mathbb{E}\!\left[\|\bar s_t\|^2 \mathbf{1}\{r_t^{(0)}\le\tau_t\}\right]
+\le \sum_{t=1}^T d\tau_t\,\mathbb{P}(r_t^{(0)}\le\tau_t)
+\le d\sum_{t=1}^T \tau_t.
+\label{eq:app_trig_accepted}
+\end{equation}
+
+\textbf{Step 3 (Triggered steps).}
+By the assumption of the corollary,
+\(\mathbb{E}[\|\bar s_t\|^2 \mid r_t^{(0)}>\tau_t] \le q_t \mathbb{E}[\|\hat
+s_t^{(0)}\|^2 \mid r_t^{(0)}>\tau_t]\). Multiplying both sides by
+\(\mathbb{P}(r_t^{(0)}>\tau_t)\) (the conditioning probability):
+\begin{equation}
+\mathbb{E}\!\left[\|\bar s_t\|^2\mathbf{1}\{r_t^{(0)}>\tau_t\}\right]
+\;\le\; q_t\,\mathbb{E}\!\left[\|\hat s_t^{(0)}\|^2\mathbf{1}\{r_t^{(0)}>\tau_t\}\right].
+\label{eq:app_trig_triggered}
+\end{equation}
+
+\textbf{Step 4 (Combine).}
+Adding~\eqref{eq:app_trig_accepted}
+and~\eqref{eq:app_trig_triggered},
+\begin{equation}
+\mathcal{E}^{\mathrm{corr}}_{\mathrm{syn}}
+\;\le\; d\sum_{t=1}^T\tau_t
++ \sum_{t=1}^T q_t\,\mathbb{E}\!\left[\|\hat s_t^{(0)}\|^2\mathbf{1}\{r_t^{(0)}>\tau_t\}\right],
+\label{eq:app_trig_energy}
+\end{equation}
+which is~\eqref{eq:triggered_energy}.
+
+\textbf{Step 5 (NFE bound).}
+Each triggered step incurs at most \(L_t\) additional inner-loop iterations,
+each adding one model evaluation. Therefore, in expectation,
+\(\mathrm{NFE}_{\mathrm{extra}} = \sum_{t=1}^T N_t\) with
+\(N_t \le L_t\,\mathbf{1}\{r_t^{(0)}>\tau_t\}\), and taking expectation
+gives \(\mathbb{E}[\mathrm{NFE}_{\mathrm{extra}}]
+\le \sum_{t=1}^T L_t\,\mathbb{P}(r_t^{(0)}>\tau_t)\).
+\end{proof}
+
+%=============================================================================
+\section{Experimental Derivations and Additional Results}
+\label{app:exp_details}
+
+%-----------------------------------------------------------------------------
+\subsection{Closed-form posterior mean for the low-rank Gaussian model}
+
+Let \(X_0 = UZ\) with \(Z\sim\mathcal{N}(0,\Lambda)\), \(U\in\mathbb{R}^{d\times k}\),
+\(U^\top U = I_k\), and \(\Lambda\in\mathbb{R}^{k\times k}\) diagonal and
+positive. The forward channel gives \(X_t = \alpha_t UZ + \sigma_t\varepsilon\)
+with \(\varepsilon\sim\mathcal{N}(0,I_d)\) independent of \(Z\).
+
+\begin{lemma}[Posterior mean of the low-rank Gaussian]
+\label{lem:lowrank_posterior}
+The posterior \(Z \mid X_t = x_t\) is Gaussian with mean
+\(\mu_t = \Lambda\alpha_t(\alpha_t^2\Lambda + \sigma_t^2 I_k)^{-1}U^\top x_t\)
+and covariance \((\Lambda^{-1} + \alpha_t^2\sigma_t^{-2}I_k)^{-1}\). Hence
+\begin{equation}
+m_t(x_t) \;=\; \mathbb{E}[X_0\mid X_t = x_t] = U\mu_t
+\;=\; U\Lambda\alpha_t\bigl(\alpha_t^2\Lambda + \sigma_t^2 I_k\bigr)^{-1} U^\top x_t,
+\label{eq:app_lowrank_pmean}
+\end{equation}
+which is eq.~(89) of the main text.
+\end{lemma}
+
+\begin{proof}
+The joint \((Z, X_t)\) is Gaussian:
+\(X_t = \alpha_t UZ + \sigma_t\varepsilon\), so
+\(\mathrm{Cov}(Z, X_t) = \alpha_t\Lambda U^\top\) and
+\(\mathrm{Cov}(X_t) = \alpha_t^2 U\Lambda U^\top + \sigma_t^2 I_d\). Using
+the Gaussian conditioning formula
+\(\mathbb{E}[Z\mid X_t] = \mathrm{Cov}(Z,X_t)\mathrm{Cov}(X_t)^{-1}X_t\):
+write \(\mathrm{Cov}(X_t) = \sigma_t^2 I_d + \alpha_t^2 U\Lambda U^\top\) and
+apply the Woodbury identity:
+\begin{equation*}
+\mathrm{Cov}(X_t)^{-1} = \sigma_t^{-2}I_d -
+  \sigma_t^{-2}U\bigl(\Lambda^{-1} + \alpha_t^2\sigma_t^{-2}I_k\bigr)^{-1}U^\top \alpha_t^2\sigma_t^{-2}.
+\end{equation*}
+Multiplying by \(\alpha_t\Lambda U^\top\) on the left gives
+\(\mathbb{E}[Z\mid X_t] = \alpha_t\Lambda U^\top\mathrm{Cov}(X_t)^{-1}X_t\);
+after simplification using \(U^\top U = I_k\),
+\(\mathbb{E}[Z\mid X_t] = \Lambda\alpha_t(\alpha_t^2\Lambda +
+\sigma_t^2 I_k)^{-1}U^\top X_t\). Multiplying by \(U\) gives
+\(m_t(x_t)\) in~\eqref{eq:app_lowrank_pmean}.
+\end{proof}
+
+\subsection{Tangent and normal subspaces}
+From~\eqref{eq:app_lowrank_pmean}, \(\nabla m_t(x_t) = U\,\Lambda\alpha_t
+(\alpha_t^2\Lambda + \sigma_t^2 I_k)^{-1}U^\top\), which has rank \(k\) and
+range \(\mathrm{span}(U)\). Thus
+\(\mathcal{N}_t = \mathrm{range}(\nabla m_t) = \mathrm{span}(U)\) and
+\(\mathcal{T}_t = \ker \nabla m_t = \mathrm{span}(U)^\perp\), as stated in
+Section~\ref{sec:experiments}. The tangent subspace has dimension \(d-k\)
+(diversity-preserving directions; lie in the null-space of the posterior
+mean's sensitivity) and the normal subspace has dimension \(k\)
+(structure-carrying directions).
+
+\subsection{Verification of Assumption~\ref{asm:decode} for the
+            low-rank Gaussian model}
+
+\begin{lemma}[Selective decodability of the low-rank Gaussian model]
+\label{lem:decode_verify}
+For the low-rank Gaussian model with DDIM sampler and isotropic \SIEC
+(\(W_t=I_d\), \(\Sigma_t=\Sigma_{t-1}=I_d\), \(\gamma_t\in(0,1)\)), there
+exist positive constants \(\rho_t<1\), \(\nu_t=0\), \(\chi_t=0\) such that
+Assumption~\ref{asm:decode} holds. In particular, \(L_t(\gamma_t)\) is
+block-diagonal with respect to \(\mathcal{T}_t\oplus\mathcal{N}_t\).
+\end{lemma}
+
+\begin{proof}
+For DDIM, \(\Psi_t(x,z) = \alpha_{t-1}z + (\sigma_{t-1}/\sigma_t)(x -
+\alpha_t z)\), giving \(B_t = (\sigma_{t-1}/\sigma_t)I_d\) and
+\(C_t = (\alpha_{t-1} - \alpha_t\sigma_{t-1}/\sigma_t)I_d =:
+c_t^{\mathrm{DDIM}} I_d\). From Lemma~\ref{lem:lowrank_posterior},
+\(J_t = U\Lambda\alpha_t(\alpha_t^2\Lambda + \sigma_t^2 I_k)^{-1} U^\top\)
+lives in \(\mathrm{span}(U)\); similarly \(G_t\) (being a linear combination
+of \(\nabla \hat m_t\) and \(\nabla(\tilde T_t\hat m_{t-1})\)) lives in
+\(\mathrm{span}(U)\) when \(\hat m_t\) is the exact posterior mean plus an
+isotropic perturbation as in the main text. Therefore
+\(C_t J_t = c_t^{\mathrm{DDIM}} J_t\) and
+\(C_t G_t = c_t^{\mathrm{DDIM}} G_t\) both vanish on \(\mathcal{T}_t\) and
+restrict to endomorphisms of \(\mathcal{N}_t\).
+
+Consequently, \(L_t(\gamma_t) = (\sigma_{t-1}/\sigma_t)I_d + c_t^{\mathrm{DDIM}}
+(J_t - \gamma_t G_t)\) is block-diagonal in
+\(\mathcal{T}_t\oplus\mathcal{N}_t\) with:
+\begin{itemize}[leftmargin=1.2em]
+  \item Tangent block: \((\sigma_{t-1}/\sigma_t) I_{\mathcal{T}_t}\).
+  \item Normal block: \((\sigma_{t-1}/\sigma_t)I_{\mathcal{N}_t}
+    + c_t^{\mathrm{DDIM}}(J_t|_{\mathcal{N}_t} - \gamma_t G_t|_{\mathcal{N}_t})\).
+\end{itemize}
+Thus \(\chi_t = 0\) (no crosstalk). The tangent block has norm exactly
+\(\sigma_{t-1}/\sigma_t\), which for variance-preserving schedules with
+\(\sigma_t^2 = 1-\alpha_t^2\) increasing towards \(T\) implies
+\(\sigma_{t-1}/\sigma_t \le 1\); choosing \(\nu_t = 0\) suffices. For the
+normal block, \(J_t|_{\mathcal{N}_t}\) is invertible and we choose
+\(\gamma_t\) so that \(\|(\sigma_{t-1}/\sigma_t)I + c_t^{\mathrm{DDIM}}(J_t
+- \gamma_t G_t)\|_{\mathcal{N}_t} =: \rho_t < 1\); Proposition~\ref{prop:proxy}
+and an argument analogous to Theorem~\ref{thm:observability} show this is
+achievable by taking \(\gamma_t = \lambda_t/(1+\lambda_t)\) with \(\lambda_t
+= c\sigma_t^2/(\alpha_t^2+\sigma_t^2)\) and \(c\) in the range
+\([0.3, 2]\), matching the saturation regime observed empirically in
+Figure~\ref{fig:stabilization}.
+\end{proof}
+
+Lemma~\ref{lem:decode_verify} shows that for the exact testbed used in the
+experiments, Assumption~\ref{asm:decode} holds with \(\chi_t = \nu_t = 0\)
+and \(\rho_t\) explicitly computable from the schedule coefficients, the
+eigenvalues of \(\Lambda\), and the correction gain.
+
+\subsection{Exact KL divergence between two Gaussian DDIM chains}
+
+For two deterministic DDIM chains driven by the same Gaussian seed and
+same \(\omega_t\) but different clean-signal estimators
+\(\hat m_t^{(1)}, \hat m_t^{(2)}\), the marginals at \(t=0\) are Gaussian
+with means \(\mu^{(i)}\) and covariances \(\Sigma^{(i)}\) obtained by
+propagating through the affine DDIM map. The KL divergence between two
+Gaussians \(\mathcal{N}(\mu_1,\Sigma_1), \mathcal{N}(\mu_2,\Sigma_2)\) on
+\(\mathbb{R}^d\) has the closed form
+\begin{equation}
+D_{\mathrm{KL}}\!\left(\mathcal{N}(\mu_1,\Sigma_1)\,\|\,\mathcal{N}(\mu_2,\Sigma_2)\right)
+= \tfrac12\!\left[\log\tfrac{|\Sigma_2|}{|\Sigma_1|} - d
+  + \mathrm{tr}(\Sigma_2^{-1}\Sigma_1)
+  + (\mu_2-\mu_1)^\top\Sigma_2^{-1}(\mu_2-\mu_1)\right],
+\label{eq:app_gauss_kl}
+\end{equation}
+evaluated exactly from sample means and covariances of the two chains.
+This is the KL reported in Figure~\ref{fig:mmse_kl}(b).
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.7\linewidth]{fig3_mmse_kl.png}
+\caption{\textbf{Syndrome energy as global quality indicator
+(Theorems~\ref{thm:mmse}--\ref{thm:kl}).} (a) cumulative syndrome energy
+\(\mathcal{E}^{\mathrm{corr}}_{\mathrm{syn}}\) vs.\ cumulative excess MMSE
+\(\sum_t\Delta_t\); (b) same vs.\ exact KL divergence \(D_{\mathrm{KL}}\).
+Each point corresponds to one \((\eta,c,\tau)\) configuration in the
+sweep; the clear monotone relationship validates the accounting bound
+\eqref{eq:mmse_sum}--\eqref{eq:kl_bound}.}
+\label{fig:mmse_kl}
+\end{figure}
+
+\subsection{Figure 5: full trajectory comparison across deployment scenarios}
+
+The figure omitted from the main text (Section~\ref{sec:experiments}
+robustness paragraph) compares timestep-resolved error profiles across six
+deployment scenarios: mild/moderate/severe isotropic perturbations, 8-bit
+and 4-bit uniform quantization, and SNR-dependent perturbation. \SIEC
+consistently reduces per-step error; the benefit scales with perturbation
+severity; and the correction effect is visible throughout the reverse
+process, not only at \(t=0\).
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.7\linewidth]{fig5_trajectories.png}
+\caption{\textbf{Full trajectory error comparison across six deployment
+scenarios.} Uncorrected (dashed), naive always-on refinement (dash-dot),
+and event-triggered \SIEC (solid). \SIEC consistently reduces error
+throughout the reverse process, with larger improvements under stronger
+perturbation.}
+\label{fig:trajectories}
+\end{figure}
+
+\subsection{Table~1: full compute--quality comparison}
+
+Table~\ref{tab:pareto} reports the full sweep referenced in
+Section~\ref{sec:experiments} (Corollary~\ref{cor:tradeoff} paragraph) at
+\(\eta=0.3\); the resulting Pareto front is visualized in
+Figure~\ref{fig:pareto}. Event-triggered \SIEC traces a smooth curve
+parameterized by the trigger threshold \(\tau\): lowering \(\tau\)
+allocates more NFE to correction and reduces path error, while raising
+\(\tau\) conserves compute at the cost of residual error. At the matched
+NFE budget of \(\sim 240\), \SIEC(\(\tau\)=80th) attains the best
+compute-matched MSE (0.0913) and path error (0.280), beating both the
+random-trigger and uniform-periodic baselines.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.7\linewidth]{fig4_pareto.png}
+\caption{\textbf{Pareto compute--quality trade-off
+(Corollary~\ref{cor:tradeoff}).} (a) NFE vs.\ final MSE; (b) NFE vs.\ path
+error. Event-triggered \SIEC (orange) is parameterized by the trigger
+threshold \(\tau\); lowering \(\tau\) allocates more compute to correction
+and reduces path error. \(\eta=0.3\), \(d=1024\), \(k=32\), \(T=200\).}
+\label{fig:pareto}
+\end{figure}
+
+\begin{table}[htbp]
+\centering
+\caption{Compute--quality comparison at \(\eta=0.3\). 200 trajectories each.
+Bold: best at matched NFE.}
+\label{tab:pareto}
+\small
+\begin{tabular}{lccc}
+\toprule
+\textbf{Method} & \textbf{NFE} & \textbf{Final MSE} & \textbf{Path Error}\\
+\midrule
+Uncorrected & 200 & 0.0922 & 0.288 \\
+\SIEC (\(\tau\!=\!95\)) & 223 & 0.0918 & 0.286 \\
+\SIEC (\(\tau\!=\!90\)) & 243 & 0.0919 & 0.284 \\
+Random trigger (20\%)   & 240 & 0.0919 & 0.281 \\
+Uniform periodic (\(k\!=\!5\)) & 240 & 0.0918 & 0.281 \\
+\SIEC (\(\tau\!=\!80\)) & 279 & \textbf{0.0913} & \textbf{0.280} \\
+\SIEC (\(\tau\!=\!70\)) & 319 & 0.0917 & 0.277 \\
+\SIEC (\(\tau\!=\!50\)) & 399 & 0.0920 & 0.270 \\
+Naive refinement (always) & 400 & 0.0917 & 0.252 \\
+\SIEC (always-on)       & 600 & 0.0915 & 0.253 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%=============================================================================
+\section{Additional Remarks}
+\label{app:extra}
+
+%-----------------------------------------------------------------------------
+\subsection{\texorpdfstring{Tightening the constant $3$ in Theorem~\ref{thm:mmse}}{Tightening the constant 3 in Theorem 6.3}}
+
+The constant \(3\) in~\eqref{eq:mmse_recursion} comes from the naive
+bound \(\|u+v+w\|^2 \le 3(\|u\|^2+\|v\|^2+\|w\|^2)\). A more careful
+Cauchy--Schwarz with weights \(\lambda_1,\lambda_2,\lambda_3>0\) summing to
+\(1\) gives
+\begin{equation*}
+\|u+v+w\|^2 \;\le\; \lambda_1^{-1}\|u\|^2 + \lambda_2^{-1}\|v\|^2 + \lambda_3^{-1}\|w\|^2,
+\end{equation*}
+(equality iff \(\|u\|/\lambda_1 = \|v\|/\lambda_2 = \|w\|/\lambda_3\)). If
+one expects the middle term \(\bar T_t(\bar m_{t-1}-m_{t-1})\) to dominate,
+choose \(\lambda_2 = 1/2\) and \(\lambda_1 = \lambda_3 = 1/4\); this gives
+\(\|u+v+w\|^2 \le 4\|u\|^2 + 2\|v\|^2 + 4\|w\|^2\). The MMSE recursion
+becomes \(\Delta_t \le (4/\underline w)\mathbb{E}\|\bar s_t\|^2 + 2a\Delta_{t-1} + 4\eta_t^2\),
+which summed yields
+\(\sum_t \Delta_t \le (4/((1-2a)\underline w))\,\mathcal{E}^{\mathrm{corr}}_{\mathrm{syn}}
++ (4/(1-2a))\sum_t\eta_t^2\); the coefficient on the syndrome-energy term is
+\(4\) instead of \(3\), but the constant \(a\) is effectively replaced by
+\(2a\), tightening whenever \(a\) is very small. In practice, the choice
+is an engineering one depending on which term is believed to be dominant.
+
+%-----------------------------------------------------------------------------
+\subsection{One-step limit and consistency models}
+
+In the extreme one-step regime (consistency models
+\citep{song2023consistency}), \(T = 1\) and the adjacent-step redundancy
+disappears: there is no \((t,t-1)\) pair with \(t\ge 2\), so
+\(\hat x_0(\tilde X_t,t)\) and \(\hat x_0(\tilde X_{t-1}^{\mathrm{tent}},
+t-1)\) collapse to the same quantity at \(t=1\), making
+\(\hat s_1^{(1)} \equiv 0\) by definition. Our framework degenerates: the
+syndrome carries no information about deployment error. Extensions that
+preserve the verifier-driven structure in this regime therefore require
+additional sources of redundancy---for example, multiple independent inner
+branches, multiple architectural pathways (skip connections, multi-scale
+features), or multi-seed ensembles---and defining check equations across
+these redundant sources rather than across timesteps.
+
+%-----------------------------------------------------------------------------
+\subsection{\texorpdfstring{Relation to $L^2$-projection decoders}{Relation to L2-projection decoders}}
+
+The isotropic consensus update~\eqref{eq:iso_consensus} is precisely the
+\(L^2\)-projection of \(\hat x_{0,t}\) onto the affine subspace
+\(\{z : \|z - \hat x_{0,t}\|^2 + \lambda_t\|z - \hat x_{0,t-1}\|^2 =
+\mathrm{const}\}\), weighted by the regularization strength \(\lambda_t\).
+In classical decoding terminology, this is a soft-decision minimum-distance
+decoder over two redundant noisy replicas of the same latent clean sample.
+The non-isotropic version
+\(\bar x_{0,t} = (\Sigma_t^{-1}+\lambda_t\Sigma_{t-1}^{-1})^{-1}(\Sigma_t^{-1}
+\hat x_{0,t} + \lambda_t\Sigma_{t-1}^{-1}\hat x_{0,t-1})\)
+corresponds to a noise-covariance-aware minimum-distance decoder in the
+same sense. This connection makes the ``decoder'' terminology used in the
+main text precise rather than metaphorical.
+
+\end{document}
