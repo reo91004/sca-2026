@@ -87,19 +87,30 @@ def analyze_one(npz_path: Path, component_specific: bool = True) -> dict:
     """attack_seed{N}.npz 한 파일 분석.
 
     Schema: traces/mu_prime/meta with label_component, label_alpha,
-            sk_pke_bytes_hex, n_per_ct, alpha_pos, alpha_neg.
+            sk_pke_bytes_hex, n_per_ct, alpha_pos, alpha_neg, level (optional).
 
     component_specific=True (default, paper method): s[c] 학습 시 component=c
     oracle pair (label_comp==c) 만 사용. 다른 component 가 trace 에 미치는
     noise 제거 → cleaner Welch-t.
 
-    component_specific=False: 4 designs all-mixed PoI (cross-component, 더 noisy).
-    """
-    p_smaug = _params.SMAUG1
-    hs = p_smaug.hs
+    component_specific=False: 모든 designs all-mixed PoI (cross-component, 더 noisy).
 
+    level-agnostic — meta 에 'level' 있으면 그 SmaugParams 로, 없으면 smaug1 fallback.
+    """
     d = np.load(npz_path, allow_pickle=True)
     T = d["traces"]; mus = d["mu_prime"]; meta = d["meta"].item()
+
+    # level 자동 감지: meta['level'] (신규 schema) 또는 sk_pke 길이로 fallback.
+    level_name = meta.get("level")
+    if level_name is None:
+        sk_len = len(meta["sk_pke_bytes_hex"]) // 2
+        # smaug1=128, smaug3=192, smaug5=256
+        level_name = {128: "smaug1", 192: "smaug3", 256: "smaug5"}.get(sk_len, "smaug1")
+    p_smaug = _params.get(level_name)
+    hs = p_smaug.hs
+    alpha_pos = int(meta.get("alpha_pos", 64))
+    alpha_neg = int(meta.get("alpha_neg", 192))
+
     label_comp = np.asarray(meta["label_component"])
     label_alpha = np.asarray(meta["label_alpha"])
     sk_bytes = bytes.fromhex(meta["sk_pke_bytes_hex"])
@@ -122,6 +133,11 @@ def analyze_one(npz_path: Path, component_specific: bool = True) -> dict:
 
     out: dict = {
         "path": str(npz_path),
+        "level": level_name,
+        "module_rank": p_smaug.module_rank,
+        "hs": hs,
+        "alpha_pos": alpha_pos,
+        "alpha_neg": alpha_neg,
         "sk_hash_short": (sk_bytes.hex())[:16],
         "sk_hw": [int(np.count_nonzero(sk[i])) for i in range(p_smaug.module_rank)],
         "n_per_ct": n_per,
@@ -133,9 +149,9 @@ def analyze_one(npz_path: Path, component_specific: bool = True) -> dict:
 
     # per component analysis
     full_correct = 0
-    for comp in (0, 1):
-        mp = (label_comp == comp) & (label_alpha == 64)
-        mn = (label_comp == comp) & (label_alpha == 192)
+    for comp in range(p_smaug.module_rank):
+        mp = (label_comp == comp) & (label_alpha == alpha_pos)
+        mn = (label_comp == comp) & (label_alpha == alpha_neg)
         if not mp.any() or not mn.any():
             out[f"s{comp}"] = None
             continue
@@ -192,7 +208,7 @@ def analyze_one(npz_path: Path, component_specific: bool = True) -> dict:
         }
         full_correct += int((sp == s_gt).sum())
 
-    out["full_sk_acc"] = full_correct / 512.0
+    out["full_sk_acc"] = full_correct / float(p_smaug.module_rank * p_smaug.n)
     return out
 
 
@@ -211,10 +227,12 @@ def summarize(results: list[dict]) -> dict:
             "max": float(vals.max()),
             "median": float(np.median(vals)),
         }
-    for comp in (0, 1):
+    # component count 는 results 의 module_rank 가 다를 수 있으므로 max 로.
+    max_comp = max(int(r.get("module_rank", 2)) for r in results)
+    for comp in range(max_comp):
         for pm in per_comp_metrics:
             vals = np.array([r[f"s{comp}"][pm] for r in results
-                             if r[f"s{comp}"] is not None], dtype=float)
+                             if r.get(f"s{comp}") is not None], dtype=float)
             if vals.size == 0:
                 continue
             summary[f"s{comp}.{pm}"] = {
@@ -240,14 +258,15 @@ def main() -> int:
         print(f"  analyzing {p.name} ...")
         r = analyze_one(p)
         results.append(r)
-        s0 = r.get("s0", {}); s1 = r.get("s1", {})
-        print(f"    sk={r['sk_hash_short']}, N/CT={r['n_per_ct']}, valid={r['n_valid_bits']}, "
-              f"max|t|={r['max_t']:.2f}")
-        print(f"    s[0] sparse bit={s0.get('sparse_bit', 0):.3f} "
-              f"sign={s0.get('sparse_sign', 0):.3f}, "
-              f"s[1] sparse bit={s1.get('sparse_bit', 0):.3f} "
-              f"sign={s1.get('sparse_sign', 0):.3f}, "
-              f"full sk={r['full_sk_acc']:.3f}")
+        print(f"    [{r['level']} k={r['module_rank']} hs={r['hs']}] sk={r['sk_hash_short']}, "
+              f"N/CT={r['n_per_ct']}, valid={r['n_valid_bits']}, max|t|={r['max_t']:.2f}")
+        per_comp_strs = []
+        for comp in range(int(r['module_rank'])):
+            sd = r.get(f"s{comp}") or {}
+            per_comp_strs.append(
+                f"s[{comp}] bit={sd.get('sparse_bit', 0):.3f}/sign={sd.get('sparse_sign', 0):.3f}"
+            )
+        print(f"    {' | '.join(per_comp_strs)}, full sk={r['full_sk_acc']:.3f}")
 
     if not results:
         print("[ERROR] no valid seeds")
@@ -264,7 +283,8 @@ def main() -> int:
           f"std={summary['n_valid_bits']['std']:.1f}")
     print(f"  max_t:        mean={summary['max_t']['mean']:.2f}, "
           f"std={summary['max_t']['std']:.2f}")
-    for comp in (0, 1):
+    max_comp = max(int(r.get("module_rank", 2)) for r in results)
+    for comp in range(max_comp):
         sb = summary.get(f"s{comp}.sparse_bit")
         ss = summary.get(f"s{comp}.sparse_sign")
         cc = summary.get(f"s{comp}.corr")
@@ -280,10 +300,11 @@ def main() -> int:
     with out_txt.open("w") as fh:
         fh.write(f"# Multi-seed evaluation — {len(results)} seeds\n\n")
         for r in results:
-            fh.write(f"## seed {r['sk_hash_short']}, N/CT={r['n_per_ct']}\n")
+            fh.write(f"## [{r['level']} k={r['module_rank']} hs={r['hs']}] "
+                     f"seed {r['sk_hash_short']}, N/CT={r['n_per_ct']}\n")
             fh.write(f"  sk HW: {r['sk_hw']}, valid bits: {r['n_valid_bits']}, "
                      f"max|t|={r['max_t']:.2f}\n")
-            for comp in (0, 1):
+            for comp in range(int(r['module_rank'])):
                 if r.get(f"s{comp}") is None: continue
                 s = r[f"s{comp}"]
                 fh.write(f"  s[{comp}]: corr={s['corr']:+.4f}, "

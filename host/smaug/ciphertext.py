@@ -40,10 +40,10 @@ class Ciphertext:
 
 
 def ct_to_bytes(p: SmaugParams, c1: np.ndarray, c2: np.ndarray) -> bytes:
-    """(c1, c2) → CIPHERTEXT_BYTES.
+    """(c1, c2) → CIPHERTEXT_BYTES. smaug1/3/5 모든 레벨 지원.
 
-    c1.shape == (module_rank, n) — 행 단위로 pack_rp 적용 후 concat.
-    c2.shape == (n,)            — pack_rp2.
+    c1.shape == (module_rank, n) — 행 단위로 pack_rp(bits=log_p) 적용 후 concat.
+    c2.shape == (n,)            — pack_rp2(bits=log_p2).
     """
     if c1.shape != (p.module_rank, p.n):
         raise ValueError(
@@ -51,19 +51,11 @@ def ct_to_bytes(p: SmaugParams, c1: np.ndarray, c2: np.ndarray) -> bytes:
         )
     if c2.shape != (p.n,):
         raise ValueError(f"c2.shape={c2.shape} != ({p.n},)")
-    if p.log_p != 8:
-        raise NotImplementedError(
-            f"ct_to_bytes 현재 LOG_P=8 (smaug1) 만 지원 — log_p={p.log_p}"
-        )
-    if p.log_p2 != 5:
-        raise NotImplementedError(
-            f"ct_to_bytes 현재 LOG_P2=5 (smaug1) 만 지원 — log_p2={p.log_p2}"
-        )
 
     parts: list[bytes] = []
     for k in range(p.module_rank):
-        parts.append(pack_rp(c1[k]))
-    parts.append(pack_rp2(c2))
+        parts.append(pack_rp(c1[k], bits_per_coef=p.log_p, n_coefs=p.n))
+    parts.append(pack_rp2(c2, bits_per_coef=p.log_p2, n_coefs=p.n))
     out = b"".join(parts)
     if len(out) != p.ciphertext_bytes:
         raise AssertionError(
@@ -75,17 +67,15 @@ def ct_to_bytes(p: SmaugParams, c1: np.ndarray, c2: np.ndarray) -> bytes:
 def ct_from_bytes(p: SmaugParams, buf: bytes) -> tuple[np.ndarray, np.ndarray]:
     if len(buf) != p.ciphertext_bytes:
         raise ValueError(f"len={len(buf)} != {p.ciphertext_bytes}")
-    if p.log_p != 8 or p.log_p2 != 5:
-        raise NotImplementedError(
-            "ct_from_bytes 현재 smaug1 (LOG_P=8, LOG_P2=5) 만 지원"
-        )
 
     off = 0
     c1 = np.empty((p.module_rank, p.n), dtype=np.int64)
     for k in range(p.module_rank):
-        c1[k] = unpack_rp(buf[off:off + p.ctpoly1_bytes])
+        c1[k] = unpack_rp(buf[off:off + p.ctpoly1_bytes],
+                          bits_per_coef=p.log_p, n_coefs=p.n)
         off += p.ctpoly1_bytes
-    c2 = unpack_rp2(buf[off:off + p.ctpoly2_bytes])
+    c2 = unpack_rp2(buf[off:off + p.ctpoly2_bytes],
+                    bits_per_coef=p.log_p2, n_coefs=p.n)
     off += p.ctpoly2_bytes
     assert off == p.ciphertext_bytes
     return c1, c2

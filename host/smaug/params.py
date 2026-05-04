@@ -56,6 +56,17 @@ class SmaugParams:
     def ctpolyvec_bytes(self) -> int:
         return self.ctpoly1_bytes * self.module_rank
 
+    @property
+    def skpoly_bytes(self) -> int:
+        # SKPOLY_BYTES = LWE_N / 4 (2-bit ternary packed), spec 정의.
+        return self.n // 4
+
+    @property
+    def pke_secret_key_bytes(self) -> int:
+        # PKE_SECRETKEY_BYTES = SKPOLYVEC_BYTES = SKPOLY_BYTES * MODULE_RANK
+        # smaug1=128, smaug3=192, smaug5=256. attack 의 'X' dump 가 이 부분.
+        return self.skpoly_bytes * self.module_rank
+
     def assert_consistent(self) -> None:
         """parameters.h 의 합산 관계가 dataclass 와 일치하는지 검증."""
         if self.ctpolyvec_bytes + self.ctpoly2_bytes != self.ciphertext_bytes:
@@ -83,28 +94,30 @@ SMAUG1 = SmaugParams(
     shared_secret_bytes=32,
 )
 
+# spec values cross-checked against include/crypto_kem/smaug{3,5}/{parameters,api}.h.
+# CRYPTO_PUBLICKEYBYTES / CRYPTO_CIPHERTEXTBYTES 는 api.h 에 hardcoded 된 값.
 SMAUG3 = SmaugParams(
     name="smaug3",
     n=256, module_rank=3,
-    log_q=10, log_p=8, log_p2=8, log_t=1,
+    log_q=11, log_p=9, log_p2=4, log_t=1,
     hs=88,
-    # 아래 byte 수는 spec 문서 기준 placeholder. smaug3/5 를 실제로
-    # 다룰 때 parameters.h 를 다시 확인하고 갱신.
-    public_key_bytes=992,
-    secret_key_bytes=192 + 992,
-    ciphertext_bytes=1088,
+    public_key_bytes=1088,        # api.h: CRYPTO_PUBLICKEYBYTES = 1088
+    secret_key_bytes=224 + 1088,  # api.h: CRYPTO_SECRETKEYBYTES = 224 + 1088
+    ciphertext_bytes=992,         # api.h: CRYPTO_CIPHERTEXTBYTES = 992
     delta_bytes=32,
     shared_secret_bytes=32,
 )
 
+# smaug5 (KpqC SMAUG-T v4.0): MODULE_RANK = 4 (NOT 5 — common 잘못된 짐작),
+# HS = 87 (not 152).
 SMAUG5 = SmaugParams(
     name="smaug5",
-    n=256, module_rank=5,
-    log_q=11, log_p=8, log_p2=6, log_t=1,
-    hs=152,
-    public_key_bytes=1632,
-    secret_key_bytes=224 + 1632,
-    ciphertext_bytes=1472,
+    n=256, module_rank=4,
+    log_q=11, log_p=9, log_p2=7, log_t=1,
+    hs=87,
+    public_key_bytes=1440,        # api.h: CRYPTO_PUBLICKEYBYTES = 1440
+    secret_key_bytes=352 + 1440,  # api.h: CRYPTO_SECRETKEYBYTES = 352 + 1440
+    ciphertext_bytes=1376,        # api.h: CRYPTO_CIPHERTEXTBYTES = 1376
     delta_bytes=32,
     shared_secret_bytes=32,
 )

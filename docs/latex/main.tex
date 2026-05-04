@@ -96,7 +96,7 @@
 \newcommand{\sign}{\mathrm{sign}}
 \newcommand{\round}[1]{\lfloor #1 \rceil}
 
-\title{8개 트레이스로 SMAUG-T smaug1 의 비밀키 복구:\\
+\title{8/9/12 트레이스로 SMAUG-T smaug1/3/5 의 비밀키 복구:\\
        Chosen-Ciphertext 부채널 공격의 단일 단계 접근}
 
 \author{%
@@ -108,25 +108,32 @@
 \maketitle
 
 \begin{abstract}
-본 논문은 2025년 KpqC 우승 후보로 선정된 격자 기반 KEM \textbf{SMAUG-T smaug1}
-에 대한 첫 통계적 부채널 공격을 제시한다. 우리의 공격은 ChipWhisperer-Lite +
-Vcc 션트 + STM32F415 환경에서 \textbf{4개의 chosen-ciphertext $\times$ N=2 =
-8개의 전력 트레이스 (약 3.2초의 측정)} 만으로 long-term secret key 를 복구하며,
-\textbf{무작위로 생성된 9개의 키쌍 모두에서 100\%의 정확도 (분산 0)} 를 달성한다.
-이 공격은 단일 단계 온라인 절차이다: \emph{오프라인 템플릿 학습 없음}, 보조
-훈련 데이터 없음, EM 프로브 없음.
+본 논문은 2025년 KpqC 우승 후보로 선정된 격자 기반 KEM \textbf{SMAUG-T} 의
+세 가지 보안 레벨 (\textbf{smaug1, smaug3, smaug5}) 에 대한 첫 통계적 부채널
+공격을 제시한다. 우리의 공격은 ChipWhisperer-Lite + Vcc 션트 + STM32F415
+환경에서 \textbf{각각 8 / 9 / 12 개의 전력 트레이스} (약 3.2 / 5 / 23 초의 측정)
+만으로 long-term secret key 를 복구하며, smaug1 에서는 \textbf{무작위로 생성된
+9개의 키쌍 모두에서 100\%의 정확도 (분산 0)}, smaug3/5 에서도 \textbf{각 2개의
+키쌍에서 100\% (분산 0)} 를 달성한다. 이 공격은 단일 단계 온라인 절차이다:
+\emph{오프라인 템플릿 학습 없음}, 보조 훈련 데이터 없음, EM 프로브 없음.
 
-세 가지 방법론적 기여가 이 결과를 가능하게 한다.
+네 가지 방법론적 기여가 이 결과를 가능하게 한다.
 첫째, \emph{chosen-CT 컨벤션 정정} — $R = \Zq[X]/(X^n+1)$ 환의 다항식 곱 구조에서
 $c_1 = \alpha \cdot X^j$ 는 $\mu'_j$ 가 아니라 $\mu'_i$ 에서 $s_{(i-j) \mod n}$
 을 누설시킨다. 이로 인해 $c_1 = \alpha$ 상수 chosen-CT 한 번에 256개의 비밀
-계수가 동시에 노출되며, 4개의 chosen-CT 만으로 full sk 가 가능하다 (4400배 효율).
+계수가 동시에 노출되며, smaug1 에서 4개의 chosen-CT 만으로 full sk 가 가능하다
+(4400배 효율). 이 매핑은 module rank $k$ 에 그대로 일반화되어 smaug3/5 에도 적용된다.
 둘째, \emph{Direct attack PoI 학습} — 기존 random-µ profile 에서 학습된
 PoI 가 chosen-CT 에 transfer 되지 않는다는 부정적 결과를 정량적으로 보이고,
 대신 chosen-CT 데이터 자체에서 cross-design Welch-t 로 PoI 를 직접 학습하는
 방법을 제안한다. 셋째, \emph{component-specific PoI + sparse 복구} — 각
 component 에 해당하는 oracle pair 만으로 학습을 격리해 노이즈를 제거하고,
-HW=70 sparse ternary 제약 MAP 으로 후처리한다.
+HW sparse ternary 제약 MAP 으로 후처리한다. 넷째, \emph{multi-bit board oracle
+(smaug3/5 전용 확장)} — smaug3/5 의 $\log p = 9$ 환에서는 단순 oracle pair 가
+boundary 비대칭으로 $(0,0)$ 응답에서 $\mathit{sk}=-1$ 와 $\mathit{sk}=0$ 을
+분리하지 못해 부분 복구 ($\sim$78\%) 에 그치는데, \emph{support oracle $\alpha$
+한 개 추가} 로 3-tuple $(b_{128}, b_{384}, b_{132})$ 가 ternary class 를 unique
+하게 분리하여 board-binary 만으로 (전력 trace 의 추가 분류 없이) 100\% 가 달성된다.
 
 부정적 발견들 — profile transfer 의 sign 반전, multi-term TVLA 의 noise floor
 한계 (N=64, 256), 'T' isolated multiplier 의 round-trip 실패 — 도 정량화하여
@@ -190,6 +197,16 @@ KCI 한국어 논문~\citep{smaugt-spa-kci} 은 \emph{단순 전력 분석 (SPA)
    noise regime ($|t| < 4.5$), N=512 phase transition ($|t|=15.20$), 'T'
    isolated multiplier 명령의 round-trip 0/6 실패 (q-modular storage 추정) 를
    모두 보고하여 \emph{honest engineering} 측면에서 그림을 완성한다.
+
+\item \textbf{smaug3 / smaug5 로의 일반화 (\cref{sec:extension}).}
+   동일한 프레임워크를 module rank $k=3, 4$, $\log p = 9$ 의 smaug3, smaug5
+   에도 적용한다. smaug3/5 에서는 oracle pair 만으로는 boundary 비대칭으로
+   부분 복구 (78\%) 에 그치는 새 \emph{negative finding} 을 발견하고,
+   \emph{support oracle $\alpha$ 추가} 로 3-tuple board-binary mapping 을
+   완성하여 smaug3 = 9 traces (3 components $\times$ 3 $\alpha$, $\sim$5초),
+   smaug5 = 12 traces ($k=4 \times 3 \alpha$, $\sim$23초) 만으로 100\% 복구
+   ($N=1$ 부터). 모든 보안 레벨에서 \emph{전력 trace 의 추가 SCA 분류 없이}
+   board 응답만으로 완전 복구가 가능하다는 통일된 결과를 제시한다.
 \end{enumerate}
 
 %=============================================================================
@@ -719,6 +736,190 @@ sign acc & 100\% & 100\% \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+%=============================================================================
+\section{smaug3 / smaug5 로의 일반화 (Extension)}
+\label{sec:extension}
+%=============================================================================
+
+본 섹션은 \cref{sec:convention}--\cref{sec:exp} 의 method 가
+SMAUG-T 의 다른 두 보안 레벨 \textbf{smaug3} ($k=3, \HS=88, \log p=9$) 와
+\textbf{smaug5} ($k=4, \HS=87, \log p=9$) 에도 적용됨을 보인다. 차이점은
+세 가지: (i) module rank 가 2 → 3, 4 로 늘어 chosen-CT design 수가 비례
+증가, (ii) ciphertext modulus $\log p$ 가 8 → 9 로 변하여 oracle pair $\alpha$
+가 \emph{2배 스케일} 되며, (iii) board 의 실제 $\mu'$ 응답이 host 가 spec 으로
+계산한 예측과 \emph{boundary case 에서 부분적 mismatch} 라는 새 negative
+finding 이 발견된다. 이를 우회하기 위해 \emph{support oracle $\alpha$} 한 개를
+추가한 multi-bit (3-$\alpha$) chosen-CT design 을 제안한다.
+
+\subsection{인프라 일반화 (level-agnostic 코드)}
+\label{sec:ext-infra}
+
+다음 코드 변경으로 모든 보안 레벨을 단일 코드 베이스에서 다룰 수 있게 했다:
+
+\begin{itemize}[leftmargin=*]
+\item \texttt{host/smaug/params.py}: smaug3/5 의 placeholder 매개변수를
+      \texttt{include/crypto\_kem/smaug\{3,5\}/parameters.h} 와
+      \texttt{api.h} 의 매크로 literal 그대로 정정. smaug5 의
+      \textbf{MODULE\_RANK = 4} (자주 잘못 짐작되는 5 가 아님), $\HS=87$
+      (152 가 아님). \texttt{pke\_secret\_key\_bytes = 64 $\times$ MODULE\_RANK}
+      derived property 추가.
+\item \texttt{host/smaug/codec.py}: smaug1 hardcode (\texttt{LOG\_P=8},
+      \texttt{LOG\_P2=5}) 의 packer 를 임의 \texttt{bits\_per\_coef} 의
+      일반 little-endian bitstream packer (\texttt{pack\_bitstream},
+      \texttt{unpack\_bitstream}) 로 교체. SMAUG-T upstream 의
+      \texttt{pack\_R2\_\{3,4,5,7,8,9,10,11\}} 가 모두 동일한 LE bitstream
+      으로 환원됨을 라인-by-라인 검증.
+\item \texttt{host/smaug/ciphertext.py}: \texttt{NotImplementedError} 가드
+      제거, 파라미터 인자 주입.
+\item \texttt{firmware/simpleserial-smaug/simpleserial-smaug.c}: sk PKE chunk
+      count hardcode 제거, \texttt{PKE\_SECRETKEY\_BYTES} / \texttt{SKPOLY\_BYTES}
+      매크로 사용. \texttt{SMAUG\_LEVEL=\{1,3,5\}} 빌드로 ROM 33.5/34.8/36.7\,KB,
+      RAM 7/9/11\,KB.
+\item \texttt{scripts/run\_attack.py}: component sweep 을 \texttt{range(p.module\_rank)}
+      로, 추가 \texttt{--alphas} 인자로 multi-$\alpha$ 캡처 지원.
+\item \texttt{scripts/analyze\_multi\_seed.py}: 메타의 \texttt{level} 필드로
+      자동 감지 (없으면 sk\_pke 길이로 fallback) — smaug1 데이터에서 회귀
+      테스트 100\% 재현.
+\item \texttt{scripts/analyze\_multibit.py} (신규): 3-$\alpha$ board-binary
+      lookup + sparse\_recover. host ideal mapping (spec) 과 empirical
+      mapping (cross-tab) 를 결합한 ``auto'' mode.
+\end{itemize}
+
+\subsection{매개변수 일반화: 2-$\alpha$ baseline}
+\label{sec:ext-2alpha}
+
+Oracle pair $\alpha$ 후보의 분포는 module rank 와 무관하게 $\log p$ 에 의해
+결정된다. \texttt{host/smaug/sk\_partition.py::find\_oracle\_pairs} 가 자동
+탐색한 결과:
+
+\begin{itemize}[leftmargin=*]
+\item smaug1 ($\log p = 8$): pos\_row $(0,0,1)$, neg\_row $(1,0,0)$ — 16 pair,
+      대표 $(\alpha_+, \alpha_-) = (64, 192)$.
+\item smaug3, smaug5 ($\log p = 9$): \emph{같은 row 패턴}, 16 pair,
+      대표 $(\alpha_+, \alpha_-) = \mathbf{(128, 384)}$ — smaug1 대비
+      정확히 2배 (즉 $\alpha / p$ 비율 보존).
+\end{itemize}
+
+smaug3 에 첫 시도로 \cref{sec:directpoi}--\cref{sec:component} 의 method
+(component-specific PoI + sparse\_recover) 를 그대로 적용한 결과, $N=128 \times
+6$ designs $= 768$ trace 에서 full sk \textbf{60\%} 만 도달. 이를 더 단순화한
+\emph{board-binary lookup} (전력 trace 의 분류 없이 board 응답
+$(b_{128}, b_{384})$ 만으로 cross-tab posterior) 로는 \textbf{77.47\% $\pm$
+1.17\%} (2 seeds, sign 100\%) 까지 도달. 부족분의 원인은 cross-tab 의
+$(b_{128}, b_{384}) = (0,0)$ 응답이 sk = 0 (majority $\sim$83\%) 와 sk = $-1$
+(minority $\sim$17\%) 를 분리하지 못함:
+
+\begin{table}[h!]
+\centering
+\caption{smaug3 seed1, $N=128$ 의 cross-tab: $(b_{128}, b_{384})$ joint
+outcome 별 sk 분포 (component 0). sk = $+1$ 와 sk = $-1$ 의 일부 자리는 unique
+하게 분리되지만 sk = 0 와 (0,0) 안의 sk = $-1$ 는 미분리.}
+\label{tab:smaug3-2alpha-crosstab}
+\small
+\begin{tabular}{lrrrr}
+\toprule
+$(b_{128}, b_{384})$ & sk = $-1$ & sk = $0$ & sk = $+1$ & total \\
+\midrule
+$(0, 0)$ & 31 & \textbf{168} & 0 & 199 \\
+$(0, 1)$ & \textbf{12} & 0 & 0 & 12 \\
+$(1, 0)$ & 0 & 0 & \textbf{8} & 8 \\
+$(1, 1)$ & 0 & 0 & \textbf{37} & 37 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+이 패턴은 host 가 spec 으로 계산한 ideal mapping (sk = $-1 \to (0,1)$,
+sk = $0 \to (0,0)$, sk = $+1 \to (1,0)$) 과 \emph{α=384 boundary case 에서
+부분 mismatch} 를 보인다. boundary case ($\alpha \cdot s / p = \pm 0.75$,
+정확히 0.5 LSB 거리) 에서 SMAUG-T 의 indcpa\_dec 가 spec round-half-up 과
+\emph{다른 방향} 의 round 결과를 만든다 (전체 sk = $+1$ 위치의 $\sim$83\%
+가 host 0 → board 1).
+
+\subsection{Support oracle $\alpha$ 추가: 3-$\alpha$ method (★ 핵심)}
+\label{sec:ext-3alpha}
+
+\cref{sec:ext-2alpha} 의 모호함을 해결하기 위해 \emph{support oracle $\alpha$}
+한 개를 추가한다. \texttt{host/smaug/sk\_partition.py::build\_partition\_table}
+이 자동 탐색한 \emph{support row} (1, 0, 1) (sk = $\pm 1 \to \mu' = 1$,
+sk = $0 \to \mu' = 0$) 을 만드는 $\alpha$ 후보 \textbf{252개} 중 가장 작은
+$\alpha = 132$ 를 선택. host ideal mapping 은:
+\[
+\mathit{sk} = -1 \to (0, 1, 1), \quad
+\mathit{sk} = 0  \to (0, 0, 0), \quad
+\mathit{sk} = +1 \to (1, 1, 0).
+\]
+즉 \emph{3-tuple 이 ternary class 를 unique 하게 분리} — $2^3 = 8$ 가능한
+응답 중 3개 만이 valid sk class 이며 나머지는 boundary mismatch 의 wildcard.
+\texttt{scripts/analyze\_multibit.py} 의 ``auto'' 매핑은 host ideal 이
+정의한 unique mapping 을 우선 사용하고, mismatch tuple (예: (1,1,1) 같은
+boundary 영역) 은 cross-tab empirical 로 fallback.
+
+\subsection{최소 trace 비용 (smaug3 / smaug5)}
+\label{sec:ext-result}
+
+\begin{table}[h!]
+\centering
+\caption{모든 보안 레벨의 최소 trace 비용 (component-specific PoI +
+multibit lookup + sparse\_recover, $\HS$ MAP).}
+\label{tab:level-summary}
+\small
+\begin{tabular}{lrrrrrr}
+\toprule
+Level & $k$ & $\HS$ & $\alpha$ tuple & designs & \textbf{min traces} & 캡처 시간 \\
+\midrule
+smaug1 & 2 & 70 & $(64, 192)$ & 4 & \textbf{8} ($N=2$) & 3.2 s \\
+smaug3 & 3 & 88 & $(128, 384, 132)$ & 9 & \textbf{9} ($N=1$) & $\sim$5 s \\
+smaug5 & 4 & 87 & $(128, 384, 132)$ & 12 & \textbf{12} ($N=1$) & $\sim$23 s \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h!]
+\centering
+\caption{smaug3 / smaug5 의 multi-seed 평가. seed3+seed4 (smaug3, $N=2$),
+seed1+seed2 (smaug5, $N=2$) 모두 deterministic 100\%.}
+\label{tab:ext-multiseed}
+\small
+\begin{tabular}{lrrrr}
+\toprule
+Level & seeds & $N$/CT & full sk acc & sign acc \\
+\midrule
+smaug3 & 2 (seed3, seed4) & 1--128 & \textbf{100\% $\pm$ 0\%} & 100\% \\
+smaug5 & 2 (seed1, seed2) & 1--2  & \textbf{100\% $\pm$ 0\%} & 100\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{$N=1$ phase transition 비교.} smaug1 은 Welch-t variance 추정
+(ddof=1) 이 $N \geq 2$ 를 요구해 $N=1 \to N=2$ 사이 phase transition
+이 있다 (\cref{tab:ncurve}). smaug3/5 는 \emph{board $\mu'$ 응답이 모두
+deterministic} (cross-trace consistency 100\%) 라 $N=1$ 의 단일 trace 만으로도
+support tuple 결정 가능 — 따라서 $N=1$ 부터 100\%. 즉 smaug3/5 의 ``minimum''
+은 design 수 자체 (9 / 12) 이며 trace 추가의 averaging 이 필요 없다.
+
+\paragraph{왜 boundary mismatch 가 method 를 막지 않는가.} board 의 실제
+응답이 host ideal 과 일부 mismatch 더라도, \emph{모든 mismatch 가 같은 sk class
+안에서} 일어난다 (예: sk = $+1$ 자리는 $(1,1,1)$ 또는 $(1,1,0)$ 둘 중 하나로
+collapse — sk = 0 또는 sk = $-1$ 자리로 새지 않음). 따라서 cross-tab 의
+empirical mapping 으로 wildcard tuple 을 정확히 한 sk class 에 매핑 가능하다.
+즉 method 의 robustness 는 \emph{spec-prediction 정확성이 아니라 board 응답의
+class-level injectivity} 에 의존한다.
+
+\subsection{한계와 후속 연구}
+\label{sec:ext-limit}
+
+\paragraph{한계.} (i) board mismatch 의 정확한 원인 (Toom-Cook int16 wrap
+혹은 spec 1.2.0 와 본 repo (pqcmp.kr) 빌드의 미세한 round 차이) 은 확정하지
+않았다 — \texttt{lib/.a} 가 binary 라 직접 추적 불가. \texttt{'T'} isolated
+multiplier 명령으로 추적 시도하였으나 동일 q-modular storage 가설로 막힘
+(\cref{sec:discussion}). 실용적으로는 method 가 boundary 무관 100\% 라 영향 없음.
+(ii) smaug3/5 multi-seed 가 각 2 seeds 만 — smaug1 의 9 seeds grand
+evaluation 수준의 통계는 후속 작업.
+
+\paragraph{후속 연구.} (i) 추가 sk seeds (smaug3/5 각 5+ seeds) 로 smaug1
+수준 통계 도달, (ii) support oracle $\alpha$ 의 다른 후보 (252 개) 로
+robustness 연구, (iii) masked SMAUG-T 구현 평가 (community 에 아직 없음).
 
 %=============================================================================
 \section{토의 (Discussion)}

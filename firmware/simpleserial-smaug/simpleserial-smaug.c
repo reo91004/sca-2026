@@ -63,8 +63,8 @@ extern void indcpa_enc_namespaced(uint8_t ctxt[CRYPTO_CIPHERTEXTBYTES],
 // 측면 누설 (re-enc 의 µ 사용, cmov 의 K_z mask) 제거.
 // signature: (delta[32], sk[PKE_SECRETKEY_BYTES=128], ct[CIPHERTEXT_BYTES])
 #define indcpa_dec_namespaced SMAUG_NAMESPACE(indcpa_dec)
-extern void indcpa_dec_namespaced(uint8_t delta[32],
-                                  const uint8_t sk[128],
+extern void indcpa_dec_namespaced(uint8_t delta[DELTA_BYTES],
+                                  const uint8_t sk[PKE_SECRETKEY_BYTES],
                                   const uint8_t ctxt[CRYPTO_CIPHERTEXTBYTES]);
 
 // SMAUG-T 가 내부에서 쓰는 SHA3-256. KEM 자체가 그걸 export 하지 않아
@@ -295,16 +295,25 @@ static uint8_t cmd_indcpa_dec_inject(uint8_t *buf, uint8_t len)
     return 0x00;
 }
 
-// 'X' : sk 의 첫 PKE_SECRETKEY_BYTES (= 128B for smaug1) 를 32B chunk 로 dump.
-//        payload = 1B chunk index (0..3 for smaug1).
+// 'X' : sk 의 첫 PKE_SECRETKEY_BYTES (level 별 가변) 을 32B chunk 로 dump.
+//        payload = 1B chunk index (0..CHUNK_COUNT-1).
 //        응답 = 32B raw sk bytes (host 가 SMAUG-T Sx unpacking 으로 ternary 디코드).
 //        Sx_to_bytes 는 4 ternary coeff/byte (2 bit each). 호스트 측 디코드는
 //        host/smaug/codec.py 에 추가.
 //        ground truth — E3c 분류기 정확도 정량화에 필수.
+//
+//        PKE_SECRETKEY_BYTES = SKPOLYVEC_BYTES = SKPOLY_BYTES * MODULE_RANK
+//          smaug1 (k=2): 128 B → 4 chunks
+//          smaug3 (k=3): 192 B → 6 chunks
+//          smaug5 (k=4): 256 B → 8 chunks
+//        모든 레벨에서 PKE_SECRETKEY_BYTES 는 32 의 배수 (SKPOLY_BYTES = 64).
 #define DUMPSK_PAYLOAD_LEN 1u
 #define DUMPSK_CHUNK_BYTES 32u
-#define DUMPSK_TOTAL_BYTES 128u   /* PKE_SECRETKEY_BYTES = SKPOLYVEC_BYTES = SKPOLY(64)*2 */
-#define DUMPSK_CHUNK_COUNT (DUMPSK_TOTAL_BYTES / DUMPSK_CHUNK_BYTES)  /* = 4 */
+#define DUMPSK_TOTAL_BYTES PKE_SECRETKEY_BYTES
+#define DUMPSK_CHUNK_COUNT (DUMPSK_TOTAL_BYTES / DUMPSK_CHUNK_BYTES)
+#if DUMPSK_TOTAL_BYTES % DUMPSK_CHUNK_BYTES
+#error "PKE_SECRETKEY_BYTES must be divisible by DUMPSK_CHUNK_BYTES (32)"
+#endif
 
 static uint8_t cmd_dump_sk_chunk(uint8_t *buf, uint8_t len)
 {
@@ -372,9 +381,9 @@ static uint8_t cmd_isolated_poly_mul(uint8_t *buf, uint8_t len)
     }
 
     /* sk PKE 영역 unpack — sk[0..PKE_SECRETKEY_BYTES) 가 Sx packed.
-       SKPOLY_BYTES = 256 / 4 = 64. component 별 64B chunk. */
+       SKPOLY_BYTES = LWE_N / 4 = 64. component 별 64B chunk. */
     for (unsigned m = 0; m < MODULE_RANK; m++) {
-        bytes_to_Sx_namespaced(&t_sk_unpacked[m], &sk[m * 64u]);
+        bytes_to_Sx_namespaced(&t_sk_unpacked[m], &sk[m * SKPOLY_BYTES]);
     }
 
     /* host_b 다항식 = 0, sparse 자리만 alpha (signed int16) */

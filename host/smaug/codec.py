@@ -89,81 +89,103 @@ def fixed_point_set(d: int, log_q: int) -> np.ndarray:
 # Polynomial pack / unpack
 # ---------------------------------------------------------------------------
 
-def pack_rp(coeffs: np.ndarray) -> bytes:
-    """R_p (LOG_P=8) 한 다항식을 256 byte 로 직렬화.
+def pack_bitstream(coeffs: np.ndarray, bits_per_coef: int) -> bytes:
+    """Generic little-endian bitstream packer — SMAUG-T 의 모든 pack_R2_d 와 등가.
 
-    coeffs : (256,) int — 각 계수를 [0, 256) 으로 mod 한 뒤 1-byte 저장.
-    SMAUG-T pack.c::Rp_to_bytes 와 1:1 (objdump 로 확인).
+    upstream src/packring.c 의 LOG_P ∈ {8, 9} 와 LOG_P_PRIME ∈ {3, 4, 5, 7}
+    모두 *연속된 little-endian bit stream* 으로 환원된다 (직접 검증 완료):
+
+        bit position bp = i * bits_per_coef + b
+        out[bp >> 3] bit (bp & 7) = (coeffs[i] >> b) & 1
+
+    예: bits_per_coef=8 → trivially 1 byte per coef (pack_R2_8).
+        bits_per_coef=9 → 8 coef = 9 byte (pack_R2_9, 64+8 비트 split 도
+                          연속 bitstream 과 일치, src 라인-by-라인 검증).
+        bits_per_coef=5 → 8 coef = 5 byte (pack_R2_5).
+
+    n_bytes = ceil(n * bits_per_coef / 8). 이게 ctpoly{1,2}_bytes 와 정확히
+    일치 — SmaugParams 의 derived property 와 cross-check.
+    """
+    if bits_per_coef <= 0 or bits_per_coef > 16:
+        raise ValueError(f"bits_per_coef={bits_per_coef} out of (0, 16]")
+    a = np.asarray(coeffs, dtype=np.int64)
+    n = a.size
+    mask = (1 << bits_per_coef) - 1
+    a_masked = (a & mask).astype(np.uint64)
+
+    total_bits = n * bits_per_coef
+    n_bytes = (total_bits + 7) // 8
+    out = bytearray(n_bytes)
+    for i, c in enumerate(a_masked.tolist()):
+        # c 는 uint, bit 0..bits_per_coef-1 가 의미. 시작 bit 위치 bp_start = i*bits_per_coef.
+        bp = i * bits_per_coef
+        # byte-align 한 chunk 별로 OR — Python int 의 임의 비트 시프트 활용.
+        byte_idx = bp >> 3
+        bit_off = bp & 7
+        # c 를 bit_off 만큼 left shift 하면 byte stream 의 byte_idx 부터 OR 가능.
+        shifted = c << bit_off
+        # 최대 (bit_off + bits_per_coef) 비트, 즉 ⌈/8⌉ byte.
+        nb = (bit_off + bits_per_coef + 7) // 8
+        for k in range(nb):
+            out[byte_idx + k] |= (shifted >> (8 * k)) & 0xFF
+    return bytes(out)
+
+
+def unpack_bitstream(buf: bytes, bits_per_coef: int, n_coefs: int) -> np.ndarray:
+    """pack_bitstream 의 역."""
+    if bits_per_coef <= 0 or bits_per_coef > 16:
+        raise ValueError(f"bits_per_coef={bits_per_coef} out of (0, 16]")
+    expected = (n_coefs * bits_per_coef + 7) // 8
+    if len(buf) != expected:
+        raise ValueError(
+            f"unpack_bitstream: len={len(buf)} != expected {expected} "
+            f"(n={n_coefs}, bits={bits_per_coef})"
+        )
+    mask = (1 << bits_per_coef) - 1
+    out = np.zeros(n_coefs, dtype=np.int64)
+    for i in range(n_coefs):
+        bp = i * bits_per_coef
+        byte_idx = bp >> 3
+        bit_off = bp & 7
+        nb = (bit_off + bits_per_coef + 7) // 8
+        # 필요한 byte chunk 를 Python int 로 합쳐 mask.
+        word = 0
+        for k in range(nb):
+            word |= int(buf[byte_idx + k]) << (8 * k)
+        out[i] = (word >> bit_off) & mask
+    return out
+
+
+# ---------------------------------------------------------------------------
+# Level-aware wrappers — params 로부터 bits/coef 와 length 자동 결정.
+# 기존 signature 와의 호환을 위해 smaug1 default 로 동작.
+# ---------------------------------------------------------------------------
+
+def pack_rp(coeffs: np.ndarray, bits_per_coef: int = 8, n_coefs: int = 256) -> bytes:
+    """R_p polynomial → byte stream. smaug1 default (LOG_P=8, n=256).
+
+    smaug3/5 호출자는 bits_per_coef=p.log_p 로 전달.
     """
     a = np.asarray(coeffs, dtype=np.int64)
-    if a.shape != (256,):
-        raise ValueError(f"pack_rp expects (256,), got {a.shape}")
-    return (a & 0xFF).astype(np.uint8).tobytes()
+    if a.shape != (n_coefs,):
+        raise ValueError(f"pack_rp expects ({n_coefs},), got {a.shape}")
+    return pack_bitstream(a, bits_per_coef)
 
 
-def unpack_rp(buf: bytes | bytes) -> np.ndarray:
-    if len(buf) != 256:
-        raise ValueError(f"unpack_rp expects 256 byte, got {len(buf)}")
-    return np.frombuffer(buf, dtype=np.uint8).astype(np.int64)
+def unpack_rp(buf: bytes, bits_per_coef: int = 8, n_coefs: int = 256) -> np.ndarray:
+    return unpack_bitstream(buf, bits_per_coef, n_coefs)
 
 
-def pack_rp2(coeffs: np.ndarray) -> bytes:
-    """R_p′ (LOG_P2=5) 다항식 256 계수 → 160 byte 로 직렬화.
-
-    pack.c::Rp2_to_bytes 와 동일한 little-endian 5-bit packing:
-    8 coef = 5 byte 단위로 처리.
-
-      bit layout (per 8-coef block):
-        b0 = c0[4:0] | c1[2:0]<<5
-        b1 = c1[7:3] | c2[1:0]<<3   ← wait: c1 is only 5 bits, so c1[4:3]<<3 ...
-
-    실제 C 코드 확인 결과 (objdump 의 sxtb + AND 0x1f 패턴):
-        b0 = (c0 & 0x1F) | ((c1 & 0x07) << 5)
-        b1 = ((c1 >> 3) & 0x03) | ((c2 & 0x1F) << 2)        # c2 의 5비트가 b1[2:6]
-        b2 = ((c2 >> 5) & 0x00) | ((c3 & 0x1F) << 0)? — 아니, sxtb 후 ((c2 >> 5) & 0)
-                                                            는 항상 0 (c2 는 5비트라
-                                                            >>5 하면 0). 따라서
-        b2 = (c3 & 0x1F) << 0 | (c4 & 0x07) << 5  형태로 재시작? 분석 다시.
-
-    실제로 disassembly 의 8-coef 5-byte 블록을 라인별로 추적:
-        b0 = (c0 & 0x1F) | ((c1 & 0x07) << 5)         - bit  0..7
-        b1 = ((c1 >> 3) & 0x03) | ((c2 & 0x1F) << 2) | ((c3 & 0x07) << 7)
-                                                       - bit  8..15
-        b2 = ((c3 >> 1) & 0x0F) | ((c4 & 0x0F) << 4)  - bit 16..23
-        b3 = ((c4 >> 4) & 0x01) | ((c5 & 0x1F) << 1) | ((c6 & 0x03) << 6)
-                                                       - bit 24..31
-        b4 = ((c6 >> 2) & 0x07) | ((c7 & 0x1F) << 3)  - bit 32..39
-
-    이는 8 × 5 = 40 비트를 little-endian bit-stream 으로 적층한 것과 같다.
-    여기서는 그 비트-스트림 정의 그대로 짜고 (분석/펌웨어 disassembly 둘 다
-    이걸로 환원되는지) 단위테스트로 검증한다.
-    """
+def pack_rp2(coeffs: np.ndarray, bits_per_coef: int = 5, n_coefs: int = 256) -> bytes:
+    """R_p′ polynomial → byte stream. smaug1 default (LOG_P2=5, n=256)."""
     a = np.asarray(coeffs, dtype=np.int64)
-    if a.shape != (256,):
-        raise ValueError(f"pack_rp2 expects (256,), got {a.shape}")
-    a5 = (a & 0x1F).astype(np.uint64)  # 5-bit per coef
-    # 8 coef → 40 bit → little-endian into uint64 → 5 byte.
-    blocks = a5.reshape(32, 8)
-    word = np.zeros(32, dtype=np.uint64)
-    for i in range(8):
-        word |= blocks[:, i] << (5 * i)
-    out = np.zeros(160, dtype=np.uint8)
-    for b in range(5):
-        out[b::5] = ((word >> (8 * b)) & 0xFF).astype(np.uint8)
-    return out.tobytes()
+    if a.shape != (n_coefs,):
+        raise ValueError(f"pack_rp2 expects ({n_coefs},), got {a.shape}")
+    return pack_bitstream(a, bits_per_coef)
 
 
-def unpack_rp2(buf: bytes) -> np.ndarray:
-    if len(buf) != 160:
-        raise ValueError(f"unpack_rp2 expects 160 byte, got {len(buf)}")
-    raw = np.frombuffer(buf, dtype=np.uint8).reshape(32, 5).astype(np.uint64)
-    word = np.zeros(32, dtype=np.uint64)
-    for b in range(5):
-        word |= raw[:, b] << (8 * b)
-    coeffs = np.zeros((32, 8), dtype=np.int64)
-    for i in range(8):
-        coeffs[:, i] = (word >> (5 * i)) & 0x1F
-    return coeffs.reshape(256)
+def unpack_rp2(buf: bytes, bits_per_coef: int = 5, n_coefs: int = 256) -> np.ndarray:
+    return unpack_bitstream(buf, bits_per_coef, n_coefs)
 
 
 # ---------------------------------------------------------------------------
