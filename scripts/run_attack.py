@@ -46,6 +46,7 @@ import numpy as np  # noqa: E402
 
 from host.chosen_ct import CHUNK_BYTES, reset_target  # noqa: E402
 from host.smaug import chosen as _chosen  # noqa: E402
+from host.smaug import codec as _codec  # noqa: E402
 from host.smaug import params as _params  # noqa: E402
 
 
@@ -89,6 +90,14 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--firmware-hex", type=Path, default=None,
                    help="플래시할 .hex. None 이면 simpleserial-smaug-CW308_STM32F4-<level>.hex.")
     p.add_argument("--serial", default=None)
+    p.add_argument("--reuse-sk", action="store_true",
+                   help="reset_target + 'F' (keygen) 을 건너뛰고 board 의 RAM 에 잔존한 "
+                        "기존 sk 를 그대로 사용. 같은 키로 다른 capture session 을 만들기 위함. "
+                        "board 가 power-cycle 되었거나 다른 펌웨어로 플래시된 경우 'X' 응답이 "
+                        "이전 dump 와 안 맞을 수 있음. --expect-sk-hash 로 검증.")
+    p.add_argument("--expect-sk-hash", type=str, default=None,
+                   help="--reuse-sk 와 함께 사용. 'X' 로 dump 한 sk 의 첫 16 chars (hex) 가 "
+                        "이 값과 일치해야. 다르면 raise → silent mismatch 방지.")
     return p.parse_args()
 
 
@@ -172,16 +181,23 @@ def main() -> int:
     scope.gain.db = args.gain_db
     scope.clock.adc_src = "clkgen_x4"
     scope.trigger.triggers = "tio4"
-    reset_target(scope)
+    if not args.reuse_sk:
+        reset_target(scope)
     target = cw.target(scope, cw.targets.SimpleSerial)
     target.baud = args.baud
     target.flush()
     time.sleep(0.3)
 
     try:
-        target.simpleserial_write("F", b"")
-        pk_fp16 = _ack(target, 16)
-        print(f"  pk_fp16 = {pk_fp16.hex()}")
+        if args.reuse_sk:
+            # board RAM 의 기존 sk 를 그대로 사용. F skip → keygen 안 함.
+            # 'X' chunk 0 만으로는 pk_fp16 를 못 얻으므로 대체로 pk_fp16='reused' 표기.
+            pk_fp16 = b"\x00" * 16
+            print(f"  [reuse-sk] skipped reset+F — using existing sk in board RAM")
+        else:
+            target.simpleserial_write("F", b"")
+            pk_fp16 = _ack(target, 16)
+            print(f"  pk_fp16 = {pk_fp16.hex()}")
 
         # PKE sk dump (32-byte chunks). chunk count = pke_secret_key_bytes / 32.
         # smaug1: 4, smaug3: 6, smaug5: 8.
@@ -191,6 +207,16 @@ def main() -> int:
             target.simpleserial_write("X", bytes([idx]))
             sk_pke.extend(_ack(target, 32, timeout_ms=2000))
         assert len(sk_pke) == p.pke_secret_key_bytes
+
+        if args.reuse_sk and args.expect_sk_hash:
+            actual = bytes(sk_pke).hex()[:len(args.expect_sk_hash)]
+            if actual != args.expect_sk_hash:
+                raise RuntimeError(
+                    f"[ERROR] --reuse-sk: expected sk hash {args.expect_sk_hash} "
+                    f"but board sk starts with {actual}. board may have power-cycled "
+                    f"or loaded different firmware — abort to avoid silent mismatch."
+                )
+            print(f"  [reuse-sk] sk hash verified: {actual}")
 
         # chosen-CT designs: each component × α list.
         # 기본 (oracle pair only): designs/comp = 2.
@@ -208,19 +234,42 @@ def main() -> int:
         all_mus: list[np.ndarray] = []
         all_labels = []  # per-trace (component, alpha)
         ct_fps = []
+        sk_unpacked = _codec.unpack_sx(bytes(sk_pke)).reshape(p.module_rank, p.n).astype(np.int64)
         started = time.time()
         for n_done, (comp, alpha) in enumerate(sweep, 1):
             ct = _chosen.build_monomial_c1(p, component=comp, coef_idx=0,
                                            alpha=alpha)
-            fp = inject_ct(target, ct.to_bytes())
-            ct_fps.append(fp.hex())
+            ct_bytes = ct.to_bytes()
+            host_fp = hashlib.sha3_256(ct_bytes).hexdigest()[:32]
+            fp = inject_ct(target, ct_bytes)
+            board_fp = fp.hex()
+            ct_fps.append(board_fp)
+            if board_fp != host_fp:
+                raise RuntimeError(
+                    f"[ERROR] ct fingerprint mismatch: host={host_fp} board={board_fp}. "
+                    f"가능 원인: 보드에 다른 level firmware 가 flash 되어 있음. "
+                    f"`python3 host/upload.py {args.firmware_hex}` 후 재시도."
+                )
             t, m = capture_n(scope, target, args.num_per_ct, args.samples)
+            # First-trace round-trip check: predicted µ′ vs board µ′ for ct (deterministic).
+            mu_pred = _chosen.predict_mu_prime(p, ct.c1, sk_unpacked)
+            mu_actual = np.zeros(256, dtype=int)
+            for k in range(256):
+                mu_actual[k] = (int(m[0, k // 8]) >> (k % 8)) & 1
+            n_match = int((mu_pred == mu_actual).sum())
+            if n_match != 256:
+                raise RuntimeError(
+                    f"[ERROR] µ′ round-trip mismatch ({n_match}/256) at design "
+                    f"(comp={comp}, alpha={alpha}). 가능 원인: firmware/level mismatch 또는 "
+                    f"capture corruption. ct_bytes 와 sk dump 둘 다 board 에 올바른지 확인."
+                )
             all_traces.append(t)
             all_mus.append(m)
             all_labels.extend([(comp, alpha)] * args.num_per_ct)
             elapsed = time.time() - started
             print(f"  [{n_done}/{len(sweep)}] component={comp} α={alpha:3d} "
-                  f"({elapsed:.1f}s, {(n_done * args.num_per_ct)/elapsed:.2f} tr/s)")
+                  f"({elapsed:.1f}s, {(n_done * args.num_per_ct)/elapsed:.2f} tr/s, "
+                  f"µ′ rt OK)")
 
         traces = np.concatenate(all_traces, axis=0)
         mus = np.concatenate(all_mus, axis=0)
