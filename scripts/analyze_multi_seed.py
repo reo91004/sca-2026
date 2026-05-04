@@ -6,22 +6,22 @@ Paper Section 7 (Minimum trace cost) + Section 8.4 (9-seed evaluation).
 
 Method (paper Section 6 — component-specific PoI):
   각 attack_seed*.npz 별:
-    1. *Component-specific* direct PoI 학습 (default, paper main):
-       s[c] 학습 시 component=c oracle pair (label_comp==c) 만 사용 →
-       다른 component 의 trace 영향 제거 → cleaner Welch-t.
-       (component_specific=False 옵션이 cross-component baseline)
+    1. *Component-specific* direct PoI 학습:
+       기본 경로는 µ′ 라벨을 쓰지 않고, 공격자가 아는 design label
+       (α_pos vs α_neg) 만으로 Welch-t 를 수행한다. 각 coefficient i 는
+       trace window i 안에서 PoI 를 고른다.
     2. Oracle pair attack per component (α=64 vs α=192)
     3. sparse_recover.greedy(hs=70) — HW=70 MAP recovery
     4. accuracy(bit, support, sign) per component + full sk
 
-핵심 결과 (paper main, 9 seeds 종합):
-  full_sk_acc: mean=100%, std=0% (zero variance across 9 keypairs × 3 N regimes)
-  s[0] / s[1] sparse bit + sign: 100% / 100%
-  valid_bits: 120 ± 2.5 (= 2 × HW=70 - overlap)
+중요한 해석:
+  --poi-source mu-prime 은 board 가 반환한 µ′ 라벨로 PoI 를 고르는
+  diagnostic/ablation 경로다. 이 경로의 100% 결과는 target µ′ 를 모르는
+  공격 모델의 성능으로 주장하면 안 된다.
 
-비교 (paper Table):
-  Cross-component PoI: mean 95.6% ± 5.6%, min 87.1%
-  Component-specific PoI (paper main): mean 100% ± 0%
+  --poi-source design-window 는 공격자가 아는 design label(α_pos/α_neg)만
+  사용한다. 다만 per-coefficient time window 가 실제 trace layout 과 맞아야
+  하므로, attack-valid 결과는 window alignment/calibration 후 별도로 산출한다.
 
 용법 (paper reproducer):
     # 1. 각 seed 캡처: scripts/run_attack.py -n 128 --out traces/attack_seed${s}.npz
@@ -55,6 +55,22 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("paths", nargs="+", type=Path,
                    help="attack_seed*.npz 경로들 (run_attack.py schema)")
     p.add_argument("--out-prefix", type=str, default="results/multi_seed")
+    p.add_argument("--poi-source",
+                   choices=("design-window", "mu-prime", "schedule"),
+                   default="design-window",
+                   help="design-window: α_pos/α_neg design labels only (attack-valid, "
+                        "needs trace alignment). "
+                        "mu-prime: target µ′ labels (instrumented baseline; "
+                        "공격 결과 아님). "
+                        "schedule: load PoI idx_t from --schedule-source npz "
+                        "(profiled SCA — calibration keypair 의 µ′ 로 학습한 schedule).")
+    p.add_argument("--window-start", type=int, default=0,
+                   help="design-window PoI search start sample.")
+    p.add_argument("--window-end", type=int, default=None,
+                   help="design-window PoI search end sample. Default: trace end.")
+    p.add_argument("--schedule-source", type=Path, default=None,
+                   help="poi-source=schedule 시 PoI idx_t 를 학습할 calibration .npz. "
+                        "target 평가 시 자기 자신을 사용하면 µ′-leak 와 동등 → 가드.")
     return p.parse_args()
 
 
@@ -83,7 +99,103 @@ def _learn_poi_from_subset(traces: np.ndarray, bit_per: np.ndarray,
     return poi, t_score, sign_v
 
 
-def analyze_one(npz_path: Path, component_specific: bool = True) -> dict:
+def _welch_t(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    """Sample-wise Welch t for two trace groups."""
+    if a.shape[0] < 2 or b.shape[0] < 2:
+        return np.zeros(a.shape[1], dtype=np.float64)
+    ma = a.mean(axis=0); mb = b.mean(axis=0)
+    va = a.var(axis=0, ddof=1).clip(min=1e-12)
+    vb = b.var(axis=0, ddof=1).clip(min=1e-12)
+    return (ma - mb) / np.sqrt(va / a.shape[0] + vb / b.shape[0])
+
+
+def _learn_poi_from_design_windows(
+    traces_pos: np.ndarray,
+    traces_neg: np.ndarray,
+    *,
+    n_bits: int = 256,
+    window_start: int = 0,
+    window_end: int | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Unlabeled direct PoI: α_pos vs α_neg design labels only.
+
+    Without µ′ labels, per-bit PoI needs a time-to-coefficient convention. This
+    function divides [window_start, window_end) into n_bits equal windows and
+    chooses the strongest α_pos-vs-α_neg Welch-t sample inside each window.
+
+    sign_v is intentionally all +1: the signed score is the raw
+    mean(α_pos)-mean(α_neg) at the selected point. Multiplying by the t sign would
+    take abs(diff) and destroy the secret sign.
+    """
+    if traces_pos.ndim != 2 or traces_neg.ndim != 2:
+        raise ValueError("traces_pos/traces_neg must be 2-D")
+    n_samples = traces_pos.shape[1]
+    if traces_neg.shape[1] != n_samples:
+        raise ValueError("trace length mismatch")
+    if window_end is None:
+        window_end = n_samples
+    if not (0 <= window_start < window_end <= n_samples):
+        raise ValueError(
+            f"bad window range [{window_start}, {window_end}) for trace length {n_samples}"
+        )
+    if (window_end - window_start) < n_bits:
+        raise ValueError("window range must contain at least one sample per bit")
+
+    t = _welch_t(traces_pos, traces_neg)
+    edges = np.linspace(window_start, window_end, n_bits + 1, dtype=int)
+    poi = np.full(n_bits, -1, dtype=int)
+    t_score = np.zeros(n_bits, dtype=np.float64)
+    sign_v = np.ones(n_bits, dtype=int)
+    for bi in range(n_bits):
+        lo, hi = int(edges[bi]), int(edges[bi + 1])
+        if hi <= lo:
+            continue
+        local = t[lo:hi]
+        off = int(np.argmax(np.abs(local)))
+        poi[bi] = lo + off
+        t_score[bi] = float(local[off])
+    return poi, t_score, sign_v
+
+
+def learn_schedule_from_npz(npz_path: Path) -> dict:
+    """Calibration npz 의 µ′ 라벨로 component 별 PoI idx_t (256,) 추출.
+
+    Returns dict: {comp: {"poi": (256,), "sign": (256,), "t": (256,)}} (component-specific).
+    """
+    d = np.load(npz_path, allow_pickle=True)
+    T = d["traces"]; mus = d["mu_prime"]; meta = d["meta"].item()
+    level_name = meta.get("level") or {128: "smaug1", 192: "smaug3",
+                                         256: "smaug5"}[len(meta["sk_pke_bytes_hex"]) // 2]
+    p = _params.get(level_name)
+    label_comp = np.asarray(meta["label_component"])
+    n_per = int(meta["n_per_ct"])
+    min_class = max(8, n_per // 4)
+
+    N = T.shape[0]
+    bit_per = np.zeros((N, 256), dtype=np.int8)
+    for i in range(N):
+        for k in range(256):
+            bit_per[i, k] = (int(mus[i, k // 8]) >> (k % 8)) & 1
+
+    out = {"_meta": {"level": level_name, "module_rank": p.module_rank,
+                     "sk_hash_short": meta["sk_pke_bytes_hex"][:16],
+                     "source": str(npz_path)}}
+    for comp in range(p.module_rank):
+        mask = (label_comp == comp)
+        poi, t_score, sign_v = _learn_poi_from_subset(T[mask], bit_per[mask], min_class)
+        out[comp] = {"poi": poi, "sign": sign_v, "t": t_score}
+    return out
+
+
+def analyze_one(
+    npz_path: Path,
+    component_specific: bool = True,
+    *,
+    poi_source: str = "design-window",
+    window_start: int = 0,
+    window_end: int | None = None,
+    schedule: dict | None = None,
+) -> dict:
     """attack_seed{N}.npz 한 파일 분석.
 
     Schema: traces/mu_prime/meta with label_component, label_alpha,
@@ -117,19 +229,27 @@ def analyze_one(npz_path: Path, component_specific: bool = True) -> dict:
     sk = unpack_sx(sk_bytes).reshape(p_smaug.module_rank, p_smaug.n).astype(np.int64)
     n_per = int(meta["n_per_ct"])
 
-    # bit per trace
+    # Legacy/debug path only. The profile-free design-window path never uses
+    # board µ′ labels for PoI learning.
     N_total = T.shape[0]
-    bit_per = np.zeros((N_total, 256), dtype=np.int8)
-    for i in range(N_total):
-        for k in range(256):
-            bit_per[i, k] = (int(mus[i, k // 8]) >> (k % 8)) & 1
+    bit_per = None
+    if poi_source == "mu-prime":
+        bit_per = np.zeros((N_total, 256), dtype=np.int8)
+        for i in range(N_total):
+            for k in range(256):
+                bit_per[i, k] = (int(mus[i, k // 8]) >> (k % 8)) & 1
 
     min_class = max(8, n_per // 4)
 
-    # Cross-component PoI (분석 만, 비교용)
-    poi_all, t_all, _ = _learn_poi_from_subset(T, bit_per, min_class)
-    n_valid_all = int((poi_all >= 0).sum())
-    max_t_all = float(np.abs(t_all[poi_all >= 0]).max()) if n_valid_all else 0.0
+    poi_all = np.full(256, -1, dtype=int)
+    t_all = np.zeros(256)
+    n_valid_all = 0
+    max_t_all = 0.0
+    if poi_source == "mu-prime":
+        assert bit_per is not None
+        poi_all, t_all, _ = _learn_poi_from_subset(T, bit_per, min_class)
+        n_valid_all = int((poi_all >= 0).sum())
+        max_t_all = float(np.abs(t_all[poi_all >= 0]).max()) if n_valid_all else 0.0
 
     out: dict = {
         "path": str(npz_path),
@@ -144,11 +264,13 @@ def analyze_one(npz_path: Path, component_specific: bool = True) -> dict:
         "n_total_trace": N_total,
         "n_valid_bits": n_valid_all,  # cross-component
         "max_t": max_t_all,
-        "method": "component_specific" if component_specific else "cross_component",
+        "method": f"{'component_specific' if component_specific else 'cross_component'}:{poi_source}",
     }
 
     # per component analysis
     full_correct = 0
+    valid_total = 0
+    max_t_components = 0.0
     for comp in range(p_smaug.module_rank):
         mp = (label_comp == comp) & (label_alpha == alpha_pos)
         mn = (label_comp == comp) & (label_alpha == alpha_neg)
@@ -156,13 +278,28 @@ def analyze_one(npz_path: Path, component_specific: bool = True) -> dict:
             out[f"s{comp}"] = None
             continue
 
-        # PoI 학습 — component_specific 옵션
-        if component_specific:
+        # PoI 학습 — default는 µ′ 없이 design label만 사용.
+        if poi_source == "schedule":
+            if schedule is None or comp not in schedule:
+                raise ValueError(f"poi_source=schedule needs schedule[{comp}]")
+            poi = np.asarray(schedule[comp]["poi"], dtype=int).copy()
+            t_score = np.asarray(schedule[comp]["t"], dtype=float).copy()
+            sign_v = np.asarray(schedule[comp]["sign"], dtype=int).copy()
+        elif poi_source == "design-window":
+            poi, t_score, sign_v = _learn_poi_from_design_windows(
+                T[mp], T[mn],
+                n_bits=p_smaug.n,
+                window_start=window_start,
+                window_end=window_end,
+            )
+        elif component_specific:
+            assert bit_per is not None
             mask_comp = (label_comp == comp)
             T_c = T[mask_comp]
             bit_c = bit_per[mask_comp]
             poi, t_score, sign_v = _learn_poi_from_subset(T_c, bit_c, min_class)
         else:
+            assert bit_per is not None
             poi = poi_all; t_score = t_all
             sign_v = np.where(t_score > 0, +1, -1).astype(int)
 
@@ -194,28 +331,76 @@ def analyze_one(npz_path: Path, component_specific: bool = True) -> dict:
         m_sp = sparse_recover.accuracy(sp, s_gt)
 
         valid_c = poi >= 0
+        # Score decomposition (PoI 가 살아있는지 진단 — full_sk 단일 metric 보완).
+        # top_k_recall: |d_per| 의 상위 hs 위치에 진짜 nonzero 자리가 몇 개 들어가는가.
+        #   pre-sparse rank metric. 1.0 이면 sparse_recover 가 완벽한 input 을 받음.
+        # support_pred ∩ support_true / hs : sparse_recover 출력 후 support 일치율 (raw recall).
+        # nonzero_corr : nonzero 자리 위에서만 본 d_per vs sk_gt 상관 (sign 정보 보존 여부).
+        order = np.argsort(-np.abs(d_per), kind="stable")
+        top_k_set = set(order[:hs].tolist())
+        true_nz_set = set(np.flatnonzero(s_gt).tolist())
+        top_k_recall = len(top_k_set & true_nz_set) / float(hs) if hs > 0 else 0.0
+        sp_nz = set(np.flatnonzero(sp).tolist())
+        sp_support_recall = len(sp_nz & true_nz_set) / float(hs) if hs > 0 else 0.0
+        nz_mask = s_gt != 0
+        if nz_mask.any() and float(d_per[nz_mask].std()) > 1e-9:
+            nz_corr = float(np.corrcoef(d_per[nz_mask], s_gt[nz_mask].astype(float))[0, 1])
+        else:
+            nz_corr = float("nan")
         out[f"s{comp}"] = {
             "valid_bits": int(valid_c.sum()),
             "max_t": float(np.abs(t_score[valid_c]).max()) if valid_c.any() else 0.0,
             "corr": corr,
+            "nz_corr": nz_corr,
+            "top_k_recall": top_k_recall,
             "raw_bit": m_raw["bit_accuracy"],
             "raw_support": m_raw["support_accuracy"],
             "raw_sign": m_raw["sign_accuracy"],
             "sparse_bit": m_sp["bit_accuracy"],
             "sparse_support": m_sp["support_accuracy"],
+            "sparse_support_recall": sp_support_recall,
             "sparse_sign": m_sp["sign_accuracy"],
             "sparse_pred_hw": int(np.count_nonzero(sp)),
         }
+        valid_total += int(valid_c.sum())
+        if valid_c.any():
+            max_t_components = max(max_t_components, float(np.abs(t_score[valid_c]).max()))
         full_correct += int((sp == s_gt).sum())
 
+    if poi_source == "design-window":
+        out["n_valid_bits"] = valid_total
+        out["max_t"] = max_t_components
     out["full_sk_acc"] = full_correct / float(p_smaug.module_rank * p_smaug.n)
     return out
+
+
+def baseline_full_sk_random(n: int, hs: int) -> float:
+    """sparse_recover (HW=hs constraint) 하 random 예측의 기대 full-sk accuracy.
+
+    n 자리 중 hs 자리를 nonzero 로 random 선택 → 위치 일치율 (1-HG): (n-hs)²/n² + hs²/n².
+    nonzero 자리 위에서 sign 일치 1/2 → 부분 가중. 정확:
+        E[bit_acc] = P(both zero) + P(both nonzero) · 1/2
+                   = ((n-hs)/n)² + (hs/n)² · (1/2)
+    """
+    if n <= 0:
+        return 0.0
+    pz = (n - hs) / float(n)
+    pn = hs / float(n)
+    return pz * pz + pn * pn * 0.5
+
+
+def baseline_full_sk_all_zero(n: int, hs: int) -> float:
+    """unconstrained predict-all-zero baseline. sparse_recover 와는 다른 framework."""
+    if n <= 0:
+        return 0.0
+    return (n - hs) / float(n)
 
 
 def summarize(results: list[dict]) -> dict:
     """results 의 mean/std/min/max metric 표."""
     metrics = ["full_sk_acc", "n_valid_bits", "max_t"]
-    per_comp_metrics = ["corr", "raw_bit", "sparse_bit", "sparse_sign"]
+    per_comp_metrics = ["corr", "nz_corr", "top_k_recall", "raw_bit",
+                       "sparse_bit", "sparse_sign", "sparse_support_recall"]
 
     summary = {"n_seeds": len(results)}
     for m in metrics:
@@ -250,13 +435,39 @@ def main() -> int:
     paths = sorted(args.paths)
     print(f"[INFO] {len(paths)} seeds")
 
+    schedule = None
+    schedule_sk_hash = None
+    if args.poi_source == "schedule":
+        if args.schedule_source is None:
+            raise SystemExit("[ERROR] --poi-source schedule requires --schedule-source")
+        if not args.schedule_source.exists():
+            raise SystemExit(f"[ERROR] schedule source {args.schedule_source} not found")
+        print(f"[schedule] learning from {args.schedule_source.name}")
+        schedule = learn_schedule_from_npz(args.schedule_source)
+        schedule_sk_hash = schedule["_meta"]["sk_hash_short"]
+        n_valid_total = sum(int((schedule[c]["poi"] >= 0).sum())
+                            for c in schedule if isinstance(c, int))
+        print(f"  source sk={schedule_sk_hash}, valid_bits_total={n_valid_total}")
+
     results = []
     for p in paths:
         if not p.exists():
             print(f"  [SKIP] {p} not found")
             continue
+        if args.poi_source == "schedule":
+            d = np.load(p, allow_pickle=True)
+            tgt_hash = d["meta"].item()["sk_pke_bytes_hex"][:16]
+            if tgt_hash == schedule_sk_hash:
+                print(f"  [SKIP] {p.name} — same sk as schedule source (would be µ′-leak)")
+                continue
         print(f"  analyzing {p.name} ...")
-        r = analyze_one(p)
+        r = analyze_one(
+            p,
+            poi_source=args.poi_source,
+            window_start=args.window_start,
+            window_end=args.window_end,
+            schedule=schedule,
+        )
         results.append(r)
         print(f"    [{r['level']} k={r['module_rank']} hs={r['hs']}] sk={r['sk_hash_short']}, "
               f"N/CT={r['n_per_ct']}, valid={r['n_valid_bits']}, max|t|={r['max_t']:.2f}")
@@ -283,13 +494,30 @@ def main() -> int:
           f"std={summary['n_valid_bits']['std']:.1f}")
     print(f"  max_t:        mean={summary['max_t']['mean']:.2f}, "
           f"std={summary['max_t']['std']:.2f}")
+
+    n0 = int(results[0]["module_rank"]) * 256
+    hs0 = int(results[0]["hs"]) * int(results[0]["module_rank"])
+    rand_b = baseline_full_sk_random(n0, hs0)
+    az_b = baseline_full_sk_all_zero(n0, hs0)
+    print(f"  [baseline] random (HW={hs0}/{n0} constrained) ≈ {rand_b:.3f}")
+    print(f"  [baseline] predict-all-zero (unconstrained)   ≈ {az_b:.3f}")
+
     max_comp = max(int(r.get("module_rank", 2)) for r in results)
     for comp in range(max_comp):
         sb = summary.get(f"s{comp}.sparse_bit")
         ss = summary.get(f"s{comp}.sparse_sign")
         cc = summary.get(f"s{comp}.corr")
+        nzc = summary.get(f"s{comp}.nz_corr")
+        tk = summary.get(f"s{comp}.top_k_recall")
+        ssr = summary.get(f"s{comp}.sparse_support_recall")
         if sb is None: continue
-        print(f"  s[{comp}] corr:        mean={cc['mean']:+.3f} ± {cc['std']:.3f}")
+        print(f"  s[{comp}] corr (all):    mean={cc['mean']:+.3f} ± {cc['std']:.3f}")
+        if nzc is not None:
+            print(f"  s[{comp}] corr (nz):     mean={nzc['mean']:+.3f} ± {nzc['std']:.3f}")
+        if tk is not None:
+            print(f"  s[{comp}] top-K recall:  mean={tk['mean']:.3f} ± {tk['std']:.3f}")
+        if ssr is not None:
+            print(f"  s[{comp}] sup recall:    mean={ssr['mean']:.3f} ± {ssr['std']:.3f}")
         print(f"  s[{comp}] sparse bit:  mean={sb['mean']:.3f} ± {sb['std']:.3f} "
               f"(min {sb['min']:.3f}, max {sb['max']:.3f})")
         print(f"  s[{comp}] sparse sign: mean={ss['mean']:.3f} ± {ss['std']:.3f}")
@@ -307,12 +535,25 @@ def main() -> int:
             for comp in range(int(r['module_rank'])):
                 if r.get(f"s{comp}") is None: continue
                 s = r[f"s{comp}"]
-                fh.write(f"  s[{comp}]: corr={s['corr']:+.4f}, "
+                fh.write(f"  s[{comp}]: corr={s['corr']:+.4f} "
+                         f"(nz={s.get('nz_corr', float('nan')):+.4f}), "
+                         f"top-K rec={s.get('top_k_recall', 0):.3f}, "
+                         f"sup rec={s.get('sparse_support_recall', 0):.3f}, "
                          f"raw bit={s['raw_bit']:.3f}, "
                          f"sparse bit={s['sparse_bit']:.3f}, "
                          f"sign={s['sparse_sign']:.3f}, "
                          f"pred_hw={s['sparse_pred_hw']}\n")
             fh.write(f"  full sk: {r['full_sk_acc']:.3f}\n\n")
+
+        n0 = int(results[0]["module_rank"]) * 256
+        hs0 = int(results[0]["hs"]) * int(results[0]["module_rank"])
+        rand_b = baseline_full_sk_random(n0, hs0)
+        az_b = baseline_full_sk_all_zero(n0, hs0)
+        fh.write(f"## Baselines (n={n0}, total HW={hs0})\n")
+        fh.write(f"  random with HW=hs constraint:  {rand_b:.4f}\n")
+        fh.write(f"  predict-all-zero (no HW cstr): {az_b:.4f}\n")
+        fh.write("  µ′-leak instrumented (this code w/ --poi-source mu-prime): 1.0000 (어제 결과)\n\n")
+
         fh.write("## Summary\n")
         for k, v in summary.items():
             if k == "n_seeds": fh.write(f"  n_seeds: {v}\n"); continue

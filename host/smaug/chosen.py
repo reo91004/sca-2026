@@ -1,17 +1,18 @@
 """Chosen-ciphertext 빌더 (host 측, 보드와 통신하지 않음).
 
-이 모듈은 docs/idea.md 의 µ′ classifier 전략을 SMAUG-T smaug1 의
-Compress/Decompress fixed-point 집합 위에 직접 옮긴 코드.
+이 모듈은 docs/idea.md 의 µ′ classifier 전략을 SMAUG-T 의 ciphertext
+직렬화 도메인 위에 직접 옮긴 코드.
 
 수학 (smaug1, T=2):
 
     µ′_i = ⌊ (t / p)·⟨c1, s⟩_i + (t / p′)·c2_i ⌉ mod t
          = ⌊ (1 / 128)·⟨c1, s⟩_i + (1 / 16)·c2_i ⌉ mod 2
 
-c1 ∈ R_p^k 의 계수는 fixed-point set U_p = {0, 4, 8, …, q − 4}, c2 ∈ R_p′
-의 계수는 U_p′ = {0, 32, 64, …, q − 32}. host 가 만든 c1/c2 의 모든 계수가
-이 집합 안에 들어와야 *Decompress(Compress(·))* 가 항등이 되어, 보드가
-실제로 받는 다항식이 host 가 의도한 그것과 정확히 일치한다.
+c1 ∈ R_p^k 의 계수는 [0, p), c2 ∈ R_p′ 의 계수는 [0, p′) 이다. 이 값들이
+그대로 ciphertext byte stream 에 pack 되고, 펌웨어의 indcpa_dec 도 같은 R_p /
+R_p′ 도메인 값을 복호화 식에 사용한다. q-domain fixed-point 값(예: smaug1 의
+320, 576, ...)을 여기 넣으면 pack 시 하위 log_p 비트만 남아 다른 ciphertext 와
+alias 되므로 허용하지 않는다.
 
 빌더:
     build_mu_constant(p, mu_bit)        c1=0, c2 = round-up/down threshold
@@ -22,7 +23,6 @@ from __future__ import annotations
 
 import numpy as np
 
-from .codec import fixed_point_set
 from .ciphertext import Ciphertext
 from .params import SmaugParams
 
@@ -94,8 +94,8 @@ def build_monomial_c1(
 ) -> Ciphertext:
     """c1 = α · X^j (component k 의 단항), c2 = 0.
 
-    α 는 fixed-point set U_p (= {0, 4, 8, …, q − 4} for smaug1) 안에서 골라야
-    하고, 입력값이 그 집합에 없으면 ValueError. coef_idx ∈ [0, n).
+    α 는 ciphertext 의 R_p 계수이므로 0 <= α < p 이어야 한다.
+    coef_idx ∈ [0, n).
 
     이 ct 는 ⟨c1, s⟩_i = α · s_{(i − coef_idx) mod n} (cyclic with anticyclic
     sign at wrap) 형태가 되어, µ′_i 가 *단일 비밀 계수* 분류기로 작용한다.
@@ -105,15 +105,11 @@ def build_monomial_c1(
     if not (0 <= coef_idx < params.n):
         raise IndexError(f"coef_idx {coef_idx} out of [0, {params.n})")
 
-    fp = fixed_point_set(params.log_p, params.log_q)
-    if alpha not in fp.tolist():
-        raise ValueError(
-            f"alpha={alpha} ∉ U_p (size {fp.size}). 시작점 후보: "
-            f"{fp[:5].tolist()} … {fp[-3:].tolist()}"
-        )
+    if not (0 <= int(alpha) < params.p):
+        raise ValueError(f"alpha={alpha} outside R_p=[0, {params.p})")
 
     c1 = np.zeros((params.module_rank, params.n), dtype=np.int64)
-    c1[component, coef_idx] = alpha
+    c1[component, coef_idx] = int(alpha)
     c2 = np.zeros(params.n, dtype=np.int64)
     return Ciphertext(c1=c1, c2=c2, params=params)
 
@@ -125,25 +121,19 @@ def build_multi_term_c1(
     """c1[m, l] = α for each (m, l) → α 매핑. 나머지 0. c2 = 0.
 
     coefs : {(component, coef_idx): alpha}. component ∈ [0, module_rank),
-    coef_idx ∈ [0, n), alpha ∈ U_p. 한 component 의 한 자리만 비어있어도
+    coef_idx ∈ [0, n), alpha ∈ [0, p). 한 component 의 한 자리만 비어있어도
     build_monomial_c1 과 동치.
 
     범용 빌더 — Phase H 의 multi-term chosen-CT 에 사용.
     """
-    fp = fixed_point_set(params.log_p, params.log_q)
-    fp_set = set(int(x) for x in fp.tolist())
-
     c1 = np.zeros((params.module_rank, params.n), dtype=np.int64)
     for (m, l), alpha in coefs.items():
         if not (0 <= m < params.module_rank):
             raise IndexError(f"component {m} ∉ [0, {params.module_rank})")
         if not (0 <= l < params.n):
             raise IndexError(f"coef_idx {l} ∉ [0, {params.n})")
-        if int(alpha) not in fp_set:
-            raise ValueError(
-                f"alpha={alpha} ∉ U_p (size {fp.size}, sample "
-                f"{fp[:3].tolist()}…{fp[-2:].tolist()}) at (m={m}, l={l})"
-            )
+        if not (0 <= int(alpha) < params.p):
+            raise ValueError(f"alpha={alpha} outside R_p=[0, {params.p}) at (m={m}, l={l})")
         c1[m, l] = int(alpha)
     c2 = np.zeros(params.n, dtype=np.int64)
     return Ciphertext(c1=c1, c2=c2, params=params)

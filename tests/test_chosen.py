@@ -33,25 +33,25 @@ def test_mu_one_unsupported_explicit() -> None:
     assert raised, "mu_bit=1 build 가 NotImplementedError 를 안 냄 — 수학적 한계 누락"
 
 
-def test_monomial_c1_alpha_must_be_in_fixed_point_set() -> None:
+def test_monomial_c1_alpha_must_be_in_rp_domain() -> None:
     p = params.SMAUG1
-    # alpha=4 는 U_p (= multiples of 4) 에 들어 있음 → 통과
-    ct = chosen.build_monomial_c1(p, component=0, coef_idx=10, alpha=4)
+    # alpha 는 ciphertext R_p 계수이므로 0 <= alpha < p 이면 통과.
+    ct = chosen.build_monomial_c1(p, component=0, coef_idx=10, alpha=3)
     assert ct.c1.shape == (p.module_rank, p.n)
     assert ct.c2.shape == (p.n,)
     nonzero = np.argwhere(ct.c1 != 0)
     assert nonzero.shape == (1, 2), f"단항 위치 1개여야 함, got {nonzero}"
     assert tuple(nonzero[0].tolist()) == (0, 10)
-    assert int(ct.c1[0, 10]) == 4
+    assert int(ct.c1[0, 10]) == 3
     assert (ct.c2 == 0).all()
 
-    # alpha=3 은 U_p 밖 → ValueError
+    # q-domain fixed-point 값 320은 R_p 밖이며, pack alias를 막기 위해 거부.
     raised = False
     try:
-        chosen.build_monomial_c1(p, component=0, coef_idx=0, alpha=3)
+        chosen.build_monomial_c1(p, component=0, coef_idx=0, alpha=320)
     except ValueError:
         raised = True
-    assert raised, "fixed-point set 밖 alpha 가 ValueError 안 던짐"
+    assert raised, "R_p 밖 alpha 가 ValueError 안 던짐"
 
 
 def test_multi_term_c1_shape_and_placement() -> None:
@@ -78,7 +78,7 @@ def test_multi_term_c1_rejects_invalid_alpha() -> None:
     p = params.SMAUG1
     raised = False
     try:
-        chosen.build_multi_term_c1(p, {(0, 0): 3})  # 3 ∉ U_p
+        chosen.build_multi_term_c1(p, {(0, 0): p.p})
     except ValueError:
         raised = True
     assert raised

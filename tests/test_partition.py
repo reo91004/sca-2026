@@ -101,11 +101,12 @@ def test_oracle_pairs_discoverable_smaug1() -> None:
 
 
 def test_oracle_pair_count_smaug1() -> None:
-    """4 개 +1 detector × 4 개 -1 detector = 16 쌍."""
+    """R_p 직렬화 도메인에서는 대표 oracle pair (64, 192) 한 쌍."""
     p = params.SMAUG1
     stats = sk_partition.build_partition_table(p)
     pairs = sk_partition.find_oracle_pairs(stats)
-    assert len(pairs) == 16, f"oracle pair count = {len(pairs)}, 기대 16"
+    assert len(pairs) == 1, f"oracle pair count = {len(pairs)}, 기대 1"
+    assert (pairs[0].alpha_pos, pairs[0].alpha_neg) == (64, 192)
 
 
 def test_predict_mu_prime_pair_basic() -> None:

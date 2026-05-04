@@ -11,8 +11,9 @@ Paper §5/§6 의 자연스러운 확장: smaug3/5 의 indcpa_dec 가 SMAUG-T sm
     sk=0  → host predict (0, 0, 0)
     sk=+1 → host predict (1, 0, 1)
 
-Board 의 실제 응답이 host predict 와 일치하면 100% recovery (no power trace).
-부분 mismatch 면 *empirical mapping* (cross-tab) 사용.
+Board 의 실제 응답이 host predict 와 일치하면 board-binary lookup 으로 recovery.
+부분 mismatch 를 보정하려면 같은 target key 의 sk dump 가 아니라, 독립 calibration
+keypair 에서 학습한 mapping 을 사용해야 한다.
 
 용법:
     # 1. capture (3-α): scripts/run_attack.py --level smaug3 -n 128 \\
@@ -44,10 +45,13 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("paths", nargs="+", type=Path)
     p.add_argument("--out-prefix", type=str, default="results/multibit")
-    p.add_argument("--mapping", choices=("host", "empirical", "auto"),
-                   default="auto",
+    p.add_argument("--mapping", choices=("host", "calibrated", "diagnostic"),
+                   default="host",
                    help="(b1,...,bn) → posterior 매핑. host = spec predict_mu_prime_bit, "
-                        "empirical = cross-tab from data, auto = host 우선 + (0,..,0) 만 empirical fallback.")
+                        "calibrated = --calibration 파일들에서 독립 학습, "
+                        "diagnostic = 같은 파일의 sk_gt로 cross-tab sanity check (공격 결과 아님).")
+    p.add_argument("--calibration", nargs="*", type=Path, default=None,
+                   help="mapping=calibrated 일 때 사용할 known-key calibration .npz 파일들.")
     return p.parse_args()
 
 
@@ -77,7 +81,12 @@ def host_posterior_table(p, alphas: list[int]) -> dict[tuple, np.ndarray]:
 
 def empirical_posterior_table(joint_per_pos: np.ndarray, sk_gt: np.ndarray
                               ) -> dict[tuple, np.ndarray]:
-    """주어진 sk ground truth 로 cross-tab 위 empirical posterior. sanity check 용."""
+    """주어진 sk ground truth 로 cross-tab 위 empirical posterior.
+
+    같은 keypair 평가에 이 mapping 을 쓰면 ground-truth leakage 이므로 공격 결과가
+    아니라 diagnostic/sanity check 이다. 공격 모델에서는 독립 calibration
+    keypair 에서 만든 table 만 사용한다.
+    """
     n_alphas = joint_per_pos.shape[1]
     table_count: dict[tuple, np.ndarray] = {}
     for i in range(joint_per_pos.shape[0]):
@@ -91,7 +100,69 @@ def empirical_posterior_table(joint_per_pos: np.ndarray, sk_gt: np.ndarray
     return out
 
 
-def analyze_one(npz_path: Path, mapping: str = "auto") -> dict:
+def _bits_from_mu_prime(mus: np.ndarray) -> np.ndarray:
+    """mu_prime bytes → bit matrix (N, 256)."""
+    N = mus.shape[0]
+    bit_per = np.zeros((N, 256), dtype=np.int8)
+    for i in range(N):
+        for k in range(256):
+            bit_per[i, k] = (int(mus[i, k // 8]) >> (k % 8)) & 1
+    return bit_per
+
+
+def _joint_for_component(bit_per: np.ndarray, label_comp: np.ndarray,
+                         label_alpha: np.ndarray, comp: int,
+                         alphas: list[int]) -> np.ndarray:
+    """각 alpha 의 첫 deterministic board response 로 per-position tuple 구성."""
+    joint = np.zeros((256, len(alphas)), dtype=np.int8)
+    for ai, a in enumerate(alphas):
+        mask = (label_comp == comp) & (label_alpha == a)
+        if not mask.any():
+            raise ValueError(f"missing traces for component={comp}, alpha={a}")
+        joint[:, ai] = bit_per[mask][0]
+    return joint
+
+
+def _merge_posterior_tables(tables: list[dict[tuple, np.ndarray]]) -> dict[tuple, np.ndarray]:
+    counts: dict[tuple, np.ndarray] = {}
+    for table in tables:
+        for key, post in table.items():
+            counts.setdefault(key, np.zeros(3, dtype=np.float64))
+            counts[key] += np.asarray(post, dtype=np.float64)
+    out: dict[tuple, np.ndarray] = {}
+    for key, val in counts.items():
+        s = float(val.sum())
+        if s > 0:
+            out[key] = val / s
+    return out
+
+
+def build_calibrated_table(paths: list[Path], expected_level: str,
+                           expected_alphas: list[int]) -> dict[tuple, np.ndarray]:
+    """독립 calibration 파일들에서 tuple→posterior table 을 학습."""
+    tables: list[dict[tuple, np.ndarray]] = []
+    for path in paths:
+        d = np.load(path, allow_pickle=True)
+        mus = d["mu_prime"]; meta = d["meta"].item()
+        if meta["level"] != expected_level:
+            raise ValueError(f"{path}: level {meta['level']} != {expected_level}")
+        label_comp = np.asarray(meta["label_component"])
+        label_alpha = np.asarray(meta["label_alpha"])
+        alphas = sorted(set(int(x) for x in label_alpha.tolist()))
+        if alphas != expected_alphas:
+            raise ValueError(f"{path}: alphas {alphas} != {expected_alphas}")
+        p = _params.get(meta["level"])
+        sk = unpack_sx(bytes.fromhex(meta["sk_pke_bytes_hex"])).reshape(
+            p.module_rank, p.n).astype(np.int64)
+        bit_per = _bits_from_mu_prime(mus)
+        for c in range(p.module_rank):
+            joint = _joint_for_component(bit_per, label_comp, label_alpha, c, alphas)
+            tables.append(empirical_posterior_table(joint, sk[c].astype(np.int8)))
+    return _merge_posterior_tables(tables)
+
+
+def analyze_one(npz_path: Path, mapping: str = "host",
+                calibrated_table: dict[tuple, np.ndarray] | None = None) -> dict:
     d = np.load(npz_path, allow_pickle=True)
     mus = d["mu_prime"]; meta = d["meta"].item()
     p = _params.get(meta["level"])
@@ -106,12 +177,8 @@ def analyze_one(npz_path: Path, mapping: str = "auto") -> dict:
     n_alphas = len(alphas)
     n_designs_per_comp = n_alphas
 
-    # bit per trace
-    N = mus.shape[0]
-    bit_per = np.zeros((N, 256), dtype=np.int8)
-    for i in range(N):
-        for k in range(256):
-            bit_per[i, k] = (int(mus[i, k // 8]) >> (k % 8)) & 1
+    bit_per = _bits_from_mu_prime(mus)
+    n_total = int(mus.shape[0])
 
     host_table = host_posterior_table(p, alphas)
     print(f"  level={meta['level']} module_rank={p.module_rank} hs={p.hs} "
@@ -131,20 +198,16 @@ def analyze_one(npz_path: Path, mapping: str = "auto") -> dict:
         "sk_hash_short": meta["sk_pke_bytes_hex"][:16],
         "sk_hw": [int(np.count_nonzero(sk[i])) for i in range(p.module_rank)],
         "n_per_ct": n_per,
-        "n_total_trace": N,
+        "n_total_trace": n_total,
         "method": f"multibit-{mapping}",
     }
 
     full_correct = 0
     for c in range(p.module_rank):
-        # 각 α 별로 첫 trace (deterministic) 의 bit_per — joint per position
-        joint = np.zeros((256, n_alphas), dtype=np.int8)
-        for ai, a in enumerate(alphas):
-            mask = (label_comp == c) & (label_alpha == a)
-            joint[:, ai] = bit_per[mask][0]
+        joint = _joint_for_component(bit_per, label_comp, label_alpha, c, alphas)
 
         s_gt = sk[c].astype(np.int8)
-        emp_table = empirical_posterior_table(joint, s_gt)
+        diag_table = empirical_posterior_table(joint, s_gt)
 
         # mapping 에 따라 posterior
         posterior = np.zeros((256, 3))
@@ -152,16 +215,12 @@ def analyze_one(npz_path: Path, mapping: str = "auto") -> dict:
             key = tuple(int(x) for x in joint[i])
             if mapping == "host":
                 posterior[i] = host_table[key]
-            elif mapping == "empirical":
-                posterior[i] = emp_table.get(key, np.array([1/3, 1/3, 1/3]))
-            else:  # auto: host 우선, sk=0 매핑 (0,..,0) 만 empirical 로 보강
-                base = host_table[key].copy()
-                # sum>0 인 unique mapping 이면 그대로
-                if base.sum() > 0 and (base > 0).sum() == 1:
-                    posterior[i] = base
-                else:
-                    # ambiguous (e.g., (0,0,..,0) → uniform prior). empirical 로 대체.
-                    posterior[i] = emp_table.get(key, np.array([1/3, 1/3, 1/3]))
+            elif mapping == "calibrated":
+                if calibrated_table is None:
+                    raise ValueError("mapping=calibrated requires calibrated_table")
+                posterior[i] = calibrated_table.get(key, np.array([1/3, 1/3, 1/3]))
+            else:
+                posterior[i] = diag_table.get(key, np.array([1/3, 1/3, 1/3]))
 
         sp = sparse_recover.greedy_sparse_recover(posterior, hs=p.hs)
         m = sparse_recover.accuracy(sp, s_gt)
@@ -189,9 +248,22 @@ def main() -> int:
     paths = sorted(args.paths)
     print(f"[INFO] {len(paths)} seeds, mapping={args.mapping}")
     results = []
+    calibrated_tables_by_schema: dict[tuple[str, tuple[int, ...]], dict[tuple, np.ndarray]] = {}
     for path in paths:
         print(f"\n--- {path.name} ---")
-        r = analyze_one(path, mapping=args.mapping)
+        calibrated_table = None
+        if args.mapping == "calibrated":
+            if not args.calibration:
+                raise SystemExit("[ERROR] --mapping calibrated requires --calibration")
+            d0 = np.load(path, allow_pickle=True)
+            meta0 = d0["meta"].item()
+            alphas0 = tuple(sorted(set(int(x) for x in np.asarray(meta0["label_alpha"]).tolist())))
+            schema = (meta0["level"], alphas0)
+            if schema not in calibrated_tables_by_schema:
+                calibrated_tables_by_schema[schema] = build_calibrated_table(
+                    args.calibration, meta0["level"], list(alphas0))
+            calibrated_table = calibrated_tables_by_schema[schema]
+        r = analyze_one(path, mapping=args.mapping, calibrated_table=calibrated_table)
         results.append(r)
         for c in range(int(r["module_rank"])):
             sd = r[f"s{c}"]
@@ -200,7 +272,7 @@ def main() -> int:
         print(f"  full sk: {r['full_sk_acc']:.4f}")
         # 간이 cross-tab (component 0)
         ct = r.get("s0_crosstab", {})
-        print(f"  cross-tab s[0] (joint -> [sk=-1, 0, +1]):")
+        print(f"  diagnostic cross-tab s[0] (joint -> [sk=-1, 0, +1]):")
         for k in sorted(ct.keys()):
             v = ct[k]
             print(f"    {k}: [{v[0]:3d}, {v[1]:3d}, {v[2]:3d}] (n={sum(v)})")

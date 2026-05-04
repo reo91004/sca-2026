@@ -60,6 +60,32 @@ def test_split_by_response_byte_basic() -> None:
     assert (b == traces[[3, 7]]).all()
 
 
+def test_design_window_poi_keeps_signed_design_difference() -> None:
+    """µ′ label 없이 α_pos/α_neg 디자인 차분만으로 window별 PoI를 잡는다.
+
+    sign_v 를 t-score 부호로 곱하면 모든 점수가 양수가 되어 secret sign이
+    사라지므로, design-window 경로는 raw mean_pos - mean_neg 부호를 보존해야 한다.
+    """
+    from scripts.analyze_multi_seed import _learn_poi_from_design_windows
+
+    rng = np.random.default_rng(123)
+    n_bits = 4
+    samples = 40
+    pos = rng.normal(0, 0.05, size=(8, samples)).astype(np.float32)
+    neg = rng.normal(0, 0.05, size=(8, samples)).astype(np.float32)
+    # 각 10-sample window 안에 부호가 다른 design 차분을 주입.
+    for bi, amp in enumerate([1.0, -1.0, 0.8, -0.8]):
+        j = bi * 10 + 4
+        pos[:, j] += amp
+        neg[:, j] -= amp
+
+    poi, t_score, sign_v = _learn_poi_from_design_windows(
+        pos, neg, n_bits=n_bits, window_start=0, window_end=samples)
+    assert poi.tolist() == [4, 14, 24, 34]
+    assert np.all(sign_v == 1)
+    assert t_score[0] > 0 and t_score[1] < 0
+
+
 if __name__ == "__main__":
     fns = sorted(n for n in globals() if n.startswith("test_"))
     for n in fns:

@@ -1,20 +1,39 @@
-# Real-Trace Single-Stage SCA on SMAUG-T smaug1 (8 traces, 100%)
+# SMAUG-T SCA Workbench
 
-> Paper draft: `docs/paper_draft.md` · Countermeasures analysis: `docs/countermeasures.md`
+> Paper draft: `docs/latex/main.tex` · Experiment notes: `docs/experiments.md`
 
-KpqC 2025 우승 KEM **SMAUG-T smaug1** 의 long-term secret key 를
-**4 chosen-CT × N=2 = 8 power traces (~3.2 sec capture)** 로 100% 복구하는
-side-channel attack. ChipWhisperer-Lite (CW1173) + Vcc-shunt + STM32F415
-unmasked reference 구현, **no offline templates**, no EM probe.
+KpqC 2025 우승 KEM **SMAUG-T** 의 chosen-ciphertext side-channel 실험
+저장소입니다. ChipWhisperer-Lite (CW1173) + Vcc-shunt + STM32F415 unmasked
+reference 구현 위에서 smaug1/3/5의 chosen-CT trace, diagnostic oracle, known-key
+calibration 경로를 분리해 평가합니다.
+
+2026-05-04 정합성 점검 + score 분해 후 기준:
+- `Z`의 32B µ′ 응답과 `X` sk dump는 **instrumented oracle / known-key calibration 전용**.
+- 순수 trace SCA 분석은 target µ′/sk 사용 금지. design label + trace 만.
+- smaug3/5의 empirical mapping은 *독립* calibration keypair에서 학습 (`--mapping calibrated`).
+
+**Threat model 별 결과 (n=256, hs=70/88/87, sparse_recover HW=hs constraint)**
+
+| threat model | smaug1 (k=2) | smaug3 (k=3) | smaug5 (k=4) |
+|---|---:|---:|---:|
+| trace SCA, design label only (attack-valid) | 0.562 ± 0.009 (≈ random 0.565) | — | — |
+| trace SCA, cross-session µ′-profiled schedule | 0.564 ± 0.009 (transfer fail) | — | — |
+| board response oracle, host predict (no calib) | — | 0.637 (2-α) / 0.850 (3-α) | 0.880 (3-α) |
+| board response oracle, **calibrated cross-seed (3-α)** | — | **1.000** (양방향) | **1.000** (양방향) |
+| µ′-leak instrumented (= same-session µ′ 사용) | 1.000 (어제 결과) | 1.000 | 1.000 |
+
+핵심:
+- smaug1 trace SCA 는 capture-session 간 alignment 가 random (norm-corr ≤ 0.1, 단순 shift 로 보정 불가) → 현재 setup 으로는 attack-valid full-sk recovery 불가.
+- smaug3/5 의 `calibrated` mapping 은 *trace 와 무관하게 board µ′ 응답만* 사용. 3-α (oracle pair + support α=132) 일 때 cross-key 100%. boundary mismatch 가 *device-specific* 이고 *key-specific 이 아님*을 입증.
+- 2-α 만으로는 (0,0) tuple 의 boundary ambiguity (sk=-1 의 ~73% 가 (0,0) 으로 떨어짐) 를 calibration 도 못 푼다 → 3-α mandatory.
 
 | 평가 metric | 값 |
 |---|---|
-| Trace count | **8** (= 4 chosen-CT × N=2) |
-| Capture time | **~3.2 seconds** |
-| Keypairs evaluated | **9** (random) |
-| Full sk recovery | **100% ± 0%** (9/9) |
 | Setup | CW-Lite + Vcc shunt + STM32F415 |
-| Method | Direct attack PoI + component-specific PoI + sparse_recover |
+| Trace SCA path | random level (alignment fail) — 재캡처 protocol 필요 |
+| Board oracle path | smaug3 3-α / smaug5 3-α calibrated cross-seed 100% |
+| Keypairs evaluated | 9 smaug1, 4 smaug3 (2-α + 3-α), 2 smaug5 (3-α) |
+| Method | (a) trace Welch-t per coef-window — fail; (b) calibrated tuple→class — 3-α 100% |
 
 ## 빠른 reproduce
 
@@ -28,13 +47,24 @@ for s in 1 2 3 4 5; do
     python3 scripts/run_attack.py -n 128 --out traces/attack_seed${s}.npz
 done
 
-# 3. 분석 — paper main result generator
-python3 scripts/analyze_multi_seed.py traces/attack_seed{1..5}.npz
-# → "full_sk_acc: mean=1.000, std=0.000, min=1.000, max=1.000" 출력
+# 3. trace SCA path (attack-valid, 현재 setup 에서는 random level)
+python3 scripts/analyze_multi_seed.py traces/attack_seed{1..5}.npz \
+    --poi-source design-window --out-prefix results/multi_seed_design_window
+# → full_sk ≈ 0.562 ≈ random baseline 0.565. alignment 진단:
+python3 scripts/leakage_phase_scan.py
+python3 scripts/alignment_diagnose.py
 
-# 4. 또는 minimum cost (8 traces, 3.2 sec) 시연
-python3 scripts/run_attack.py -n 2 --out traces/attack_quick.npz
-python3 scripts/analyze_multi_seed.py traces/attack_quick.npz
+# 4. cross-session µ′-profiled schedule (negative result)
+python3 scripts/analyze_multi_seed.py traces/attack_seed{2..5}.npz \
+    --poi-source schedule --schedule-source traces/attack_seed1.npz \
+    --out-prefix results/cross_key_schedule
+# → 0.564 ≈ random. capture-session 간 alignment 가 random.
+
+# 5. board response oracle path (smaug3/5, calibrated cross-seed)
+python3 scripts/analyze_multibit.py traces/attack_smaug3_seed3_3alpha_n128.npz \
+    --mapping calibrated --calibration traces/attack_smaug3_seed4_3alpha_n2.npz \
+    --out-prefix results/smaug3_3a_calib
+# → full_sk 1.000 (cross-key). 단 board µ′ 응답 직접 dump 가정.
 ```
 
 ## 디렉토리 구조
@@ -81,7 +111,7 @@ sca-2026/
 │   ├── run_h_attack.py       ←   Phase H multi-term capture (검증)
 │   ├── attack_direct_poi.py  ←   single-seed 분석
 │   └── analyze_multi_seed.py ←   ★ multi-seed (paper main result generator)
-├── tests/                    ← 64 unit tests (수학 정합성)
+├── tests/                    ← 64 unit tests (수학/분석 정합성)
 ├── results/                  ← 분석 결과 (gitignored)
 ├── traces/                   ← 캡처 .npz (gitignored)
 └── history/                  ← 발견 과정 + negative results (paper evidence trail)
@@ -134,10 +164,10 @@ python3 host/upload.py firmware/simpleserial-smaug/simpleserial-smaug-CW308_STM3
 
 ```bash
 python3 tests/run_all.py
-# === 63/63 OK ===
+# === 64/64 OK ===
 ```
 
-64 unit tests 가 *수학 정합성* 검증:
+64 unit tests 가 *수학/분석 정합성* 검증:
 - `test_codec.py`: Compress/Decompress 비트 트릭 ↔ ref 일치
 - `test_chosen.py`: chosen-CT 빌더 + `predict_mu_prime` round-trip
 - `test_partition.py`: partition table (1-term + 2-term) + oracle pair 검증

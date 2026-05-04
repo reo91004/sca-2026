@@ -2,7 +2,7 @@
 
 핵심 질문:
 
-    chosen ciphertext c1 = α·X^j (단항, c2=0) 를 SMAUG-T smaug1 의 PKE.Dec
+    chosen ciphertext c1 = α·X^j (단항, c2=0) 를 SMAUG-T 의 PKE.Dec
     에 넣으면, 출력 메시지 µ′_i 가 비밀 계수 s_{(i-j) mod n} ∈ {-1, 0, +1}
     의 *어떤* 클래스 함수가 되는가?
 
@@ -20,7 +20,7 @@
 
     P[α, s] ∈ {0, 1} ⊂ Z_t
 
-행 = α ∈ U_p (smaug1 fixed-point set, 256 개), 열 = s ∈ {-1, 0, +1}.
+행 = α ∈ R_p (ciphertext modulus), 열 = s ∈ {-1, 0, +1}.
 P[α, s] 가 µ′_i 의 *예측값* 이다. 이 행렬에서:
   - α 행이 (0, _, _) ↔ (s=-1) 이 다른 두 클래스와 분리되는지
   - separability index = #(분리되는 α) / 256
@@ -34,7 +34,6 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from .codec import fixed_point_set
 from .params import SmaugParams
 
 
@@ -98,22 +97,22 @@ def build_partition_table(
     *,
     use_negative_alpha: bool = False,
 ) -> PartitionStats:
-    """모든 α ∈ U_p 에 대해 (s=-1, 0, +1) 분류표 작성.
+    """모든 α ∈ R_p 에 대해 (s=-1, 0, +1) 분류표 작성.
 
     use_negative_alpha=True 면 anticyclic wrap 으로 발생하는 -α 도 함께
     sweep — 실제 c1 = α·X^j 가 만든 ⟨c1,s⟩ 의 i-번째 계수가 +α·s 또는
     -α·s 가 되는 두 위치를 모두 다루기 위해.
     """
-    Up = fixed_point_set(params.log_p, params.log_q)  # (P,) — smaug1: 256 개
+    rp = np.arange(params.p, dtype=np.int64)
     if use_negative_alpha:
-        # ±α 는 mod q 로 표현됨. -α ≡ q-α. fixed-point set 의 q-α 는 다른
-        # alpha 가 아닌 같은 set 의 wrap. 즉 효과는 sign flip 만.
+        # ±α effective 값을 함께 검사한다. 실제 ciphertext 에 들어가는 α 는
+        # R_p 값이지만 negacyclic wrap 은 곱셈 결과의 부호 반전으로 나타난다.
         # 단순히 "sign 두 방향" 을 따로 검사하려면 effective_alpha = ±α 로
         # 두 set 합집합을 다룬다 (signed integer 평가).
-        alphas = np.concatenate([Up, -Up[Up != 0]])
+        alphas = np.concatenate([rp, -rp[rp != 0]])
         alphas = np.sort(np.unique(alphas))
     else:
-        alphas = Up.copy()
+        alphas = rp.copy()
 
     matrix = np.zeros((alphas.size, 3), dtype=np.int8)
     for ai, a in enumerate(alphas.tolist()):
@@ -235,8 +234,7 @@ def build_partition_table_2term(
             col 6 = (+1, -1), 7 = (+1, 0), 8 = (+1, +1)
         값 ∈ {0, 1}.
     """
-    Up = fixed_point_set(params.log_p, params.log_q)
-    alphas = Up.copy()
+    alphas = np.arange(params.p, dtype=np.int64)
     pairs = [(sa, sb) for sa in (-1, 0, 1) for sb in (-1, 0, 1)]
     matrix = np.zeros((alphas.size, len(pairs)), dtype=np.int8)
     for ai, a in enumerate(alphas.tolist()):
