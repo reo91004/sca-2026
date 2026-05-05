@@ -67,6 +67,7 @@ def slice_samples(ds: Dataset, lo: int, hi: int) -> Dataset:
         traces=ds.traces[..., lo:hi],
         sks=ds.sks,
         design_terms=ds.design_terms,
+        design_c2=ds.design_c2,
         pkfps=ds.pkfps,
     )
 

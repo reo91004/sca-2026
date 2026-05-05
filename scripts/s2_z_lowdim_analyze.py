@@ -75,6 +75,14 @@ VECADD_LABEL_KINDS = (
     "vdelta64_hw",
 )
 
+MU_LABEL_KINDS = (
+    "mu_total_hw",
+    "mu_byte_hw",
+    "mu_block16_hw",
+    "mu_block32_hw",
+    "mu_bit",
+)
+
 LABEL_KINDS = (
     "support4",
     "sum4",
@@ -95,7 +103,7 @@ LABEL_KINDS = (
     "toom7_mul16_hw",
     "toom7_mul4_hw",
     "toom7_conv16_hw",
-) + TOOM_POINT_LABEL_KINDS + VECADD_LABEL_KINDS
+) + TOOM_POINT_LABEL_KINDS + VECADD_LABEL_KINDS + MU_LABEL_KINDS
 
 _HW16 = np.fromiter((i.bit_count() for i in range(1 << 16)), dtype=np.uint8, count=1 << 16)
 _LABEL_CACHE: dict[tuple[int, str], np.ndarray] = {}
@@ -221,6 +229,7 @@ def load_dataset(paths: list[Path], component: int) -> Dataset:
             (capture_kind == "matrix" and cmd == "Z")
             or (capture_kind == "matrix" and cmd == "V")
             or (capture_kind == "matrix" and cmd == "W")
+            or (capture_kind == "matrix" and cmd == "R")
             or (capture_kind == "u_matrix" and cmd == "U")
         ):
             continue
@@ -569,6 +578,47 @@ def label_from_vecadd_state(
     raise ValueError(f"unknown vecadd label kind {kind}")
 
 
+def mu_bits_from_component_state(
+    sk: np.ndarray,
+    terms: list[tuple[int, int]],
+    c2_const: int,
+) -> np.ndarray:
+    """µ′ bits for a single-component chosen-CT design.
+
+    The matrix captures place all public c1 terms in one component and load
+    only that component's secret into ``ds.sks``. This is equivalent to the full
+    ``chosen.predict_mu_prime`` inner product with other components set to zero.
+    """
+    inner = product_vector(sk, terms)
+    inner_mod = inner % SMAUG1.q
+    half = SMAUG1.q // 2
+    inner_signed = ((inner_mod + half) % SMAUG1.q) - half
+    c2 = np.full(SMAUG1.n, int(c2_const), dtype=np.int64) % SMAUG1.p2
+    numerator = 2 * SMAUG1.t * (inner_signed * SMAUG1.p2 + c2 * SMAUG1.p) + SMAUG1.p * SMAUG1.p2
+    denom = 2 * SMAUG1.p * SMAUG1.p2
+    return (numerator // denom % SMAUG1.t).astype(np.float64)
+
+
+def label_from_mu_bits(
+    sk: np.ndarray,
+    terms: list[tuple[int, int]],
+    c2_const: int,
+    kind: str,
+) -> np.ndarray:
+    bits = mu_bits_from_component_state(sk, terms, c2_const)
+    if kind == "mu_total_hw":
+        return np.asarray([bits.sum()], dtype=np.float64)
+    if kind == "mu_byte_hw":
+        return bits.reshape(32, 8).sum(axis=1).astype(np.float64)
+    if kind == "mu_block16_hw":
+        return bits.reshape(16, 16).sum(axis=1).astype(np.float64)
+    if kind == "mu_block32_hw":
+        return bits.reshape(8, 32).sum(axis=1).astype(np.float64)
+    if kind == "mu_bit":
+        return bits.astype(np.float64)
+    raise ValueError(f"unknown mu label kind {kind}")
+
+
 def make_labels(ds: Dataset, kind: str) -> np.ndarray:
     labels = []
     for key_i in range(ds.sks.shape[0]):
@@ -579,6 +629,15 @@ def make_labels(ds: Dataset, kind: str) -> np.ndarray:
             elif kind.startswith(("vtmp", "vshift", "vadd", "vdelta")):
                 per_design.append(
                     label_from_vecadd_state(
+                        ds.sks[key_i],
+                        terms,
+                        ds.design_c2[design_i],
+                        kind,
+                    )
+                )
+            elif kind.startswith("mu_"):
+                per_design.append(
+                    label_from_mu_bits(
                         ds.sks[key_i],
                         terms,
                         ds.design_c2[design_i],

@@ -963,3 +963,11 @@ command choices, or failed to transfer under trace-only target-key evaluation.
 
 Do not add new attack branches until one of these checkpoints produces a
 trace-only improvement over the current S2 null-level coordinate recovery.
+
+## Follow-Up Branches
+
+- Branch R (`mu'` round/pack leakage) is documented in
+  `docs/r_mu_roundpack.md`. It is now the primary positive path: diagnostic `R`
+  round/pack traces predict latent `mu'` byte/block Hamming weight with
+  held-out keys and permutation nulls, while natural `Z` transfer remains an
+  open/negative checkpoint.

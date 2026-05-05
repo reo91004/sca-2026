@@ -3,7 +3,7 @@
 
 This is the next dataset after the negative single-design S2.5 profiler:
 for each fresh key, keep the key resident, dump sk for profiling labels, then
-inject several public monomial or multi-term c1 designs and capture Z, V, or W
+inject several public monomial or multi-term c1 designs and capture Z, V, W, or R
 traces for each design.
 
 The saved NPZ has:
@@ -90,6 +90,13 @@ def _make_designs(args: argparse.Namespace, p) -> list[list[tuple[int, int]]]:
     rng = np.random.default_rng(args.design_seed)
     if args.design_mode == "monomial":
         return [[(coef, args.alpha)] for coef in _parse_coef_list(args.coefs)]
+    if args.design_mode == "detector-grid":
+        alphas = _parse_int_list(args.detector_alphas)
+        return [
+            [(int(coef), int(alpha))]
+            for alpha in alphas
+            for coef in _parse_coef_list(args.coefs)
+        ]
     if args.design_mode == "random-monomial":
         coefs = rng.choice(p.n, size=args.num_designs, replace=False)
         return [[(int(coef), args.alpha)] for coef in coefs]
@@ -130,14 +137,14 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("-s", "--samples", type=int, default=24400)
     p.add_argument("-g", "--gain-db", type=float, default=25.0)
     p.add_argument("--adc-offset", type=int, default=0)
-    p.add_argument("--cmd", choices=("Z", "V", "W"), default="Z")
+    p.add_argument("--cmd", choices=("Z", "V", "W", "R"), default="Z")
     p.add_argument("--component", type=int, default=0, choices=(0, 1))
     p.add_argument("--alpha", type=int, default=4)
     p.add_argument("--c2-mode", choices=("zero", "constant"), default="zero")
     p.add_argument("--c2-alpha", type=int, default=0)
     p.add_argument(
         "--design-mode",
-        choices=("monomial", "random-monomial", "random-multiterm"),
+        choices=("monomial", "detector-grid", "random-monomial", "random-multiterm"),
         default="monomial",
     )
     p.add_argument("--num-designs", type=int, default=8)
@@ -153,6 +160,11 @@ def parse_args() -> argparse.Namespace:
         "--alpha-choices",
         default="32,64,96,128,160,192,224",
         help="Comma-separated alpha choices for random-multiterm mode.",
+    )
+    p.add_argument(
+        "--detector-alphas",
+        default="64,128,192",
+        help="Comma-separated alpha values for detector-grid mode.",
     )
     p.add_argument(
         "--coefs",
@@ -261,7 +273,7 @@ def main() -> int:
                         f"{args.cmd} first response failed key={key_i} "
                         f"design={design_i}: len={len(first_resp)}"
                     )
-                if args.cmd in ("Z", "V"):
+                if args.cmd in ("Z", "V", "R"):
                     pred_mu = _pack_mu_bits(
                         _chosen.predict_mu_prime(p, ct.c1, sk_unpacked, ct.c2)
                     )
@@ -307,7 +319,7 @@ def main() -> int:
                     "ct_fp16_board": bundle.ct_fp16_board.hex(),
                     "ct_sha256": hashlib.sha256(ct_bytes).hexdigest(),
                     "first_resp_hex": first_resp.hex(),
-                    "first_mu_resp_hex": first_resp.hex() if args.cmd in ("Z", "V") else None,
+                    "first_mu_resp_hex": first_resp.hex() if args.cmd in ("Z", "V", "R") else None,
                 })
                 print(
                     f"[KEY {key_i:02d}] design {design_i+1}/{len(designs)} "

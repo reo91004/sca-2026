@@ -12,6 +12,7 @@ if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from host.smaug import chosen, params  # noqa: E402
+from scripts.s2_z_lowdim_analyze import label_from_mu_bits  # noqa: E402
 
 
 def test_mu_zero_is_all_zero_ct() -> None:
@@ -118,6 +119,26 @@ def _random_ternary_sk(p, seed: int) -> np.ndarray:
     """테스트용 ternary sk (HW 제약 없는 임의값)."""
     rng = np.random.default_rng(seed)
     return rng.choice([-1, 0, 1], size=(p.module_rank, p.n)).astype(np.int64)
+
+
+def test_mu_label_matches_full_predictor_for_component_design() -> None:
+    p = params.SMAUG1
+    sk = _random_ternary_sk(p, seed=0x5204)
+    terms = [(7, 64), (101, 192), (203, 128)]
+    c2_alpha = 8
+    ct = chosen.build_multi_term_c1(p, {(0, coef): alpha for coef, alpha in terms})
+    ct.c2[:] = c2_alpha
+    bits = chosen.predict_mu_prime(p, ct.c1, sk, ct.c2).astype(np.float64)
+
+    assert np.array_equal(label_from_mu_bits(sk[0], terms, c2_alpha, "mu_bit"), bits)
+    assert np.array_equal(
+        label_from_mu_bits(sk[0], terms, c2_alpha, "mu_byte_hw"),
+        bits.reshape(32, 8).sum(axis=1),
+    )
+    assert np.array_equal(
+        label_from_mu_bits(sk[0], terms, c2_alpha, "mu_block16_hw"),
+        bits.reshape(16, 16).sum(axis=1),
+    )
 
 
 def test_predict_mu_prime_monomial_matches_partition_predict() -> None:
