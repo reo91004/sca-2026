@@ -1,6 +1,6 @@
 // SimpleSerial-SMAUG: ChipWhisperer SCA target wrapper around SMAUG-T KEM.
 //
-// Two command groups:
+// Command groups and threat-model status:
 //
 //  (A) baseline / smoke                                  payload  trigger  ack
 //      'k'  crypto_kem_keypair(pk, sk)                    0       OFF       16 B  pk[0:16] (지문)
@@ -8,20 +8,31 @@
 //      'd'  crypto_kem_dec(ss_dec, ct, sk)                0       ON        1  B  mismatch (0=OK)
 //      'p'  k -> e -> (trigger high) d (trigger low)      0       d 구간     1  B  mismatch
 //
-//  (B) chosen-ciphertext (W1: docs/HANDOFF.md)
+//  (B) chosen-ciphertext/session plumbing
 //      'F'  fresh keypair, sk 영속, ct_inj/ss_enc 0-init  0       OFF       16 B  sha3_256(pk)[0:16]
 //      'I'  ct chunk inject (idx 1B + data 32B = 33B)     33      OFF       1  B  status (0=OK,
 //                                                                                  1=idx OOR,
 //                                                                                  2=len OOR)
 //      'L'  load done; ct_inj 무결성 지문                  0       OFF       16 B  sha3_256(ct_inj)[0:16]
+//      'D'  crypto_kem_dec(ss_dec, ct_inj, sk_resident)   0       ON        1  B  mismatch (vs ss_enc)
+//
+//  (C) diagnostic/calibration helpers
 //      'M'  indcpa_enc(ct_inj, pk, μ, seed=0×32)          32      OFF       16 B  sha3_256(ct_inj)[0:16]
 //           — payload = μ 32B (seed 는 펌웨어에서 zero-fixed)                      (host μ → valid PKE ct)
 //           — SS_VER_1_1 의 addcmd len < MAX_SS_LEN=64 라 64B 페이로드 거부 →
 //             μ 만 host 가 통제, seed 는 보드 zero. 추후 seed 변경 필요하면
 //             별도 'N' 명령 (seed 32B inject) 추가.
-//      'D'  crypto_kem_dec(ss_dec, ct_inj, sk_resident)   0       ON        1  B  mismatch (vs ss_enc)
-//      'Z'  indcpa_dec(mu', sk, ct_inj) — verify/cmov skip 0       ON       32  B  µ'[0..31] (256 raw bits)
-//      'X'  raw sk bytes [idx*32, idx*32+32)                1      OFF      32  B  sk chunk (host unpacks)
+//      'Z'  indcpa_dec(mu', sk, ct_inj) — verify/cmov skip 0       ON       32  B  µ'[0..31] sanity only
+//      'X'  raw sk bytes [idx*32, idx*32+32)                1      OFF      32  B  calibration labels only
+//      'T'  isolated poly_mul_acc diagnostic                3      ON        32 B  output sanity only
+//      'U'  isolated multi-term poly_mul_acc diagnostic     34     ON        32 B  output sanity only
+//      'V'  vec_vec_mult_add only (sub-trigger inside        0      ON       32  B  µ'[0..31] (post-round_t)
+//           indcpa_dec replay) — clean window for SCA
+//      'W'  component poly_mul_acc inside V-like replay       1      ON       32  B  output sanity only
+//
+//  Attack-valid claims must be trace-only. 'X', 'T', 'U', 'V', 'W', and 'Z'
+//  responses are for controlled calibration/sanity checks and must not be used
+//  as oracle output.
 //
 //  ct 페이로드는 보드에 상주 (SimpleSerial v1.1 페이로드 한도 = 64 B 라
 //  672 B 의 ct 를 한 번에 못 올린다). 'I' 를 21 회 호출 (idx 0..20, 32 B/chunk)
@@ -99,6 +110,58 @@ extern void poly_mul_acc_namespaced(const int16_t a[256],
 #define bytes_to_Sx_namespaced   SMAUG_NAMESPACE(bytes_to_Sx)
 typedef struct { int16_t coeffs[256]; } poly_t_local;
 extern void bytes_to_Sx_namespaced(poly_t_local *data, const uint8_t *bytes);
+
+// Phase V — isolated vec_vec_mult_add (= indcpa_dec 의 main multiplication phase)
+// + sub-trigger. 'Z' (= full indcpa_dec) trace 의 24400 sample window 에는
+// c2/c1 unpack/shift setup 과 vec_vec_mult_add 가 함께 들어간다. S2 의 단일
+// 좌표 HW 모델 실패는 그 혼합 window 와 모델 불일치 둘 다를 의심해야 하며,
+// shifted-sk 누설이라고 단정하지 않는다. 'V' 는 indcpa_dec 의 sk/c1 unpack +
+// shift 까지 trigger OFF 로 수행하고, vec_vec_mult_add 만 trigger ON 으로
+// 감싸 모델 검증용 깨끗한 diagnostic window 를 측정한다.
+//
+// indcpa_dec 의 disasm 위에서 정확히 다음 sequence 를 재현 (실측 분석 후 수정) :
+//   1. load_from_string_sk(sk_polyvec_buf, sk[0..PKE_SECRETKEY_BYTES))
+//                                                    // ternary {-1,0,+1} 그대로
+//   2. load_from_string(ct_unpacked_buf, ct_inj)     // c1 폴리벡 + c2 폴리
+//   3. memcpy c1 폴리벡 to v_c1_buf (shift in place 위해)
+//   4. memcpy c2 poly to v_output (vec_vec_mult_add 가 += accumulate 라 초기값 = c2)
+//   5. for i in 0..255: v_output[i] = (int16)(v_output[i] << 11)   // c2 shift, NOT sk
+//   6. for m,i in 0..MR-1,0..255: v_c1_buf[m][i] = (int16)(v_c1_buf[m][i] << 8)
+//   7. trigger_high → vec_vec_mult_add(v_output, v_c1_shifted, v_sk_polyvec, mod=8) → trigger_low
+//      // sk 는 NOT shifted — disasm 확인 (lsls #11 은 c2 buffer 에 적용됨)
+//   8. round_t loop (mu_prime[i] = (((mu_prime[i] + 0x4000) & 0xffff) >> 15) & 1)
+//   9. pack 256 bits → 32B
+//
+// 응답 32B = µ′ (post-round_t, 256 bits). 'Z' 의 µ′ 응답과 byte-for-byte 일치
+// 해야 한다 — 같은 chosen-CT + 같은 sk 위에서 두 명령이 같은 수학을 수행하므로.
+// 이게 round-trip sanity check.
+//
+// IMPORTANT (논리 정합성) :
+//  - 'V' 응답 µ′ 는 instrumented diagnostic. SCA 분석 시 응답 사용 금지 (= IND-CCA
+//    위반을 피하기 위함). trace 만 사용. 'V' 의 contribution 은 *trigger window
+//    purity* 만 — sk/c1 setup loop 가 trace 안에 안 섞이게 해 단일 좌표 HW 모델
+//    이 깨끗하게 작동하도록 보장.
+//  - 'V' 자체는 attack-valid 가 아니다 (firmware 가 노출한 wrapper). 현재 S3
+//    결과도 S1 의 poly_mul_acc 만큼 강하지 않다. 다음 단계는 'D'/'Z' 의 자연
+//    trace 에서 multiplication window 를 정렬/분리해 동일 모델을 재검증하는 것.
+#define load_from_string_namespaced     SMAUG_NAMESPACE(load_from_string)
+#define load_from_string_sk_namespaced  SMAUG_NAMESPACE(load_from_string_sk)
+#define vec_vec_mult_add_namespaced     SMAUG_NAMESPACE(vec_vec_mult_add)
+
+extern void load_from_string_namespaced(int16_t *out, const uint8_t *ct);
+extern void load_from_string_sk_namespaced(int16_t *out, const uint8_t *sk_pke);
+extern void vec_vec_mult_add_namespaced(int16_t *r,
+                                        const int16_t *a,
+                                        const int16_t *b,
+                                        const uint8_t mod);
+
+#define V_POLYVEC_INT16   (LWE_N * MODULE_RANK)              /* 512 */
+#define V_LOAD_TOTAL_INT16 (V_POLYVEC_INT16 + LWE_N)         /* 768 */
+
+static int16_t v_sk_polyvec[V_POLYVEC_INT16];                /* polyvec ternary, 1024B */
+static int16_t v_c1_shifted[V_POLYVEC_INT16];                /* polyvec << 8, 1024B */
+static int16_t v_output[LWE_N];                              /* poly: c2 << 11 → acc, 512B */
+static int16_t v_load_scratch[V_LOAD_TOTAL_INT16];           /* c1 vec + c2 poly, 1536B */
 
 // ---- 정적 버퍼 -------------------------------------------------------------
 // pk/sk/ct 는 보드에 상주. host 는 SimpleSerial 64 B/프레임 한도 때문에
@@ -353,6 +416,8 @@ static uint8_t cmd_dump_sk_chunk(uint8_t *buf, uint8_t len)
 //   'T' 가 동작하려면 'F' (영속 keypair) 를 먼저 호출해 sk 가 채워져 있어야 한다.
 //   호출 시점 sk_pke_unpacked 를 매번 다시 unpack 해서 stale state 방지.
 #define POLYMUL_PAYLOAD_LEN 5u
+#define POLYMUL_MULTI_MAX_TERMS 8u
+#define POLYMUL_MULTI_PAYLOAD_LEN (2u + 4u * POLYMUL_MULTI_MAX_TERMS)
 
 static int16_t  t_host_b[256];
 static int16_t  t_out[256];
@@ -402,6 +467,167 @@ static uint8_t cmd_isolated_poly_mul(uint8_t *buf, uint8_t len)
     return 0x00;
 }
 
+// 'U' : isolated multi-term poly_mul_acc(sk_unpacked[component], host_b, out).
+//
+//   payload = 34B fixed length:
+//      buf[0] = component
+//      buf[1] = n_terms (0..8)
+//      repeated 8 slots:
+//        idx   = buf[2 + 4*t .. 3 + 4*t] big-endian uint16
+//        alpha = buf[4 + 4*t .. 5 + 4*t] big-endian signed int16 coding
+//
+//   Terms after n_terms are ignored and should be zero-filled by host.
+//   Duplicate idx slots accumulate in int16 arithmetic. This command is a
+//   diagnostic bridge between S1's monomial 'T' and S2's random multi-term Z
+//   public designs: it keeps the same isolated poly_mul_acc trigger but lets
+//   host send the full public b polynomial shape.
+static uint8_t cmd_isolated_poly_mul_multiterm(uint8_t *buf, uint8_t len)
+{
+    if (len != POLYMUL_MULTI_PAYLOAD_LEN) {
+        uint8_t status = 2;
+        simpleserial_put('r', 1, &status);
+        return 0x00;
+    }
+    uint8_t component = buf[0];
+    uint8_t n_terms = buf[1];
+
+    if (component >= MODULE_RANK) {
+        uint8_t status = 1;
+        simpleserial_put('r', 1, &status);
+        return 0x00;
+    }
+    if (n_terms > POLYMUL_MULTI_MAX_TERMS) {
+        uint8_t status = 4;
+        simpleserial_put('r', 1, &status);
+        return 0x00;
+    }
+    for (unsigned t = 0; t < n_terms; t++) {
+        unsigned off = 2u + 4u * t;
+        uint16_t idx = ((uint16_t)buf[off] << 8) | (uint16_t)buf[off + 1u];
+        if (idx >= 256u) {
+            uint8_t status = 3;
+            simpleserial_put('r', 1, &status);
+            return 0x00;
+        }
+    }
+
+    for (unsigned m = 0; m < MODULE_RANK; m++) {
+        bytes_to_Sx_namespaced(&t_sk_unpacked[m], &sk[m * SKPOLY_BYTES]);
+    }
+
+    memset(t_host_b, 0, sizeof(t_host_b));
+    for (unsigned t = 0; t < n_terms; t++) {
+        unsigned off = 2u + 4u * t;
+        uint16_t idx = ((uint16_t)buf[off] << 8) | (uint16_t)buf[off + 1u];
+        uint16_t alpha_u = ((uint16_t)buf[off + 2u] << 8) | (uint16_t)buf[off + 3u];
+        t_host_b[idx] = (int16_t)(t_host_b[idx] + (int16_t)alpha_u);
+    }
+
+    memset(t_out, 0, sizeof(t_out));
+
+    trigger_high();
+    poly_mul_acc_namespaced(t_sk_unpacked[component].coeffs, t_host_b, t_out);
+    trigger_low();
+
+    simpleserial_put('r', 32, (uint8_t *)t_out);
+    return 0x00;
+}
+
+/* 'V' : sub-triggered isolated vec_vec_mult_add. payload 0, trigger ON during
+ *       multiplication only. 응답 = 32B µ′ (post-round_t). 'Z' 의 µ′ 와 일치
+ *       해야 함 (round-trip sanity, host predict_mu_prime 와 비교).
+ *
+ *       'V' 가 동작하려면 'F' (sk persistent) + 'I'+'L' (chosen-CT inject) 선행. */
+static uint8_t cmd_isolated_vec_mult(uint8_t *buf, uint8_t len)
+{
+    (void)len; (void)buf;
+
+    /* Step 1: sk PKE 영역 unpack → polyvec (1024B = 512 int16) — ternary 그대로 */
+    load_from_string_sk_namespaced(v_sk_polyvec, sk);
+
+    /* Step 2: ct_inj unpack → scratch (c1 polyvec + c2 poly = 1536B = 768 int16) */
+    load_from_string_namespaced(v_load_scratch, ct_inj);
+
+    /* Step 3: copy c1 polyvec into separate buffer (shift in place 위해) */
+    memcpy(v_c1_shifted, v_load_scratch, sizeof(v_c1_shifted));
+
+    /* Step 4: copy c2 poly into output buffer (vec_vec_mult_add 가 +=
+     *         accumulate 라 out 초기값 = c2 — indcpa_dec 와 똑같이) */
+    memcpy(v_output, &v_load_scratch[V_POLYVEC_INT16], sizeof(v_output));
+
+    /* Step 5: c2 (=v_output) <<= 11 (256 iter — indcpa_dec 의 첫 shift loop) */
+    for (unsigned i = 0; i < LWE_N; i++) {
+        v_output[i] = (int16_t)(v_output[i] << 11);
+    }
+
+    /* Step 6: c1[m][i] <<= 8 (MR × 256 iter — indcpa_dec 의 두번째 shift loop) */
+    for (unsigned i = 0; i < V_POLYVEC_INT16; i++) {
+        v_c1_shifted[i] = (int16_t)(v_c1_shifted[i] << 8);
+    }
+
+    /* Step 7: ★ TRIGGER WINDOW ★ — vec_vec_mult_add only. 'a'=c1_shifted,
+     *         'b'=sk_polyvec (NOT shifted), mod=8 (= LOG_P).
+     *         output 초기값 = c2_shifted (이미 v_output 에 << 11). */
+    trigger_high();
+    vec_vec_mult_add_namespaced(v_output, v_c1_shifted, v_sk_polyvec, 8);
+    trigger_low();
+
+    /* Step 8: round_t (LOG_T=1) — mu_prime[i] = (((x + 2^14) & 0xffff) >> 15) & 1 */
+    uint8_t mu_prime_bytes[DELTA_BYTES];
+    memset(mu_prime_bytes, 0, sizeof(mu_prime_bytes));
+    for (unsigned i = 0; i < LWE_N; i++) {
+        uint16_t biased = (uint16_t)((uint16_t)v_output[i] + (uint16_t)0x4000);
+        uint16_t bit = (biased >> 15) & 1u;
+        mu_prime_bytes[i / 8] |= (uint8_t)(bit << (i % 8));
+    }
+
+    /* Step 9: 32B 응답 — 'Z' 와 같은 format */
+    simpleserial_put('r', DELTA_BYTES, mu_prime_bytes);
+    return 0x00;
+}
+
+/* 'W' : component-specific V-like replay. payload = 1B component.
+ *
+ *       This keeps the same resident-key + injected-CT setup as 'V', but the
+ *       trigger window contains only one component's poly_mul_acc call. The
+ *       call order matches SMAUG's vec_vec_mult helper:
+ *
+ *           poly_mul_acc(c1_component_unshifted, sk_component, out)
+ *
+ *       In 'V', vec_vec_mult_add first shifts its public operand down by mod,
+ *       calls vec_vec_mult/poly_mul_acc, then shifts the accumulated product
+ *       back up. Therefore this command intentionally uses the unshifted c1
+ *       values from load_from_string, not the c1<<8 buffer used by 'U'.
+ */
+#define VMUL_COMPONENT_PAYLOAD_LEN 1u
+
+static uint8_t cmd_component_poly_mul(uint8_t *buf, uint8_t len)
+{
+    if (len != VMUL_COMPONENT_PAYLOAD_LEN) {
+        uint8_t status = 2;
+        simpleserial_put('r', 1, &status);
+        return 0x00;
+    }
+    uint8_t component = buf[0];
+    if (component >= MODULE_RANK) {
+        uint8_t status = 1;
+        simpleserial_put('r', 1, &status);
+        return 0x00;
+    }
+
+    load_from_string_sk_namespaced(v_sk_polyvec, sk);
+    load_from_string_namespaced(v_load_scratch, ct_inj);
+    memset(t_out, 0, sizeof(t_out));
+
+    unsigned off = (unsigned)component * LWE_N;
+    trigger_high();
+    poly_mul_acc_namespaced(&v_load_scratch[off], &v_sk_polyvec[off], t_out);
+    trigger_low();
+
+    simpleserial_put('r', 32, (uint8_t *)t_out);
+    return 0x00;
+}
+
 int main(void)
 {
     platform_init();
@@ -414,19 +640,29 @@ int main(void)
     simpleserial_addcmd('e', 0, cmd_encaps);
     simpleserial_addcmd('d', 0, cmd_decaps);
     simpleserial_addcmd('p', 0, cmd_pipeline);
-    // (B) chosen-CT
+    // (B) chosen-CT/session plumbing
     simpleserial_addcmd('F', 0,                   cmd_keygen_persistent);
     simpleserial_addcmd('I', INJECT_PAYLOAD_LEN,  cmd_inject);
     simpleserial_addcmd('L', 0,                   cmd_load_done);
-    simpleserial_addcmd('M', MENC_PAYLOAD_LEN,    cmd_pke_enc_labeled);
     simpleserial_addcmd('D', 0,                   cmd_decap_inject);
+
+    // (C) diagnostic/calibration helpers. Responses are for sanity/labels only;
+    // attack-valid analysis must use traces without treating these as oracles.
+    simpleserial_addcmd('M', MENC_PAYLOAD_LEN,    cmd_pke_enc_labeled);
     simpleserial_addcmd('Z', 0,                   cmd_indcpa_dec_inject);
     simpleserial_addcmd('X', DUMPSK_PAYLOAD_LEN,  cmd_dump_sk_chunk);
-    // (C) Phase F — isolated poly_mul_acc 시도. 응답 byte 가 SMAUG-T archive 의
-    //     internal storage form (q-modular?) 로 와서 host round-trip 매칭 어려움.
-    //     일단 명령 등록은 유지 (수정 시 빌드 영향 없음), F3 부터는 'Z' 의
-    //     전체 indcpa_dec trace 의 *영역 windowing* 으로 진행.
+
+    // S1 diagnostic — isolated poly_mul_acc. This is intentionally instrumented:
+    // useful for locating multiplication leakage, not a standalone attack claim.
     simpleserial_addcmd('T', POLYMUL_PAYLOAD_LEN, cmd_isolated_poly_mul);
+    simpleserial_addcmd('U', POLYMUL_MULTI_PAYLOAD_LEN,
+                        cmd_isolated_poly_mul_multiterm);
+
+    // S3 diagnostic — isolated vec_vec_mult_add replay. Keep it separate from
+    // natural 'D'/'Z' traces when writing conclusions.
+    simpleserial_addcmd('V', 0,                   cmd_isolated_vec_mult);
+    simpleserial_addcmd('W', VMUL_COMPONENT_PAYLOAD_LEN,
+                        cmd_component_poly_mul);
 
     while (1) {
         simpleserial_get();

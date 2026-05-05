@@ -13,6 +13,8 @@ _REPO = Path(__file__).resolve().parent.parent
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
+import hashlib
+
 from host import chosen_ct  # noqa: E402
 
 
@@ -35,6 +37,10 @@ class _MockTarget:
         self.write_log.append((cmd, bytes(data)))
         if cmd == "F":
             self._pending_ack = self._fixed_pk_fp16
+        elif cmd == "I":
+            self._pending_ack = b"\x00"
+        elif cmd == "L":
+            self._pending_ack = self._fixed_ct_fp16
         elif cmd == "M":
             self._call_no += 1
             if self._deterministic:
@@ -113,6 +119,30 @@ def test_pke_labeled_rejects_bad_lengths() -> None:
     except ValueError:
         raised += 1
     assert raised == 2
+
+
+def test_chunk_inject_can_reuse_resident_key() -> None:
+    pk = bytes.fromhex("aa" * 16)
+    ct_bytes = bytes(range(64))
+    ct_fp16 = hashlib.sha3_256(ct_bytes).digest()[:16]
+    t = _MockTarget(fixed_pk_fp16=pk, fixed_ct_fp16=ct_fp16)
+
+    bundle = chosen_ct.setup_session(
+        t,
+        ct_bytes,
+        label="resident",
+        fresh_key=False,
+        pk_fp16=pk,
+    )
+
+    assert bundle.pk_fp16 == pk
+    assert bundle.ct_fp16_board == ct_fp16
+    assert bundle.ct_fp16_host == ct_fp16
+    assert bundle.integrity_ok is True
+    cmds = [c for c, _ in t.write_log]
+    assert cmds == ["I", "I", "L"], f"sequence = {cmds}"
+    assert t.write_log[0][1] == bytes([0]) + ct_bytes[:32]
+    assert t.write_log[1][1] == bytes([1]) + ct_bytes[32:]
 
 
 if __name__ == "__main__":

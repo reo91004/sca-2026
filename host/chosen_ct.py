@@ -177,11 +177,21 @@ def setup_session(
     chunk_size: int = CHUNK_BYTES,
     inject_timeout_ms: int = 2000,
     label: str = "chosen_ct",
+    fresh_key: bool = True,
+    pk_fp16: bytes | None = None,
 ) -> Bundle:
-    """보드에 'F' → 'I' × N → 'L' 시퀀스를 보내고, 무결성 검증 + Bundle 반환.
+    """보드에 chosen ciphertext 를 주입하고, 무결성 검증 + Bundle 반환.
 
     target  : chipwhisperer 의 SimpleSerial 객체 (이미 연결됨).
     ct_bytes: host 가 주입할 ct. len == params.ciphertext_bytes 여야 함.
+
+    fresh_key=True:
+        'F' → 'I' × N → 'L'. CLI/smoke 용 기본 동작.
+
+    fresh_key=False:
+        'I' × N → 'L'. 호출자가 이미 'F' 로 resident sk 를 만들고 'X' 로
+        그 sk 를 덤프한 경우 사용한다. S2/S3 capture 는 이 모드여야 sk label 과
+        trace 대상 key 가 일치한다.
     """
     if len(ct_bytes) % chunk_size != 0:
         raise ValueError(
@@ -190,9 +200,15 @@ def setup_session(
 
     target.flush()
 
-    # 1) 'F' fresh keygen
-    _ss_write(target, "F")
-    pk_fp16 = _ss_read_ack(target, 16)
+    # 1) optional 'F' fresh keygen
+    if fresh_key:
+        _ss_write(target, "F")
+        pk_fp16 = _ss_read_ack(target, 16)
+    else:
+        if pk_fp16 is None:
+            pk_fp16 = b""
+        elif len(pk_fp16) != 16:
+            raise ValueError(f"pk_fp16 len {len(pk_fp16)} != 16")
 
     # 2) 'I' chunk inject — 'I' 페이로드는 [idx 1B][data CHUNK B]
     chunks = _chosen.chunkify(ct_bytes, chunk_size=chunk_size)
