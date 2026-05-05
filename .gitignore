@@ -2,8 +2,6 @@
 .claude
 .codex
 .mcp.json
-docs/*.md
-!docs/idea.md
 
 # python
 __pycache__/
