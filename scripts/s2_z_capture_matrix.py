@@ -3,7 +3,8 @@
 
 This is the next dataset after the negative single-design S2.5 profiler:
 for each fresh key, keep the key resident, dump sk for profiling labels, then
-inject several public monomial or multi-term c1 designs and capture Z, V, W, or R
+inject several public monomial or multi-term c1 designs and capture Z, V, W, R,
+or Q
 traces for each design.
 
 The saved NPZ has:
@@ -137,7 +138,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("-s", "--samples", type=int, default=24400)
     p.add_argument("-g", "--gain-db", type=float, default=25.0)
     p.add_argument("--adc-offset", type=int, default=0)
-    p.add_argument("--cmd", choices=("Z", "V", "W", "R"), default="Z")
+    p.add_argument("--cmd", choices=("Z", "V", "W", "R", "Q"), default="Z")
     p.add_argument("--component", type=int, default=0, choices=(0, 1))
     p.add_argument("--alpha", type=int, default=4)
     p.add_argument("--c2-mode", choices=("zero", "constant"), default="zero")
@@ -273,7 +274,7 @@ def main() -> int:
                         f"{args.cmd} first response failed key={key_i} "
                         f"design={design_i}: len={len(first_resp)}"
                     )
-                if args.cmd in ("Z", "V", "R"):
+                if args.cmd in ("Z", "V", "R", "Q"):
                     pred_mu = _pack_mu_bits(
                         _chosen.predict_mu_prime(p, ct.c1, sk_unpacked, ct.c2)
                     )
@@ -319,7 +320,7 @@ def main() -> int:
                     "ct_fp16_board": bundle.ct_fp16_board.hex(),
                     "ct_sha256": hashlib.sha256(ct_bytes).hexdigest(),
                     "first_resp_hex": first_resp.hex(),
-                    "first_mu_resp_hex": first_resp.hex() if args.cmd in ("Z", "V", "R") else None,
+                    "first_mu_resp_hex": first_resp.hex() if args.cmd in ("Z", "V", "R", "Q") else None,
                 })
                 print(
                     f"[KEY {key_i:02d}] design {design_i+1}/{len(designs)} "

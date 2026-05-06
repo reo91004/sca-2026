@@ -30,8 +30,10 @@
 //           indcpa_dec replay) — clean window for SCA
 //      'W'  component poly_mul_acc inside V-like replay       1      ON       32  B  output sanity only
 //      'R'  round_t + pack only inside V-like replay          0      ON       32  B  µ'[0..31] sanity only
+//      'Q'  vec_vec_mult_add + round_t/pack bridge            0      ON       32  B  µ'[0..31] sanity only
 //
-//  Attack-valid claims must be trace-only. 'X', 'T', 'U', 'V', 'W', 'R', and 'Z'
+//  Attack-valid claims must be trace-only. 'X', 'T', 'U', 'V', 'W', 'R', 'Q',
+//  and 'Z'
 //  responses are for controlled calibration/sanity checks and must not be used
 //  as oracle output.
 //
@@ -673,6 +675,49 @@ static uint8_t cmd_round_pack_replay(uint8_t *buf, uint8_t len)
     return 0x00;
 }
 
+/* 'Q' : bridge replay with trigger around vec_vec_mult_add + round_t/pack.
+ *
+ *       This sits between:
+ *         V: vec_vec_mult_add only
+ *         R: round_t/pack only
+ *         Z: full indcpa_dec
+ *
+ *       If R succeeds but Q fails, the clean R result may be fragile to
+ *       multiplication-window dilution. If Q succeeds but Z fails, the blocker
+ *       is more likely pre/post-window mixing or natural indcpa_dec alignment.
+ */
+static uint8_t cmd_vec_mult_round_pack_replay(uint8_t *buf, uint8_t len)
+{
+    (void)len; (void)buf;
+
+    load_from_string_sk_namespaced(v_sk_polyvec, sk);
+    load_from_string_namespaced(v_load_scratch, ct_inj);
+    memcpy(v_c1_shifted, v_load_scratch, sizeof(v_c1_shifted));
+    memcpy(v_output, &v_load_scratch[V_POLYVEC_INT16], sizeof(v_output));
+
+    for (unsigned i = 0; i < LWE_N; i++) {
+        v_output[i] = (int16_t)(v_output[i] << 11);
+    }
+    for (unsigned i = 0; i < V_POLYVEC_INT16; i++) {
+        v_c1_shifted[i] = (int16_t)(v_c1_shifted[i] << 8);
+    }
+
+    uint8_t mu_prime_bytes[DELTA_BYTES];
+    memset(mu_prime_bytes, 0, sizeof(mu_prime_bytes));
+
+    trigger_high();
+    vec_vec_mult_add_namespaced(v_output, v_c1_shifted, v_sk_polyvec, 8);
+    for (unsigned i = 0; i < LWE_N; i++) {
+        uint16_t biased = (uint16_t)((uint16_t)v_output[i] + (uint16_t)0x4000);
+        uint16_t bit = (biased >> 15) & 1u;
+        mu_prime_bytes[i / 8] |= (uint8_t)(bit << (i % 8));
+    }
+    trigger_low();
+
+    simpleserial_put('r', DELTA_BYTES, mu_prime_bytes);
+    return 0x00;
+}
+
 int main(void)
 {
     platform_init();
@@ -709,6 +754,7 @@ int main(void)
     simpleserial_addcmd('W', VMUL_COMPONENT_PAYLOAD_LEN,
                         cmd_component_poly_mul);
     simpleserial_addcmd('R', 0,                   cmd_round_pack_replay);
+    simpleserial_addcmd('Q', 0,                   cmd_vec_mult_round_pack_replay);
 
     while (1) {
         simpleserial_get();

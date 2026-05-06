@@ -460,3 +460,93 @@ Interpretation:
   listed as an open/negative checkpoint.
 - The sliding-window scan makes the negative transfer result stronger: the
   failure is not explained by a coarse 4K segment boundary alone.
+
+## R5: `Q` Bridge Check
+
+Goal: separate two possible explanations for the failed natural `Z` transfer.
+
+- If `R` leakage survives in a trigger that includes `vec_vec_mult_add`
+  immediately before `round_t/pack`, then the main `Z` problem is likely
+  full-decapsulation window mixing or coarse alignment.
+- If `R` leakage does not survive this bridge, then the strong diagnostic
+  result is fragile to multiplication-window dilution even before the rest of
+  `indcpa_dec` is included.
+
+Firmware command:
+
+- `Q` replays the same resident-sk + chosen-CT path as `V/R`.
+- It triggers around:
+  `vec_vec_mult_add_namespaced(...)` followed immediately by the
+  `round_t` loop and 32-byte pack.
+- The response is the 32-byte `mu'` sanity value, used only for round-trip
+  validation during capture and not as an analysis oracle.
+
+Capture:
+
+```bash
+python3 scripts/s2_z_capture_matrix.py --cmd Q --num-keys 8 -n 10 --samples 24400 --design-mode detector-grid --coefs 0,8,16,24 --detector-alphas 64,128,192 --tag s4_q_mu_bridge_d12n10
+```
+
+Result:
+
+- 8 keys, 12 designs, 10 traces/design.
+- All keys/designs captured `10/10`.
+- All first responses round-trip against host `predict_mu_prime`.
+- Saved:
+  `traces/s4_q_mu_bridge_d12n10_k*.npz`.
+
+Full-window analysis:
+
+```bash
+python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s4_q_mu_bridge_d12n10_k*.npz --label-kinds mu_block16_hw mu_byte_hw --block 8 --n-features 32 --ridge 10 --feature-mode corr --n-perm 300 --out-prefix results/s4_q_lowdim_mu_bridge_d12n10_full_mu_byte_block16_p300
+```
+
+Results:
+
+- `mu_block16_hw`: exact z `-0.55`, rounded-MAE z `-2.92`,
+  corr z `-2.95`.
+- `mu_byte_hw`: exact z `-1.37`, rounded-MAE z `-1.34`,
+  corr z `-2.28`.
+
+Sliding-window localization:
+
+```bash
+python3 scripts/s2_z_label_window_scan.py --inputs traces/s4_q_mu_bridge_d12n10_k*.npz --label-kind mu_byte_hw --block 8 --n-features 32 --ridge 10 --feature-mode corr --window 3976 --stride 512 --top-k 6 --n-perm 200 --out results/s4_q_label_window_scan_mu_byte_w3976_s512_p200.txt
+python3 scripts/s2_z_label_window_scan.py --inputs traces/s4_q_mu_bridge_d12n10_k*.npz --label-kind mu_block16_hw --block 8 --n-features 32 --ridge 10 --feature-mode corr --window 3976 --stride 512 --top-k 6 --n-perm 200 --out results/s4_q_label_window_scan_mu_block16_w3976_s512_p200.txt
+```
+
+Best `mu_byte_hw` confirmed window:
+
+- `5632:9608`: exact z `+1.85`, rounded-MAE z `+1.98`,
+  corr z `+1.76`.
+
+Best `mu_block16_hw` confirmed window:
+
+- `7168:11144`: exact z `+2.75`, rounded-MAE z `+2.77`,
+  corr z `+2.69`.
+
+Stricter p500 confirmation for the best `mu_block16_hw` window:
+
+```bash
+python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s4_q_mu_bridge_d12n10_k*.npz --label-kinds mu_block16_hw --sample-range 7168:11144 --block 8 --n-features 32 --ridge 10 --feature-mode corr --n-perm 500 --out-prefix results/s4_q_lowdim_mu_block16_w7168_11144_p500
+```
+
+Result:
+
+- `mu_block16_hw`, `7168:11144`:
+  exact z `+2.76`, rounded-MAE z `+2.54`, corr z `+2.40`.
+
+Interpretation:
+
+- `Q` does not pass the pre-defined transfer gate
+  (`rounded-MAE z > +3` and `corr z > +3`).
+- There is a weak localized hint around `7168:11144`, but it does not survive
+  stricter confirmation as an attack-quality signal.
+- Therefore the strong `R` diagnostic leakage is fragile once the preceding
+  multiplication is included in the same window. The natural `Z` failure is
+  not only a coarse full-window problem; the `vec_vec_mult_add` region itself
+  appears to dilute or dominate the `mu'` round/pack leakage.
+- The most conservative current claim is:
+  isolated `round_t/pack` leaks latent `mu'` byte/block-HW strongly, but that
+  leakage has not transferred to a realistic trigger containing multiplication
+  or full decapsulation.

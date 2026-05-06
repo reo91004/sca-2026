@@ -230,6 +230,7 @@ def load_dataset(paths: list[Path], component: int) -> Dataset:
             or (capture_kind == "matrix" and cmd == "V")
             or (capture_kind == "matrix" and cmd == "W")
             or (capture_kind == "matrix" and cmd == "R")
+            or (capture_kind == "matrix" and cmd == "Q")
             or (capture_kind == "u_matrix" and cmd == "U")
         ):
             continue
