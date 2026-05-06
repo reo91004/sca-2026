@@ -550,3 +550,68 @@ Interpretation:
   isolated `round_t/pack` leaks latent `mu'` byte/block-HW strongly, but that
   leakage has not transferred to a realistic trigger containing multiplication
   or full decapsulation.
+
+## R5.1: `Q` Trace-Scaling Check
+
+Question: could the weak `Q` bridge hint become an attack-quality oracle if we
+simply average more traces?
+
+Threat-model note:
+
+- `Q` is not a natural oracle. It is a diagnostic bridge that artificially
+  triggers around `vec_vec_mult_add + round_t/pack`.
+- The experiment is still useful as a transfer/scaling check, but any positive
+  result would remain diagnostic until it transfers to natural `Z` or `D`.
+- The `mu'` response is still sanity-only and is not used as a target oracle.
+
+Capture:
+
+```bash
+python3 scripts/s2_z_capture_matrix.py --cmd Q --num-keys 8 -n 20 --samples 24400 --design-mode detector-grid --coefs 0,8,16,24 --detector-alphas 64,128,192 --tag s4_q_mu_bridge_d12n20
+```
+
+Result:
+
+- 8 keys, 12 designs, 20 traces/design.
+- All keys/designs captured `20/20`.
+- Saved:
+  `traces/s4_q_mu_bridge_d12n20_k*.npz`.
+
+Fixed-window confirmation of the previous best `Q` hint:
+
+```bash
+python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s4_q_mu_bridge_d12n20_k*.npz --label-kinds mu_block16_hw --sample-range 7168:11144 --block 8 --n-features 32 --ridge 10 --feature-mode corr --n-perm 500 --out-prefix results/s4_q_lowdim_mu_block16_d12n20_w7168_11144_p500
+```
+
+Result:
+
+- `mu_block16_hw`, `7168:11144`:
+  exact z `-0.05`, rounded-MAE z `-0.99`, corr z `-1.31`.
+
+Sliding-window localization on the new `N=20` capture:
+
+```bash
+python3 scripts/s2_z_label_window_scan.py --inputs traces/s4_q_mu_bridge_d12n20_k*.npz --label-kind mu_block16_hw --block 8 --n-features 32 --ridge 10 --feature-mode corr --window 3976 --stride 512 --top-k 6 --n-perm 200 --out results/s4_q_label_window_scan_d12n20_mu_block16_w3976_s512_p200.txt
+python3 scripts/s2_z_label_window_scan.py --inputs traces/s4_q_mu_bridge_d12n20_k*.npz --label-kind mu_byte_hw --block 8 --n-features 32 --ridge 10 --feature-mode corr --window 3976 --stride 512 --top-k 6 --n-perm 200 --out results/s4_q_label_window_scan_d12n20_mu_byte_w3976_s512_p200.txt
+```
+
+Best `mu_block16_hw` confirmed window:
+
+- `13312:17288`: exact z `+0.58`, rounded-MAE z `+1.20`,
+  corr z `+1.29`.
+
+Best `mu_byte_hw` confirmed window:
+
+- `1024:5000`: exact z `+1.27`, rounded-MAE z `-0.16`,
+  corr z `+0.02`.
+
+Interpretation:
+
+- The previous `Q` weak hint did not scale with more traces. It disappeared in
+  the fixed-window p500 confirmation and did not reappear elsewhere in the
+  `N=20` sliding-window scan.
+- This makes the `Q` bridge negative stronger: the issue is not merely too few
+  traces in the `N=10` capture.
+- Since `Q` is already diagnostic and not a natural oracle, this result argues
+  against spending more time scaling `Q`. A future positive claim must instead
+  come from a natural `Z`/`D` trigger/window or remain explicitly diagnostic.
