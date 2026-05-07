@@ -1006,3 +1006,311 @@ trace-only improvement over the current S2 null-level coordinate recovery.
   p1000 confirmation gave rMAE/corr z `+2.62/+1.76`. This is the strongest
   remaining localization hint, but it is still below the `+3/+3` gate and has
   no natural `Z` transfer, so it is not an attack-valid oracle.
+
+## Branch D-Pair: Trace-only Paired Threshold Tomography on `crypto_kem_dec`
+
+Date: 2026-05-08. Documented in `docs/d_pair_oracle.md`.
+
+### Threat-Model Rebase
+
+The paired threshold tomography idea was originally tested on `Z`
+(`indcpa_dec` only). Re-reading the threat model, `Z` is also diagnostic
+instrumentation — it omits the FO transform that makes the natural KEM
+interface attack-valid. Only `D` (`crypto_kem_dec`, full FO) is
+attack-valid for an external chosen-CT attacker. All Branch D-Pair attack
+claims must come from `D`; `Z`/`R`/`Q`/`Y` results stay diagnostic.
+
+### Phase 0 — Tooling
+
+- `scripts/s2_z_capture_matrix.py` accepts `--cmd D`. The `D` response is
+  the 1-byte `mismatch` flag; only ack length and determinism are
+  validated, mu' round-trip is skipped.
+- `scripts/s4_pair_distance_oracle.py` is a new analyzer that builds same-`c1`
+  paired-`c2` features, evaluates held-out AUROC on `flip_any`, and returns
+  ridge-regression rMAE/corr on `flip_byte_hw` as a secondary metric.
+- `tests/test_pair_oracle.py` covers AUROC ties/edge cases, the
+  XOR-of-`mu_bits` round-trip for `flip_any` and `flip_byte_hw`, and synthetic
+  fixtures.
+- `python3 tests/run_all.py` passes 82/82 (9 new oracle tests).
+
+### Phase 1.0 — D Smoke
+
+1 key × 2 designs × 3 traces, `--samples 24400`:
+
+```text
+shape (4, 3, 24400), elapsed 27.7s, all round-trips OK.
+```
+
+The CW-Lite buffer caps at ~24400 samples. `--samples 32000` returned
+partial data with timeouts. Therefore one D capture covers ~0.83 ms,
+predominantly the `indcpa_dec` portion of `crypto_kem_dec`.
+
+### Phase 1.1 — D Scout (early window) and the α-bug
+
+```bash
+python3 -u scripts/s2_z_capture_matrix.py \
+  --cmd D --num-keys 6 -n 10 --samples 24400 \
+  --design-mode detector-grid --coefs 0,8,16,24 --detector-alphas 64,128,192 \
+  --c2-mode grid --c2-grid 15,16 \
+  --tag s4_d_pair_b15_16_d24n10
+```
+
+6 keys × 12 c1 designs × 2 c2 × 10 traces, all `(24, 10, 24400)`, elapsed
+2247s ≈ 37.5 min.
+
+Naive pair-distance oracle, sweep best `b64_f128_r1_corr`, full window:
+
+```text
+AUROC_pooled = 0.6719 (null 0.6063+/-0.0441, z = +1.49)
+AUROC_meankey= 0.6771 (null 0.5944+/-0.0460, z = +1.80)
+class balance: pos_frac = 0.667 (pos=48 neg=24)
+```
+
+A direct check of the `flip_any` label across all six keys revealed an
+**experiment design flaw**: the binary `flip_any` vector was *identical*
+across keys for these chosen ciphertexts. For a monomial `c1 = α·X^j` with
+`c2 = (15, 16)`, the bit-flip map at coordinate `i` only depends on
+`s_{(i-j) mod n}` and on the (α, c2) threshold position:
+
+```text
+α =  64, c2=(15,16): flip iff s in {-1, +1}
+α = 128, c2=(15,16): flip never (universal 0)
+α = 192, c2=(15,16): flip iff s in {-1, +1}
+```
+
+Because SMAUG1 has HW=70 nonzero coords out of 256, "any flip" over the
+full 256-coord vector is effectively constant: 1 for α=64/192, 0 for
+α=128. **`flip_any` is determined by the public α**, not the secret.
+Therefore the AUROC ≈ 0.67 result was the model classifying public α via
+trace, not the secret. **Not an attack-valid oracle.**
+
+### Phase 1.1' — Secret-dependent label
+
+`flip_byte_hw[b]` (byte-wise XOR-HW of μ'(c2=a) vs μ'(c2=b)) is genuinely
+secret-dependent for α=64,192: it equals the count of nonzero coordinates
+within each 8-coord byte window. The α=128 designs have constant
+`flip_byte_hw = 0` and only dilute the regression target.
+
+D scout regression on `flip_byte_hw`, sweep best `b64_f128_r1_corr`,
+full window:
+
+```text
+exact z = +1.22, rMAE z = +1.17, corr z = +1.56  (sub-gate)
+```
+
+D scout regression on `mu_delta_byte_hw` (signed byte-wise
+HW(μ'(b)) − HW(μ'(a))), sweep best:
+
+```text
+exact z = +0.32, rMAE z = +0.21, corr z = +0.85  (null)
+```
+
+Window scan with the proper config across 0..24400 samples: no subwindow
+reproduces the full-window result; signal is diffused (likely ridge
+overfit on noise correlations rather than localized leakage).
+
+### Phase 1.2 — D Control (c1=0)
+
+```bash
+python3 -u scripts/s2_z_capture_matrix.py \
+  --cmd D --num-keys 6 -n 10 --samples 24400 \
+  --design-mode detector-grid --coefs 0,8,16,24 --detector-alphas 0 \
+  --c2-mode grid --c2-grid 15,16 \
+  --tag s4_d_pair_b15_16_c1zero_d8n10
+```
+
+c1=0 control elapsed ~13 min. With α=0, μ' depends only on c2 and gives
+mu'_i=1 for both c2=15 and c2=16, so `flip_any` is always 0 (degenerate);
+AUROC undefined.
+
+Univariate paired TVLA between c2=15 and c2=16 traces:
+
+```text
+control (c1=0): max|t|=3.70 at sample 5411, frac>4.5=0%
+scout   (c1≠0): max|t|=3.63 at sample 10209, frac>4.5=0%
+```
+
+**The scout's c2-pair trace difference is at the same noise level as
+control's**. The first 24400 samples of D do not contain secret-dependent
+paired-c2 leakage; the regression z=+1.56 from Phase 1.1' is a ridge-overfit
+artifact, not a localized SCA leakage point.
+
+### Phase 1.4 — Z Ablation (NOT attack claim)
+
+Existing `s4_c2_z_pair_b15_16_d24n10_k*.npz` re-run through the new
+analyzer. Z is diagnostic, included only for code-path validation and
+relative comparison.
+
+Sweep best `b32_f64_r100_corr`, full window:
+
+```text
+AUROC_pooled = 0.7413 (null 0.6523, z = +2.15)  -- alpha-classifier (see flaw)
+flip_byte_hw: corr z = +0.99  (sub-gate, secret-honest metric)
+```
+
+Z's "AUROC z=+2.15" is also alpha-classifier inflation. The
+secret-honest regression metric `corr z = +0.99` is sub-gate. Z is
+slightly weaker than D on the same secret-dep label (`+1.56` vs `+0.99`),
+but both are sub-gate.
+
+### Phase 1.5 — Late-D Scout (`--adc-offset 24400`)
+
+To capture the FO-downstream phase of `crypto_kem_dec` (which the first
+24400 samples miss), the same chosen-CT matrix was re-captured with
+`--adc-offset 24400`. Designs restricted to α∈{64,192} (drop the useless
+α=128). Pilot (4 keys × 5 traces × 16 entries) showed corr z=+2.15 on
+window 4096:8072 of late-D mu_delta_byte_hw — promising hint.
+
+Full late-D scout (6 keys × 10 traces × 16 entries, elapsed 1502s ≈ 25
+min):
+
+```text
+sweep best (full window):
+  flip_byte_hw       b32_f64_r100_corr: exact z=+1.70, corr z=-0.29
+  mu_delta_byte_hw   b64_f32_r100_snr:  exact z=+1.69, corr z=+0.60
+
+window scan (best config), best window:
+  4096:8072   corr z = -1.27   (pilot hint did NOT reproduce)
+  12288:16264 corr z = +0.84
+```
+
+The pilot's corr z=+2.15 was a small-sample fluke. With proper power, late-D
+also gives sub-gate signal. **FO downstream amplification is too weak under
+this SCA setup to provide an attack-valid c2-paired oracle.**
+
+### Phase 2.1 — c2 Staircase (3 secret-dependent pair types)
+
+```bash
+python3 -u scripts/s2_z_capture_matrix.py \
+  --cmd D --num-keys 6 -n 10 --samples 24400 \
+  --design-mode detector-grid --coefs 0,8,16,24 --detector-alphas 64 \
+  --c2-mode grid --c2-grid 7,8,15,16,23,24 \
+  --tag s4_d_stair_a64_d24n10
+```
+
+Six keys × 4 c1 × 6 c2 × 10 traces, elapsed 2248s ≈ 37 min. Three
+secret-dependent c2-pairs per c1 (delta=1):
+
+```text
+α=64 c2=(7,8):  flip iff s=0  (s=0 detector)
+α=64 c2=(15,16):flip iff s≠0  (s≠0 detector, inverse)
+α=64 c2=(23,24):flip iff s=0  (s=0 detector, alternate position)
+```
+
+Pooled `flip_byte_hw` sweep (12 pairs/key total):
+
+```text
+exact z = +0.44, rMAE z = -0.21, corr z = +0.42  (null)
+```
+
+Per-pair-type sweep (8 pairs/key per type):
+
+```text
+(7, 8)   mu_delta_byte_hw  best b32_f32_r10_snr:    exact z = -1.18,  corr z = -0.84
+(15,16)  mu_delta_byte_hw  best b64_f64_r1_snr:     exact z = +0.08,  corr z = -0.74
+(23,24)  mu_delta_byte_hw  best b32_f128_r10_snr:   exact z = +0.89,  corr z = -0.28
+combined (7,8)+(23,24)     best b32_f256_r1_snr:    exact z = +0.73,  corr z = -0.52
+```
+
+All null. Different threshold positions don't help.
+
+Univariate paired TVLA per c2-pair (240 traces × 240 traces):
+
+```text
+(7,8):   max|t| = 4.13 at sample 4123,  frac>4.5 = 0%
+(15,16): max|t| = 4.61 at sample 4686,  frac>4.5 = 0%
+(23,24): max|t| = 3.76 at sample 1671,  frac>4.5 = 0%
+```
+
+Univariate paired signal is essentially noise across all three pair types
+on the natural D trace.
+
+### Phase 2.2 — Multi-term c1
+
+```bash
+python3 -u scripts/s2_z_capture_matrix.py \
+  --cmd D --num-keys 6 -n 10 --samples 24400 \
+  --design-mode random-multiterm --num-designs 8 --terms 4 \
+  --design-seed 20260508 --c2-mode grid --c2-grid 15,16 \
+  --tag s4_d_multiterm_d8n10
+```
+
+Random 4-term c1 with random alphas ∈ {32,64,96,128,160,192,224}. Each
+inner_i is a sum of up to 4 secret terms scaled by α. Six keys × 8 designs
+× 2 c2 × 10 traces, elapsed 1503s ≈ 25 min.
+
+Sweep on full window:
+
+```text
+flip_byte_hw      best b8_f256_r100_snr:   exact z = -0.17, rMAE z = -0.79, corr z = -2.43
+mu_delta_byte_hw  best b16_f64_r100_snr:   exact z = +1.28, rMAE z = +0.11, corr z = -2.56
+```
+
+Both labels give **negative correlation z** — the held-out predictions
+correlate inverse to truth. This is overfit on noise, not signal. Multi-term
+random alphas do not rescue the natural-D oracle.
+
+### D-Pair Branch Conclusion
+
+For SMAUG-T v4.0 on STM32F415 + CW-Lite, paired threshold tomography on
+the natural `crypto_kem_dec` interface does not produce an attack-valid
+oracle at the strict gate (`rMAE z > +3 AND corr z > +3`). Across the
+matrix of attempted variations:
+
+```text
+attempt                                     secret-dep regr corr z
+Z early-window monomial c1, c2=(15,16)      +0.99   (diagnostic, not attack)
+D early-window monomial c1, c2=(15,16)      +1.56   (attack-valid)
+D late-window  monomial c1, c2=(15,16)      +0.60   (full scout) / -1.27 (best window)
+D staircase (7,8) + (15,16) + (23,24)        null per-pair-type, max +0.89 exact
+D multi-term  random 4-term, c2=(15,16)     -2.43..-2.56 (inverted overfit)
+```
+
+The univariate paired TVLA confirms the limit: max|t| ≈ 3.7..4.6 across
+240..720 traces per c2 side, regardless of c1 design or window phase.
+This is consistent with the existing `snr_limit_cwlite.md` finding that
+per-bit |t| stalls at 4–5 even at N=1000.
+
+The two methodological wins from this branch are:
+
+1. **Threat model clarification**: only `D` is attack-valid. Z/V/R/Q/Y/W/T/U
+   are diagnostic instrumentation. Earlier C2 branch results on Z must be
+   restated as diagnostic localization, not attack claims.
+2. **`flip_any` α-bug**: any "binary did mu' flip" oracle is contaminated
+   by public-α classification when c1 is monomial(α, j) with c2 chosen so
+   that the threshold position is independent of s. Future paired-c2 work
+   must either use signed `mu_delta_byte_hw` regression or pick c2 pairs
+   that genuinely separate s-classes per coordinate.
+
+The reusable artifact from this branch is the `D` capture path
+(`--cmd D` in the matrix capture, the new `s4_pair_distance_oracle.py`
+analyzer, and `tests/test_pair_oracle.py` with 9 oracle-specific tests).
+
+### Final Pivot Recommendation
+
+The remaining options against SMAUG-T on this CW-Lite rig are:
+
+- **(a) Bigger SCA setup**: CW-Pro or higher-bandwidth oscilloscope, better
+  EM probe. Justified if we keep SMAUG-T as the target. Hardware budget
+  question.
+- **(b) Different attack vector on SMAUG-T**: template attack with explicit
+  per-coefficient secret model (per-pole leakage at known time samples), or
+  multivariate FFT alignment with shifted templates, or single-trace EM at
+  specific instruction window. All have been weakly explored in earlier
+  branches with negative or sub-gate results, suggesting we are at the
+  CW-Lite SNR ceiling rather than at a model-mismatch ceiling.
+- **(c) NTRU+ pivot** (explicitly deferred per session scope, not executed
+  in this session). NTRU+ has more classical SCA precedent and a
+  structurally different attack surface (NTT pointwise multiplication,
+  center-lift, decode threshold, FO re-encryption). The existing capture
+  path (`D` in the matrix script, paired-c2 + multi-term + late-window
+  options) can be re-targeted at NTRU+'s `crypto_kem_dec` with new firmware
+  but identical analysis tooling.
+
+Recommendation: NTRU+ pivot is the highest-EV next step. If pivot is
+deferred, the SMAUG-T result should be written up as a *controlled
+negative finding*: "v4.0 reference implementation on CW-Lite resists
+paired-c2 threshold tomography on the natural KEM interface; pre- and
+post-FO trace windows, monomial and multi-term chosen-CT designs, and
+secret-dependent c2 pair staircases all return sub-gate results under
+held-out-key permutation-null evaluation."

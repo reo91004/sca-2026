@@ -133,6 +133,15 @@ def _cmd_payload(args: argparse.Namespace) -> bytes:
     return b""
 
 
+_RESP_LEN = {"Z": 32, "V": 32, "R": 32, "Q": 32, "Y": 32, "W": 32, "D": 1}
+
+
+def _resp_len(cmd: str) -> int:
+    if cmd not in _RESP_LEN:
+        raise ValueError(f"unknown cmd {cmd!r}")
+    return _RESP_LEN[cmd]
+
+
 def _c2_values(args: argparse.Namespace, p) -> list[int]:
     if args.c2_mode == "zero":
         return [0]
@@ -161,7 +170,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("-s", "--samples", type=int, default=24400)
     p.add_argument("-g", "--gain-db", type=float, default=25.0)
     p.add_argument("--adc-offset", type=int, default=0)
-    p.add_argument("--cmd", choices=("Z", "V", "W", "R", "Q", "Y"), default="Z")
+    p.add_argument("--cmd", choices=("Z", "V", "W", "R", "Q", "Y", "D"), default="Z")
     p.add_argument("--component", type=int, default=0, choices=(0, 1))
     p.add_argument("--alpha", type=int, default=4)
     p.add_argument("--c2-mode", choices=("zero", "constant", "grid"), default="zero")
@@ -298,12 +307,13 @@ def main() -> int:
                     )
 
                 payload = _cmd_payload(args)
+                resp_len = _resp_len(args.cmd)
                 target.simpleserial_write(args.cmd, payload)
-                first_resp = bytes(target.simpleserial_read("r", 32, timeout=5000))
-                if len(first_resp) != 32:
+                first_resp = bytes(target.simpleserial_read("r", resp_len, timeout=5000))
+                if len(first_resp) != resp_len:
                     raise RuntimeError(
                         f"{args.cmd} first response failed key={key_i} "
-                        f"design={design_i}: len={len(first_resp)}"
+                        f"design={design_i}: len={len(first_resp)} expected={resp_len}"
                     )
                 if args.cmd in ("Z", "V", "R", "Q"):
                     pred_mu = _pack_mu_bits(
@@ -317,7 +327,7 @@ def main() -> int:
                         )
 
                 traces = np.empty((args.num_traces, args.samples), dtype=np.float32)
-                acks = np.zeros((args.num_traces, 32), dtype=np.uint8)
+                acks = np.zeros((args.num_traces, resp_len), dtype=np.uint8)
                 n_ok = 0
                 for trace_i in range(args.num_traces):
                     scope.arm()
@@ -325,8 +335,8 @@ def main() -> int:
                     if scope.capture():
                         print(f"[WARN] timeout key={key_i} design={design_i} trace={trace_i}")
                         continue
-                    ack = target.simpleserial_read("r", 32, timeout=5000)
-                    if ack is None or len(ack) != 32:
+                    ack = target.simpleserial_read("r", resp_len, timeout=5000)
+                    if ack is None or len(ack) != resp_len:
                         print(f"[WARN] ack fail key={key_i} design={design_i} trace={trace_i}")
                         continue
                     traces[n_ok] = scope.get_last_trace().astype(np.float32)
