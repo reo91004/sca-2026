@@ -31,3 +31,5 @@ firmware/*/*.lst
 firmware/*/*.map
 firmware/*/*.sym
 firmware/*/*.o
+
+upstream/
