@@ -56,6 +56,17 @@ def _pack_mu_bits(bits: np.ndarray) -> bytes:
     return bytes(out)
 
 
+def dump_public_key(target, chunks: int) -> bytes:
+    parts = []
+    for idx in range(chunks):
+        target.simpleserial_write("B", bytes([idx]))
+        chunk = target.simpleserial_read("r", 32, timeout=5000)
+        if chunk is None or len(chunk) != 32:
+            raise RuntimeError(f"B dump failed idx={idx}: len={0 if chunk is None else len(chunk)}")
+        parts.append(bytes(chunk))
+    return b"".join(parts)
+
+
 def _parse_coef_list(text: str) -> list[int]:
     out = []
     for part in text.split(","):
@@ -122,13 +133,25 @@ def _cmd_payload(args: argparse.Namespace) -> bytes:
     return b""
 
 
-def _apply_c2(args: argparse.Namespace, p, ct: Ciphertext) -> Ciphertext:
+def _c2_values(args: argparse.Namespace, p) -> list[int]:
     if args.c2_mode == "zero":
-        return ct
+        return [0]
     if args.c2_mode == "constant":
-        c2 = np.full(p.n, int(args.c2_alpha), dtype=np.int64)
-        return Ciphertext(c1=ct.c1, c2=c2, params=p)
+        return [int(args.c2_alpha)]
+    if args.c2_mode == "grid":
+        vals = _parse_int_list(args.c2_grid)
+        for val in vals:
+            if not (0 <= val < p.p2):
+                raise SystemExit(f"c2-grid value {val} outside [0, {p.p2})")
+        return vals
     raise ValueError(f"unknown c2 mode {args.c2_mode}")
+
+
+def _apply_c2_value(p, ct: Ciphertext, c2_alpha: int) -> Ciphertext:
+    if int(c2_alpha) == 0:
+        return ct
+    c2 = np.full(p.n, int(c2_alpha), dtype=np.int64)
+    return Ciphertext(c1=ct.c1, c2=c2, params=p)
 
 
 def parse_args() -> argparse.Namespace:
@@ -138,11 +161,16 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("-s", "--samples", type=int, default=24400)
     p.add_argument("-g", "--gain-db", type=float, default=25.0)
     p.add_argument("--adc-offset", type=int, default=0)
-    p.add_argument("--cmd", choices=("Z", "V", "W", "R", "Q"), default="Z")
+    p.add_argument("--cmd", choices=("Z", "V", "W", "R", "Q", "Y"), default="Z")
     p.add_argument("--component", type=int, default=0, choices=(0, 1))
     p.add_argument("--alpha", type=int, default=4)
-    p.add_argument("--c2-mode", choices=("zero", "constant"), default="zero")
+    p.add_argument("--c2-mode", choices=("zero", "constant", "grid"), default="zero")
     p.add_argument("--c2-alpha", type=int, default=0)
+    p.add_argument(
+        "--c2-grid",
+        default="0,1",
+        help="Comma-separated constant c2 values, crossed with every c1 design.",
+    )
     p.add_argument(
         "--design-mode",
         choices=("monomial", "detector-grid", "random-monomial", "random-multiterm"),
@@ -200,6 +228,8 @@ def main() -> int:
     if not (0 <= args.c2_alpha < p.p2):
         raise SystemExit(f"c2-alpha {args.c2_alpha} outside [0, {p.p2})")
     designs = _make_designs(args, p)
+    c2_grid = _c2_values(args, p)
+    design_entries = [(terms, c2_alpha) for terms in designs for c2_alpha in c2_grid]
     for terms in designs:
         if not terms:
             raise SystemExit("empty design")
@@ -237,6 +267,7 @@ def main() -> int:
             pk_fp16 = bytes(target.simpleserial_read("r", 16, timeout=5000))
             if len(pk_fp16) != 16:
                 raise RuntimeError("F ack failed")
+            pk_full = dump_public_key(target, p.public_key_bytes // 32)
             sk_pke = dump_sk_pke(target, p.pke_secret_key_bytes // 32)
             sk_unpacked = _codec.unpack_sx(sk_pke).astype(np.int64).reshape(p.module_rank, p.n)
             print(f"[KEY {key_i:02d}] pk={pk_fp16.hex()[:8]} sk[0:4]={sk_pke[:4].hex()}")
@@ -246,12 +277,12 @@ def main() -> int:
             design_meta = []
             min_ok = args.num_traces
 
-            for design_i, terms in enumerate(designs):
+            for design_i, (terms, c2_alpha) in enumerate(design_entries):
                 ct = _chosen.build_multi_term_c1(
                     p,
                     {(args.component, coef): alpha for coef, alpha in terms},
                 )
-                ct = _apply_c2(args, p, ct)
+                ct = _apply_c2_value(p, ct, c2_alpha)
                 ct_bytes = ct.to_bytes()
                 bundle = setup_session(
                     target,
@@ -315,7 +346,7 @@ def main() -> int:
                     "alpha": terms[0][1] if len(terms) == 1 else None,
                     "terms": terms,
                     "c2_mode": args.c2_mode,
-                    "c2_alpha": int(args.c2_alpha) if args.c2_mode == "constant" else 0,
+                    "c2_alpha": int(c2_alpha),
                     "ct_fp16_host": bundle.ct_fp16_host.hex(),
                     "ct_fp16_board": bundle.ct_fp16_board.hex(),
                     "ct_sha256": hashlib.sha256(ct_bytes).hexdigest(),
@@ -323,8 +354,8 @@ def main() -> int:
                     "first_mu_resp_hex": first_resp.hex() if args.cmd in ("Z", "V", "R", "Q") else None,
                 })
                 print(
-                    f"[KEY {key_i:02d}] design {design_i+1}/{len(designs)} "
-                    f"terms={terms} ok={n_ok}/{args.num_traces}"
+                    f"[KEY {key_i:02d}] design {design_i+1}/{len(design_entries)} "
+                    f"terms={terms} c2={c2_alpha} ok={n_ok}/{args.num_traces}"
                 )
 
             traces_out = np.stack([x[:min_ok] for x in all_traces], axis=0)
@@ -349,19 +380,21 @@ def main() -> int:
                 "firmware_hex": str(args.firmware_hex),
                 "firmware_hex_sha256": fw_sha,
                 "pk_fp16": pk_fp16.hex(),
+                "pk_hex": pk_full.hex(),
                 "sk_pke_hex": sk_pke.hex(),
                 "component": args.component,
                 "alpha": args.alpha,
                 "c2_mode": args.c2_mode,
                 "c2_alpha": int(args.c2_alpha) if args.c2_mode == "constant" else 0,
+                "c2_grid": c2_grid,
                 "design_mode": args.design_mode,
                 "design_seed": args.design_seed,
                 "terms_per_design": args.terms if args.design_mode == "random-multiterm" else 1,
-                "coefs": [terms[0][0] if len(terms) == 1 else None for terms in designs],
-                "design_terms": designs,
+                "coefs": [terms[0][0] if len(terms) == 1 else None for terms, _ in design_entries],
+                "design_terms": [terms for terms, _ in design_entries],
                 "label": f"{args.tag}_k{key_i:02d}_{pk_fp16.hex()[:8]}",
             }
-            out_path = args.out_dir / f"{args.tag}_k{key_i:02d}_d{len(designs)}_n{min_ok}_{pk_fp16.hex()[:8]}.npz"
+            out_path = args.out_dir / f"{args.tag}_k{key_i:02d}_d{len(design_entries)}_n{min_ok}_{pk_fp16.hex()[:8]}.npz"
             np.savez_compressed(
                 out_path,
                 traces=traces_out,

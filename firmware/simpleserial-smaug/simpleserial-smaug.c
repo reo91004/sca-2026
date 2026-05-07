@@ -10,6 +10,7 @@
 //
 //  (B) chosen-ciphertext/session plumbing
 //      'F'  fresh keypair, sk 영속, ct_inj/ss_enc 0-init  0       OFF       16 B  sha3_256(pk)[0:16]
+//      'B'  dump public pk bytes [idx*32, idx*32+32)       1       OFF       32 B  public pk chunk
 //      'I'  ct chunk inject (idx 1B + data 32B = 33B)     33      OFF       1  B  status (0=OK,
 //                                                                                  1=idx OOR,
 //                                                                                  2=len OOR)
@@ -31,6 +32,7 @@
 //      'W'  component poly_mul_acc inside V-like replay       1      ON       32  B  output sanity only
 //      'R'  round_t + pack only inside V-like replay          0      ON       32  B  µ'[0..31] sanity only
 //      'Q'  vec_vec_mult_add + round_t/pack bridge            0      ON       32  B  µ'[0..31] sanity only
+//      'Y'  FO downstream after indcpa_dec                     0      ON       32  B  hash sanity only
 //
 //  Attack-valid claims must be trace-only. 'X', 'T', 'U', 'V', 'W', 'R', 'Q',
 //  and 'Z'
@@ -86,6 +88,21 @@ extern void indcpa_dec_namespaced(uint8_t delta[DELTA_BYTES],
 // 호출한다. 심볼 이름은 lib/crypto_kem/smaug{1,3,5}.a 의 fips202.c.o 에서
 // `T sha3_256` 으로 잡힘.
 extern void sha3_256(uint8_t *output, const uint8_t *input, size_t inputByteLen);
+
+#define shake256_absorb_twice_squeeze_namespaced \
+    SMAUG_NAMESPACE(shake256_absorb_twice_squeeze)
+extern void shake256_absorb_twice_squeeze_namespaced(uint8_t *out,
+                                                     size_t out_bytes,
+                                                     const uint8_t *in1,
+                                                     size_t in1_bytes,
+                                                     const uint8_t *in2,
+                                                     size_t in2_bytes);
+
+#define verify_namespaced SMAUG_NAMESPACE(verify)
+extern int verify_namespaced(const uint8_t *a, const uint8_t *b, size_t len);
+
+#define cmov_namespaced SMAUG_NAMESPACE(cmov)
+extern void cmov_namespaced(uint8_t *r, const uint8_t *x, size_t len, uint8_t b);
 
 // Phase F — isolated poly_mul_acc (Toom-Cook 4-way + Karatsuba) + sub-trigger.
 // 'T' 명령에서 host 가 sparse host_b 다항식 (한 위치만 nonzero) 을 보내고
@@ -187,6 +204,12 @@ static uint8_t fp_buf[32];                          // sha3_256 응답용 임시
 // 페이로드는 그 안. SS_VER_1_1 콜백 시그니처는 (uint8_t*, uint8_t) 이며
 // len 은 simpleserial_addcmd 에 등록된 고정값.
 #define INJECT_PAYLOAD_LEN  (1u + CHUNK_BYTES)  /* idx + data */
+#define PKDUMP_PAYLOAD_LEN  1u
+#define PKDUMP_CHUNK_BYTES  32u
+#define PKDUMP_CHUNK_COUNT  (CRYPTO_PUBLICKEYBYTES / PKDUMP_CHUNK_BYTES)
+#if CRYPTO_PUBLICKEYBYTES % PKDUMP_CHUNK_BYTES
+#error "CRYPTO_PUBLICKEYBYTES must be divisible by PKDUMP_CHUNK_BYTES (32)"
+#endif
 // 'M' 명령 페이로드 = μ (32B) 만. seed 는 펌웨어에서 zero-fixed.
 // SS_VER_1_1 의 simpleserial_addcmd 는 `if (len >= MAX_SS_LEN=64) reject`
 // 라 정확히 64B 페이로드도 거부 (실측). 따라서 μ + seed = 64 안 됨.
@@ -264,6 +287,26 @@ static uint8_t cmd_keygen_persistent(uint8_t *buf, uint8_t len)
     memset(ss_enc, 0, sizeof(ss_enc));
     sha3_256(fp_buf, pk, sizeof(pk));
     simpleserial_put('r', 16, fp_buf);
+    return 0x00;
+}
+
+// 'B' : public key chunk dump. pk is public and needed by host-side labels for
+//       FO downstream diagnostics, e.g. H(pk) in G(mu', H(pk)).
+static uint8_t cmd_dump_pk_chunk(uint8_t *buf, uint8_t len)
+{
+    if (len != PKDUMP_PAYLOAD_LEN) {
+        uint8_t status = 2;
+        simpleserial_put('r', 1, &status);
+        return 0x00;
+    }
+    uint8_t idx = buf[0];
+    if (idx >= PKDUMP_CHUNK_COUNT) {
+        uint8_t status = 1;
+        simpleserial_put('r', 1, &status);
+        return 0x00;
+    }
+    simpleserial_put('r', PKDUMP_CHUNK_BYTES,
+                     &pk[(unsigned)idx * PKDUMP_CHUNK_BYTES]);
     return 0x00;
 }
 
@@ -718,6 +761,59 @@ static uint8_t cmd_vec_mult_round_pack_replay(uint8_t *buf, uint8_t len)
     return 0x00;
 }
 
+/* 'Y' : FO downstream diagnostic after indcpa_dec.
+ *
+ *       Trigger OFF:
+ *         mu' = indcpa_dec(sk, ct_inj)
+ *
+ *       Trigger ON:
+ *         H(pk)
+ *         kr = G(mu', H(pk))
+ *         ct' = indcpa_enc(pk, mu'; seed = kr[0..31])
+ *         fail = verify(ct_inj, ct')
+ *         alt = G(z, H(ct_inj)) using the same sk offset observed in
+ *               crypto_kem_dec disassembly for smaug1
+ *         cmov(kr[32..63], alt[32..63], fail)
+ *
+ *       Response = sha3_256(kr[32..63]) sanity only. It is secret-dependent and
+ *       diagnostic; attack-valid analyses must not use this response.
+ */
+static uint8_t y_mu_prime[DELTA_BYTES];
+static uint8_t y_pk_hash[32];
+static uint8_t y_kr[64];
+static uint8_t y_alt[64];
+static uint8_t y_ct_cmp[CRYPTO_CIPHERTEXTBYTES];
+
+static uint8_t cmd_fo_downstream_replay(uint8_t *buf, uint8_t len)
+{
+    (void)len; (void)buf;
+
+    indcpa_dec_namespaced(y_mu_prime, sk, ct_inj);
+
+    trigger_high();
+    sha3_256(y_pk_hash, pk, sizeof(pk));
+    shake256_absorb_twice_squeeze_namespaced(
+        y_kr, sizeof(y_kr),
+        y_mu_prime, sizeof(y_mu_prime),
+        y_pk_hash, sizeof(y_pk_hash));
+
+    memset(y_ct_cmp, 0, sizeof(y_ct_cmp));
+    indcpa_enc_namespaced(y_ct_cmp, pk, y_mu_prime, y_kr);
+    uint8_t fail = (uint8_t)verify_namespaced(ct_inj, y_ct_cmp, sizeof(y_ct_cmp));
+
+    sha3_256(y_pk_hash, ct_inj, sizeof(ct_inj));
+    shake256_absorb_twice_squeeze_namespaced(
+        y_alt, sizeof(y_alt),
+        &sk[PKE_SECRETKEY_BYTES + 4u], 32,
+        y_pk_hash, sizeof(y_pk_hash));
+    cmov_namespaced(&y_kr[32], &y_alt[32], 32, fail);
+    trigger_low();
+
+    sha3_256(fp_buf, &y_kr[32], 32);
+    simpleserial_put('r', 32, fp_buf);
+    return 0x00;
+}
+
 int main(void)
 {
     platform_init();
@@ -732,6 +828,7 @@ int main(void)
     simpleserial_addcmd('p', 0, cmd_pipeline);
     // (B) chosen-CT/session plumbing
     simpleserial_addcmd('F', 0,                   cmd_keygen_persistent);
+    simpleserial_addcmd('B', PKDUMP_PAYLOAD_LEN,  cmd_dump_pk_chunk);
     simpleserial_addcmd('I', INJECT_PAYLOAD_LEN,  cmd_inject);
     simpleserial_addcmd('L', 0,                   cmd_load_done);
     simpleserial_addcmd('D', 0,                   cmd_decap_inject);
@@ -755,6 +852,7 @@ int main(void)
                         cmd_component_poly_mul);
     simpleserial_addcmd('R', 0,                   cmd_round_pack_replay);
     simpleserial_addcmd('Q', 0,                   cmd_vec_mult_round_pack_replay);
+    simpleserial_addcmd('Y', 0,                   cmd_fo_downstream_replay);
 
     while (1) {
         simpleserial_get();

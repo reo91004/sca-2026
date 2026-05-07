@@ -19,6 +19,7 @@ observations. Profiling labels are allowed only for training keys.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -83,6 +84,12 @@ MU_LABEL_KINDS = (
     "mu_bit",
 )
 
+FO_LABEL_KINDS = (
+    "fo_kr0_byte_hw",
+    "fo_kr1_byte_hw",
+    "fo_kr64_byte_hw",
+)
+
 LABEL_KINDS = (
     "support4",
     "sum4",
@@ -103,7 +110,7 @@ LABEL_KINDS = (
     "toom7_mul16_hw",
     "toom7_mul4_hw",
     "toom7_conv16_hw",
-) + TOOM_POINT_LABEL_KINDS + VECADD_LABEL_KINDS + MU_LABEL_KINDS
+) + TOOM_POINT_LABEL_KINDS + VECADD_LABEL_KINDS + MU_LABEL_KINDS + FO_LABEL_KINDS
 
 _HW16 = np.fromiter((i.bit_count() for i in range(1 << 16)), dtype=np.uint8, count=1 << 16)
 _LABEL_CACHE: dict[tuple[int, str], np.ndarray] = {}
@@ -128,6 +135,7 @@ class Dataset:
     design_terms: list[list[tuple[int, int]]]
     design_c2: list[int]
     pkfps: list[str]
+    pks: tuple[bytes, ...] = ()
 
 
 def parse_args() -> argparse.Namespace:
@@ -213,6 +221,7 @@ def load_dataset(paths: list[Path], component: int) -> Dataset:
     traces = []
     sks = []
     pkfps = []
+    pks = []
     terms_ref: list[list[tuple[int, int]]] | None = None
     c2_ref: list[int] | None = None
     seen = set()
@@ -231,6 +240,7 @@ def load_dataset(paths: list[Path], component: int) -> Dataset:
             or (capture_kind == "matrix" and cmd == "W")
             or (capture_kind == "matrix" and cmd == "R")
             or (capture_kind == "matrix" and cmd == "Q")
+            or (capture_kind == "matrix" and cmd == "Y")
             or (capture_kind == "u_matrix" and cmd == "U")
         ):
             continue
@@ -265,6 +275,8 @@ def load_dataset(paths: list[Path], component: int) -> Dataset:
         traces.append(x)
         sks.append(full[lo:hi])
         pkfps.append(pk)
+        pk_hex = meta.get("pk_hex")
+        pks.append(bytes.fromhex(pk_hex) if isinstance(pk_hex, str) and pk_hex else b"")
         seen.add(pk)
     if not traces or terms_ref is None or c2_ref is None:
         raise ValueError("no usable matrix captures")
@@ -278,6 +290,7 @@ def load_dataset(paths: list[Path], component: int) -> Dataset:
         design_terms=terms_ref[:min_d],
         design_c2=c2_ref[:min_d],
         pkfps=pkfps,
+        pks=tuple(pks),
     )
 
 
@@ -620,6 +633,43 @@ def label_from_mu_bits(
     raise ValueError(f"unknown mu label kind {kind}")
 
 
+def pack_mu_label_bits(bits: np.ndarray) -> bytes:
+    out = bytearray(32)
+    for i, bit in enumerate(np.asarray(bits, dtype=np.int8).reshape(-1)):
+        if int(bit):
+            out[i // 8] |= 1 << (i % 8)
+    return bytes(out)
+
+
+def fo_kr_from_mu_pk(mu_bytes: bytes, pk: bytes) -> bytes:
+    if len(mu_bytes) != 32:
+        raise ValueError(f"mu_bytes len={len(mu_bytes)} != 32")
+    if len(pk) != SMAUG1.public_key_bytes:
+        raise ValueError(f"pk len={len(pk)} != {SMAUG1.public_key_bytes}")
+    pk_hash = hashlib.sha3_256(pk).digest()
+    return hashlib.shake_256(mu_bytes + pk_hash).digest(64)
+
+
+def label_from_fo_downstream(
+    sk: np.ndarray,
+    terms: list[tuple[int, int]],
+    c2_const: int,
+    pk: bytes,
+    kind: str,
+) -> np.ndarray:
+    bits = mu_bits_from_component_state(sk, terms, c2_const)
+    kr = fo_kr_from_mu_pk(pack_mu_label_bits(bits), pk)
+    if kind == "fo_kr0_byte_hw":
+        data = kr[:32]
+    elif kind == "fo_kr1_byte_hw":
+        data = kr[32:]
+    elif kind == "fo_kr64_byte_hw":
+        data = kr
+    else:
+        raise ValueError(f"unknown FO label kind {kind}")
+    return np.fromiter((int(x).bit_count() for x in data), dtype=np.float64, count=len(data))
+
+
 def make_labels(ds: Dataset, kind: str) -> np.ndarray:
     labels = []
     for key_i in range(ds.sks.shape[0]):
@@ -642,6 +692,18 @@ def make_labels(ds: Dataset, kind: str) -> np.ndarray:
                         ds.sks[key_i],
                         terms,
                         ds.design_c2[design_i],
+                        kind,
+                    )
+                )
+            elif kind.startswith("fo_"):
+                if not ds.pks or not ds.pks[key_i]:
+                    raise ValueError(f"{kind} requires pk_hex metadata in captures")
+                per_design.append(
+                    label_from_fo_downstream(
+                        ds.sks[key_i],
+                        terms,
+                        ds.design_c2[design_i],
+                        ds.pks[key_i],
                         kind,
                     )
                 )
@@ -890,6 +952,7 @@ def main() -> int:
             design_terms=ds.design_terms[lo:hi],
             design_c2=ds.design_c2[lo:hi],
             pkfps=ds.pkfps,
+            pks=ds.pks,
         )
     if args.max_traces is not None:
         if not (1 <= args.max_traces <= ds.traces.shape[2]):
@@ -900,6 +963,7 @@ def main() -> int:
             design_terms=ds.design_terms,
             design_c2=ds.design_c2,
             pkfps=ds.pkfps,
+            pks=ds.pks,
         )
     sample_lo, sample_hi = parse_sample_range(args.sample_range, ds.traces.shape[-1])
     if sample_lo != 0 or sample_hi != ds.traces.shape[-1]:
@@ -909,6 +973,7 @@ def main() -> int:
             design_terms=ds.design_terms,
             design_c2=ds.design_c2,
             pkfps=ds.pkfps,
+            pks=ds.pks,
         )
     if ds.traces.shape[0] < 4:
         print(f"[FAIL] need at least 4 keys, got {ds.traces.shape[0]}")

@@ -13,6 +13,8 @@ if str(_REPO) not in sys.path:
 
 from host.smaug import chosen, params  # noqa: E402
 from scripts.s2_z_lowdim_analyze import label_from_mu_bits  # noqa: E402
+from scripts.s2_z_lowdim_analyze import label_from_fo_downstream  # noqa: E402
+from scripts.s4_c2_pair_analyze import PairDataset, labels_for_pair  # noqa: E402
 
 
 def test_mu_zero_is_all_zero_ct() -> None:
@@ -139,6 +141,40 @@ def test_mu_label_matches_full_predictor_for_component_design() -> None:
         label_from_mu_bits(sk[0], terms, c2_alpha, "mu_block16_hw"),
         bits.reshape(16, 16).sum(axis=1),
     )
+
+
+def test_c2_pair_flip_labels_are_xor_of_mu_bits() -> None:
+    p = params.SMAUG1
+    sk = _random_ternary_sk(p, seed=0xC2D1)
+    terms = [(0, 128)]
+    base_c2 = 0
+    delta_c2 = 1
+    b0 = label_from_mu_bits(sk[0], terms, base_c2, "mu_bit").astype(np.int8)
+    b1 = label_from_mu_bits(sk[0], terms, delta_c2, "mu_bit").astype(np.int8)
+    flip = np.bitwise_xor(b0, b1).reshape(32, 8).sum(axis=1)
+
+    pds = PairDataset(
+        xmean=np.zeros((1, 1, 2), dtype=np.float64),
+        xvar=np.ones((1, 1, 2), dtype=np.float64),
+        counts=np.ones((1, 1), dtype=np.float64),
+        sks=sk[0][None, :],
+        base_terms=[terms],
+        base_c2=[base_c2],
+        delta_c2=[delta_c2],
+        pair_indices=[(0, 1)],
+        pkfps=["test"],
+    )
+    assert np.array_equal(labels_for_pair(pds, "flip_byte_hw")[0, 0], flip)
+
+
+def test_fo_downstream_labels_are_byte_hw_vectors() -> None:
+    p = params.SMAUG1
+    sk = _random_ternary_sk(p, seed=0xF0)
+    pk = bytes((i * 17 + 3) & 0xFF for i in range(p.public_key_bytes))
+    terms = [(0, 128)]
+    assert label_from_fo_downstream(sk[0], terms, 15, pk, "fo_kr0_byte_hw").shape == (32,)
+    assert label_from_fo_downstream(sk[0], terms, 15, pk, "fo_kr1_byte_hw").shape == (32,)
+    assert label_from_fo_downstream(sk[0], terms, 15, pk, "fo_kr64_byte_hw").shape == (64,)
 
 
 def test_predict_mu_prime_monomial_matches_partition_predict() -> None:

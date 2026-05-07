@@ -971,3 +971,38 @@ trace-only improvement over the current S2 null-level coordinate recovery.
   round/pack traces predict latent `mu'` byte/block Hamming weight with
   held-out keys and permutation nulls, while natural `Z` transfer remains an
   open/negative checkpoint.
+- Branch C2 (`c2` paired threshold tomography) is documented in
+  `docs/c2_threshold_pairs.md`. It tests same-`c1`, different-`c2` pairs to
+  cancel multiplication common mode. The naive `0 -> 1` pair is label-degenerate;
+  the corrected `15 -> 16` pair creates secret-dependent `mu'` flips, but
+  natural `Z` remains null-level even after paired window scanning. Diagnostic
+  `R` shows a weak signed `mu_delta_byte_hw` result, and diagnostic `Q` shows
+  only a sub-gate localized hint. The branch currently strengthens the
+  diagnostic-to-natural transfer-failure story rather than producing an
+  attack-valid oracle.
+- Branch Y (FO downstream replay) is documented in
+  `docs/fo_downstream.md`. It moves the trigger after `indcpa_dec` and tests
+  whether `mu' -> G(mu', H(pk)) -> seed' -> re-encryption -> verify/cmov`
+  amplifies latent `mu'` into a stronger trace label. A 6-key scout completed
+  cleanly with `24 designs x 10 traces`. Full-window analysis found the best
+  label at `fo_kr1_byte_hw`, but only exact z `+1.52`, rounded-MAE z `+1.52`,
+  corr z `+0.55`. A localized window scan also stayed below gate, with the best
+  confirmed corr z around `+1.21`. This branch is diagnostic only and currently
+  does not produce an attack-valid oracle.
+- S5 trace-count scaling is documented in `docs/s5_trace_scaling.md`. It asks
+  whether the failed transfer branches are merely trace-limited. The diagnostic
+  `R` positive control passes even at `N=2` (`mu_byte_hw`, rMAE/corr z
+  `+5.61/+4.29`), proving the audit can see real leakage. Natural `Z` remains
+  sub-gate through `N=10`, `Q` bridge remains negative through `N=20`, and `Y`
+  FO downstream shows a non-monotonic bump that does not persist. The only
+  coherent scaling hint is diagnostic `C2-Q` `mu_delta_byte_hw` at `N=10`
+  (rMAE/corr z `+2.30/+2.21`), but the same pair in natural `Z` is null-level.
+  Current evidence therefore favors label/window/model mismatch over a simple
+  lack of trace averaging.
+- S5.6 followed up the diagnostic `C2-Q` hint with an independent `N=20`
+  recapture (`6 keys x 24 designs x 20 traces`, all `20/20`). The old best
+  window `9216:13192` did not reproduce (`N=20` rMAE/corr z `+0.94/+0.81`).
+  A fresh window scan found `7680:11656` as the best new diagnostic window; a
+  p1000 confirmation gave rMAE/corr z `+2.62/+1.76`. This is the strongest
+  remaining localization hint, but it is still below the `+3/+3` gate and has
+  no natural `Z` transfer, so it is not an attack-valid oracle.
