@@ -209,6 +209,11 @@ in the current aggregate, later key-recovery experiments should preserve
 channel-specific evidence rather than collapsing everything into one fused
 score too early.
 
+For downstream recovery-pressure experiments, export top-100 candidate
+residues per channel from `candidate_export.npz` instead of re-reading the
+large traces.  This keeps the paper workflow reproducible while avoiding
+additional large artifacts.
+
 **Top-recovery cases (M1 baseline)**:
 1. **lane=104 slot=0 f=2563 (|f_c|=894) rk=2** ★ — near-TOP-1, large-|f_c|
    on M1 channel

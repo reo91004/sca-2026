@@ -87,6 +87,13 @@
   - |f_c| bin 기준 hits 는 large 쪽도 많다: M1 은 `>=768` 5/9, M5 는 `>=768` 5/12.
     초기 small-|f_c| 중심 가설은 Phase 4 multi-key 결과에는 맞지만, single-victim
     lane 확장에서는 large-|f_c| 후보 pool 도 별도로 살려야 한다.
+- **Candidate export** (`scripts/n52_phase45_candidate_export.py`)
+  - output: `results/ntruplus768/phase45/candidate_export.{md,npz}`
+  - 352 rows × 5 channels 에 대해 top-100 candidate residues 를 저장.
+  - true top-100 rows 의 Markdown hit-list 도 생성. 예: victim 235e27a0 lane=104
+    slot=0 true f=2563 는 M1 rank 2, top5 candidates `3213,475,2563,2061,2349`.
+  - 다음 sparse/candidate-set recovery 는 rank summary 가 아니라 이 candidate
+    export 를 입력으로 쓰는 것이 좋다.
 - M1 baseline top-100 hits 추가:
   - victim 3 lane=24 slot=0 f=1215 |f_c|=1215 rk=15
   - victim 3 lane=76 slot=1 f=1169 |f_c|=1169 rk=23
@@ -106,6 +113,8 @@
 - 다음 모델링은 `Zsum` 하나로 합치는 방향보다, M1/M5/slot/full score 를 별도
   likelihood 로 보존하고 sparse/lattice 후단에서 candidate-set evidence 로
   결합하는 쪽이 더 자연스럽다.
+- `candidate_export.npz` 가 이 후단 결합용 최소 산출물이다. 대용량 trace 를
+  다시 읽지 않고 top-k 후보 기반 recovery pressure 를 실험할 수 있다.
 - Phase 4 의 2 TOP-1 / 17 top-100 multi-victim 결과는 여전히 paper-grade 핵심.
   Phase 4.5/4.6 은 “한 victim 안에서 lane coverage 를 늘리면 partial
   NTT-coordinate disclosure 가 누적된다”는 보조/확장 claim 으로 두는 것이

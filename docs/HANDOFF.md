@@ -36,6 +36,9 @@ NTT 좌표 회수 입증.
 - all-channel hit-list 기준 top-100 union 은 37/352 이다. M1/M5/Full baseline
   top-100 overlap 이 거의 없으므로, 다음 단계는 단일 `Zsum` 점수 강화보다
   channel별 candidate evidence 를 보존한 후단 결합이 유망하다.
+- `scripts/n52_phase45_candidate_export.py` 로 352 rows × 5 channels 의 top-100
+  candidate residues 를 `results/ntruplus768/phase45/candidate_export.npz` 에
+  저장했다. 다음 recovery-pressure 실험은 trace 재로딩 없이 이 파일에서 시작.
 
 ## 2. 관련 파일
 
@@ -232,6 +235,7 @@ linear interp 가 +3 coords/96 cases 회수.
 - latest summary: `results/ntruplus768/phase45/SUMMARY.md`
 - overlap/projection: `results/ntruplus768/phase45/overlap_projection.md`
 - channel hit-list: `results/ntruplus768/phase45/channel_hitlist.md`
+- candidate export: `results/ntruplus768/phase45/candidate_export.{md,npz}`
 
 ### 4.2 Pending (Phase 5/6, design 단계)
 
