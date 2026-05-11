@@ -94,6 +94,14 @@
     slot=0 true f=2563 는 M1 rank 2, top5 candidates `3213,475,2563,2061,2349`.
   - 다음 sparse/candidate-set recovery 는 rank summary 가 아니라 이 candidate
     export 를 입력으로 쓰는 것이 좋다.
+- **Candidate pressure curve** (`scripts/n53_phase45_candidate_pressure.py`)
+  - output: `results/ntruplus768/phase45/candidate_pressure.{md,npz}`
+  - single-channel top-10 은 M1 1/352, M5 1/352, Full 1/352 수준.
+  - all-channel union: top-5 2/352, top-10 4/352, top-20 5/352, top-50 18/352,
+    top-100 37/352.
+  - all-channel union 의 평균 후보집합 크기: top-10 set 41.2, top-100 set 371.2.
+    따라서 현재 결과는 direct recovery 라기보다 후보집합 제약이며,
+    후단 consistency/prior 없이는 full key recovery 로 이어지지 않는다.
 - M1 baseline top-100 hits 추가:
   - victim 3 lane=24 slot=0 f=1215 |f_c|=1215 rk=15
   - victim 3 lane=76 slot=1 f=1169 |f_c|=1169 rk=23
@@ -115,6 +123,9 @@
   결합하는 쪽이 더 자연스럽다.
 - `candidate_export.npz` 가 이 후단 결합용 최소 산출물이다. 대용량 trace 를
   다시 읽지 않고 top-k 후보 기반 recovery pressure 를 실험할 수 있다.
+- `candidate_pressure.md` 기준 top-10 압력은 매우 약하므로 다음 실험은
+  (1) G 확장으로 null ceiling 낮추기, 또는 (2) 후보집합 prior/consistency 결합
+  중 하나여야 한다.
 - Phase 4 의 2 TOP-1 / 17 top-100 multi-victim 결과는 여전히 paper-grade 핵심.
   Phase 4.5/4.6 은 “한 victim 안에서 lane coverage 를 늘리면 partial
   NTT-coordinate disclosure 가 누적된다”는 보조/확장 claim 으로 두는 것이
