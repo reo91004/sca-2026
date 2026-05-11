@@ -14,7 +14,9 @@ Current NTRU+ conclusion, as of 2026-05-11:
 - Phase 4.5/4.6 single-victim multi-lane data is now **3 victims, 88 lanes,
   352 cases**.  The aggregate top-100 counts are M1 baseline `9/352`, M5
   baseline `12/352`, full stack `8/352`, and M1/M5/full union `29/352`
-  (channel-mixed upper bound).
+  (channel-mixed upper bound), but candidate-set-size null analysis shows the
+  single-victim raw top-100 counts are not statistically meaningful recovery
+  evidence.
 - This is best stated as **partial NTT-coordinate information disclosure**, not
   full secret-key recovery.  Current lattice/full-key recovery remains
   infeasible under the measured recovery rate.

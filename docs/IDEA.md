@@ -102,6 +102,16 @@
   - all-channel union 의 평균 후보집합 크기: top-10 set 41.2, top-100 set 371.2.
     따라서 현재 결과는 direct recovery 라기보다 후보집합 제약이며,
     후단 consistency/prior 없이는 full key recovery 로 이어지지 않는다.
+- **Candidate-set null significance** (`scripts/n54_phase45_candidate_null.py`)
+  - output: `results/ntruplus768/phase45/candidate_null.{md,npz}`
+  - single-channel top-100 은 null 과 구분되지 않음:
+    M1 obs 9 vs exp 10.19 (z=-0.38), M5 obs 12 vs exp 10.19 (z=0.58),
+    Full obs 8 vs exp 10.19 (z=-0.69).
+  - all-channel union top-100 도 obs 37 vs exp 37.80 (z=-0.14).
+  - 결론: Phase 4.5/4.6 raw top-100 candidate-set counts 는 paper-grade
+    recovery evidence 가 아니다. Phase 4 의 TOP-1/top-rank 및 mechanistic
+    leakage 가 main positive evidence 이고, Phase 4.5/4.6 은 후단 artifact 와
+    variance/negative evidence 로 정리한다.
 - M1 baseline top-100 hits 추가:
   - victim 3 lane=24 slot=0 f=1215 |f_c|=1215 rk=15
   - victim 3 lane=76 slot=1 f=1169 |f_c|=1169 rk=23
@@ -115,9 +125,9 @@
   192-lane extrapolation 시 약 **20 coords/victim** 이다. M5 baseline 은
   `12/88 = 0.136`, 약 **26 coords/victim** 이다. Full stack 은 현재
   `8/88 = 0.091`, 약 **17 coords/victim** 으로 M1/M5 개별 baseline보다 낮다.
-- 여러 channel 을 union 하면 top-100 upper bound 는 최대 약 **63 coords/victim**
-  까지 올라가지만, 이는 pipeline 하나의 공격 성능이 아니라 정보 누출 후보 pool
-  크기다. 논문에서는 single-pipeline 수치와 union upper bound 를 분리해서 쓴다.
+- 여러 channel 을 union 하면 raw top-100 upper bound 는 최대 약 **63 coords/victim**
+  까지 올라가지만, candidate-set null 과 구분되지 않는다. 논문에서는 이를
+  회수율이 아니라 negative/diagnostic result 로 분리해서 쓴다.
 - 다음 모델링은 `Zsum` 하나로 합치는 방향보다, M1/M5/slot/full score 를 별도
   likelihood 로 보존하고 sparse/lattice 후단에서 candidate-set evidence 로
   결합하는 쪽이 더 자연스럽다.
@@ -126,6 +136,9 @@
 - `candidate_pressure.md` 기준 top-10 압력은 매우 약하므로 다음 실험은
   (1) G 확장으로 null ceiling 낮추기, 또는 (2) 후보집합 prior/consistency 결합
   중 하나여야 한다.
+- `candidate_null.md` 기준으로는 (2)만으로는 부족할 가능성이 크다. 먼저 G 확장
+  또는 model sharpness 개선으로 true rank distribution 자체를 null 밖으로
+  밀어내야 한다.
 - Phase 4 의 2 TOP-1 / 17 top-100 multi-victim 결과는 여전히 paper-grade 핵심.
   Phase 4.5/4.6 은 “한 victim 안에서 lane coverage 를 늘리면 partial
   NTT-coordinate disclosure 가 누적된다”는 보조/확장 claim 으로 두는 것이

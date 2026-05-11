@@ -214,11 +214,14 @@ residues per channel from `candidate_export.npz` instead of re-reading the
 large traces.  This keeps the paper workflow reproducible while avoiding
 additional large artifacts.
 
-The top-k pressure curve confirms that the current single-victim data is not
-yet a direct-recovery result: all-channel union gives 4/352 at top-10 and
-37/352 at top-100, with average all-channel candidate-set sizes of 41.2 and
-371.2 respectively.  This should be framed as candidate-set leakage requiring
-additional consistency/prior information.
+The top-k pressure and null checks confirm that the current single-victim data
+is not yet a direct-recovery result: all-channel union gives 4/352 at top-10
+and 37/352 at top-100, with average all-channel candidate-set sizes of 41.2
+and 371.2 respectively.  Under the actual set-size null, all-channel top-100
+has expected 37.80 hits (z=-0.14).  This should be framed as a negative /
+diagnostic result for single-victim candidate-set recovery, while the paper's
+positive recovery evidence remains the Phase 4 multi-victim TOP-1/top-rank
+cases and mechanistic leakage analysis.
 
 **Top-recovery cases (M1 baseline)**:
 1. **lane=104 slot=0 f=2563 (|f_c|=894) rk=2** ★ — near-TOP-1, large-|f_c|

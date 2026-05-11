@@ -43,6 +43,12 @@ NTT 좌표 회수 입증.
   4/352, top-50 18/352, top-100 37/352. 평균 all-channel candidate set size 는
   top-10 에서 41.2, top-100 에서 371.2 이므로 현재는 direct recovery 보다
   candidate-set constraint 로 해석해야 한다.
+- `scripts/n54_phase45_candidate_null.py` 로 candidate-set size 를 반영한
+  uniform-rank null 을 계산했다. all-channel top-100 은 observed 37/352,
+  null expected 37.80, z=-0.14. 즉 Phase 4.5/4.6 raw top-100 candidate-set
+  counts 는 유의하지 않다. Single-victim section 은 leakage/candidate-export
+  artifact 로 두고, paper-grade positive claim 은 Phase 4 의 TOP-1/top-rank
+  cases 와 mechanistic leakage 에 둔다.
 
 ## 2. 관련 파일
 
@@ -232,6 +238,10 @@ linear interp 가 +3 coords/96 cases 회수.
 - `scripts/n50_phase45_overlap_projection.py` 로 union/overlap 을 재계산했다.
   M1 ∪ M5 ∪ Full top-100 은 29/352 이고 192-lane projection 은 약 63
   coords/victim 이지만, channel-mixed information-pool upper bound 로만 취급한다.
+- `candidate_null.md` 반영 후 더 강한 정정: raw top-100 candidate-set counts 는
+  set-size null 과 구분되지 않는다. Phase 4.5/4.6 은 단일 victim trace 에서
+  channel-specific score/candidate artifacts 를 만들 수 있음을 보여주는
+  engineering result 로 쓰고, recovery claim 으로는 격하한다.
 
 **관련 산출물**:
 - trace: `traces/ntruplus768/phase45/wide_K1_L48_N8.npz`
@@ -241,6 +251,7 @@ linear interp 가 +3 coords/96 cases 회수.
 - channel hit-list: `results/ntruplus768/phase45/channel_hitlist.md`
 - candidate export: `results/ntruplus768/phase45/candidate_export.{md,npz}`
 - candidate pressure: `results/ntruplus768/phase45/candidate_pressure.md`
+- candidate null: `results/ntruplus768/phase45/candidate_null.md`
 
 ### 4.2 Pending (Phase 5/6, design 단계)
 
@@ -266,9 +277,10 @@ linear interp 가 +3 coords/96 cases 회수.
 
 현재 Phase 4 multi-victim 은 240 cases 중 17 unique top-100, Phase 4.5/4.6
 single-victim aggregate 는 352 cases 중 M1 9 / M5 12 / full-stack 8 top-100.
-192-lane single-victim projection 은 약 17-26 top-100 NTT 좌표 / victim 이며,
-이는 sparse {-1,0,+1} f_coeff recovery 에 부족하다. **현 setup 으로 full sk
-recovery 불가**. 가능 솔루션:
+192-lane single-victim projection 은 raw top-100 count 기준 약 17-26 좌표 /
+victim 이지만, candidate-set-size null 에서는 유의하지 않다. 따라서 현재
+single-victim aggregate 는 sparse {-1,0,+1} f_coeff recovery 에 쓰기 부족하다.
+**현 setup 으로 full sk recovery 불가**. 가능 솔루션:
 
 1. **G 확장 + 더 많은 lanes** → 100+ 좌표 per key 가능, lattice attack
    feasible 가능성 검토 필요.
