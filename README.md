@@ -23,7 +23,7 @@ Current NTRU+ conclusion, as of 2026-05-11:
   simple G expansion as a negative scout, not a new positive result.  Follow-up
   PoI/window diagnostics showed that apparent oracle-PoI gains are explained by
   self-oracle selection bias, while attack-compatible PoI choices stay at
-  `0/16`-`1/16` top-100.
+  `0/16`-`1/16` top-100.  Window reducer sweeps also stayed at `0/16` top-10.
 - This is best stated as **partial NTT-coordinate information disclosure**, not
   full secret-key recovery.  Current lattice/full-key recovery remains
   infeasible under the measured recovery rate.

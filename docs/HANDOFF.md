@@ -59,7 +59,9 @@ NTT 좌표 회수 입증.
   완료했다. Secret-referenced oracle PoI 는 W=96 에서 M1/M5 모두 16/16
   top-100 처럼 보였지만, self-oracle null 에서도 candidate 의 97-99% 가
   top-100 이 되어 selection bias 로 판정. Attack-compatible `predict`/slot/
-  γ-variance empirical PoI 는 회수 개선을 만들지 못했다.
+  γ-variance empirical PoI 는 회수 개선을 만들지 못했다. Window reducer sweep
+  (`scripts/n58_*`) 도 mean/top-k/softmax/max 모두 top-10 0/16, 최선 top-100
+  1/16 에 그쳐 negative.
 
 ## 2. 관련 파일
 
@@ -112,6 +114,7 @@ NTT 좌표 회수 입증.
 | n55_phase46_g200_capture.py | G=200 compact calibrated-lane scout capture |
 | n56_phase46_g200_poi_diagnose.py | G200 PoI/window diagnostic (`pred`/slot/emp/winmax/oracle) |
 | n57_phase46_g200_oracle_null.py | G200 self-oracle selection-bias null |
+| n58_phase46_g200_window_reducers.py | G200 attack-compatible window reducer sweep |
 
 ### 2.3 결과 파일 (results/ntruplus768/phase4/)
 
@@ -311,6 +314,8 @@ slot=0 f=844 rk=87; full-stack best rk=286.
   - outputs: `results/ntruplus768/phase46/g200_poi_diag_w{16,32,64,96}.{npz,md}`
 - Oracle-selection null: `scripts/n57_phase46_g200_oracle_null.py`
   - outputs: `results/ntruplus768/phase46/g200_oracle_null_w{16,32,96}.{npz,md}`
+- Window reducer sweep: `scripts/n58_phase46_g200_window_reducers.py`
+  - output: `results/ntruplus768/phase46/g200_window_reducers.{npz,md}`
 
 **핵심 결과**:
 - Attack-compatible PoI choices:
@@ -327,11 +332,17 @@ slot=0 f=844 rk=87; full-stack best rk=286.
   - W=96: null candidate top-100 97-99%.
   - true candidate median self-null p-values are not compelling
     (W=96: M1 0.547, M5 0.685).
+- Attack-compatible reducer sweep:
+  - mean/top-k/softmax/max over W=16/32/64/96.
+  - all top-10 are 0/16.
+  - best top-100 is only 1/16 (M1 mean W=16, rank 75), not better than
+    fixed-PoI M5 baseline 1/16.
 
 **해석**:
 - Oracle PoI gain 은 leakage proof 가 아니라 sample-selection bias 로 설명된다.
 - 현재 G200 compact trace 에서는 sk-independent PoI refinement 로 score sharpness
   가 회복되지 않는다.
+- Candidate-independent window aggregation 도 현재 trace 를 rescue 하지 못한다.
 - 다음 capture 는 보류. 후속 실험은 independent PoI selector 또는 window
   marginalization 에 selection penalty 를 넣은 likelihood model 이 있어야 한다.
 

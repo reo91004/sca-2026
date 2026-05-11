@@ -56,6 +56,11 @@
   - windows: ±16, ±32, ±96.
   - outputs:
     `results/ntruplus768/phase46/g200_oracle_null_w{16,32,96}.{npz,md}`
+- Attack-compatible window reducer sweep:
+  - script: `scripts/n58_phase46_g200_window_reducers.py`
+  - reducers: mean, top3, top5, top9, soft5, soft10, max.
+  - models: M1, M5, Full (`z(M1)+z(M5)`).
+  - output: `results/ntruplus768/phase46/g200_window_reducers.{npz,md}`
 
 결과 (수치)
 - Attack-compatible PoI choices do not recover:
@@ -98,6 +103,17 @@
   | ±32 | 2660-2770 / 3456 (77-80%) | 14/16 | 15/16 | M1 0.384, M5 0.570 |
   | ±96 | 3352-3412 / 3456 (97-99%) | 16/16 | 16/16 | M1 0.547, M5 0.685 |
 
+- Attack-compatible window reducer sweep is also negative:
+
+  | best reducer/model | W | top-1 | top-10 | top-100 | best rank |
+  |---|---:|---:|---:|---:|---:|
+  | M1 mean | ±16 | 0/16 | 0/16 | 1/16 | 75 |
+  | M5 mean | ±96 | 0/16 | 0/16 | 0/16 | 143 |
+  | Full mean | ±32 | 0/16 | 0/16 | 0/16 | 210 |
+  | M1 soft5 | ±16 | 0/16 | 0/16 | 0/16 | 104 |
+  | M5 max | ±64 | 0/16 | 0/16 | 0/16 | 239 |
+  | Full top9 | ±96 | 0/16 | 0/16 | 0/16 | 277 |
+
 해석
 - G200 trace 에서 secret-referenced oracle PoI 는 좋아 보이지만, 모든 후보가
   자기 best sample 을 고르면 null candidate 도 대부분 top-100 처럼 보인다.
@@ -110,6 +126,9 @@
   보존하지 못한다. Phase 4 에서 보인 leakage 는 존재하지만, single-victim
   G200 compact setting 에서는 공격자가 사용할 수 있는 안정적 PoI selector 가
   아직 없다.
+- Mean/top-k/softmax reducer 도 fixed-pred M5 1/16 top-100 보다 나아지지
+  않았다. 즉 단순 window aggregation 은 현재 G200 trace 의 후단 rescue path 가
+  아니다.
 - 다음 실험은 더 넓은 unconstrained window 가 아니라, 독립 calibration 으로
   PoI 선택 자유도를 줄이는 방법이어야 한다. 예: separate profiling victim 의
   lane/slot timing prior, firmware-cycle marker 기반 alignment, 또는 M1/M5
@@ -120,6 +139,7 @@
 - (h2) 문서와 handoff 에 n56/n57 결과를 반영한다. ✅
 - (h3) 추가 capture 는 independent PoI selector 또는 penalized likelihood 모델
   가 생기기 전까지 보류한다. ✅
+- (h4) attack-compatible window reducer sweep 도 negative 로 닫는다. ✅
 
 ---
 
