@@ -35,6 +35,94 @@
 
 ## 실험 로그
 
+### 2026-05-11  Phase 4.6-G200 PoI/window diagnostic — oracle gain 은 selection bias
+
+가정
+- G=200 compact scout 의 fixed/slot PoI 결과가 약한 이유가 단순 timing miss 라면,
+  주변 window 안의 더 나은 PoI 선택으로 true rank 가 개선되어야 한다.
+- 그러나 true candidate 의 best sample 을 직접 고르는 oracle PoI 는 강한 선택
+  편향이 있으므로, 같은 self-oracle 절차를 모든 candidate 에 적용한 null 과
+  비교해야 한다.
+
+과정
+- PoI/window diagnostic:
+  - script: `scripts/n56_phase46_g200_poi_diagnose.py`
+  - inputs: `traces/ntruplus768/phase46/g200_calib_K1L4N8_s6000.npz`
+  - windows: ±16, ±32, ±64, ±96 around `predict_poi(lane)`.
+  - outputs:
+    `results/ntruplus768/phase46/g200_poi_diag_w{16,32,64,96}.{npz,md}`
+- Oracle-selection null:
+  - script: `scripts/n57_phase46_g200_oracle_null.py`
+  - windows: ±16, ±32, ±96.
+  - outputs:
+    `results/ntruplus768/phase46/g200_oracle_null_w{16,32,96}.{npz,md}`
+
+결과 (수치)
+- Attack-compatible PoI choices do not recover:
+
+  | method | W | top-1 | top-10 | top-100 | best rank |
+  |---|---:|---:|---:|---:|---:|
+  | M1 pred | any | 0/16 | 0/16 | 0/16 | 344 |
+  | M5 pred | any | 0/16 | 0/16 | 1/16 | 36 |
+  | M1 slot | any | 0/16 | 0/16 | 0/16 | 266 |
+  | M5 slot | any | 0/16 | 0/16 | 1/16 | 87 |
+  | M1 empirical γ-var | ±96 | 0/16 | 0/16 | 0/16 | 113 |
+  | M5 empirical γ-var | ±64 | 0/16 | 0/16 | 1/16 | 76 |
+
+- Unconstrained per-candidate `winmax` also fails despite using the whole
+  local window:
+
+  | method | W | top-1 | top-10 | top-100 | best rank |
+  |---|---:|---:|---:|---:|---:|
+  | M1 winmax | ±16 | 0/16 | 0/16 | 0/16 | 147 |
+  | M1 winmax | ±96 | 0/16 | 0/16 | 0/16 | 209 |
+  | M5 winmax | ±16 | 0/16 | 0/16 | 0/16 | 319 |
+  | M5 winmax | ±96 | 0/16 | 0/16 | 0/16 | 287 |
+
+- Secret-referenced oracle looks strong, but this is not attack-valid:
+
+  | method | W | top-1 | top-10 | top-100 | median rank |
+  |---|---:|---:|---:|---:|---:|
+  | M1 oracle | ±16 | 0/16 | 1/16 | 10/16 | 57 |
+  | M5 oracle | ±16 | 0/16 | 1/16 | 10/16 | 77 |
+  | M1 oracle | ±32 | 0/16 | 1/16 | 14/16 | 30 |
+  | M5 oracle | ±32 | 0/16 | 1/16 | 15/16 | 53 |
+  | M1 oracle | ±96 | 0/16 | 4/16 | 16/16 | 16 |
+  | M5 oracle | ±96 | 1/16 | 4/16 | 16/16 | 24 |
+
+- Self-oracle null explains the oracle gain:
+
+  | W | null top-100 range over model/lane | true M1 top-100 | true M5 top-100 | median self-null p |
+  |---:|---:|---:|---:|---:|
+  | ±16 | 1846-2010 / 3456 (53-58%) | 10/16 | 10/16 | M1 0.363, M5 0.473 |
+  | ±32 | 2660-2770 / 3456 (77-80%) | 14/16 | 15/16 | M1 0.384, M5 0.570 |
+  | ±96 | 3352-3412 / 3456 (97-99%) | 16/16 | 16/16 | M1 0.547, M5 0.685 |
+
+해석
+- G200 trace 에서 secret-referenced oracle PoI 는 좋아 보이지만, 모든 후보가
+  자기 best sample 을 고르면 null candidate 도 대부분 top-100 처럼 보인다.
+  따라서 oracle 16/16 은 숨은 회수 가능성을 뜻하지 않고, sample-selection bias
+  가 지배적이라는 결론이다.
+- γ-variance empirical PoI 는 sk-independent 이지만 M1 0/16, M5 최대 1/16
+  top-100 에 그쳤다. 현재 trace 에서 timing-only 또는 γ-var 기반 PoI 수정은
+  score sharpness 를 회복하지 못한다.
+- Window max 는 multi-comparison null 이 커져서 true candidate advantage 를
+  보존하지 못한다. Phase 4 에서 보인 leakage 는 존재하지만, single-victim
+  G200 compact setting 에서는 공격자가 사용할 수 있는 안정적 PoI selector 가
+  아직 없다.
+- 다음 실험은 더 넓은 unconstrained window 가 아니라, 독립 calibration 으로
+  PoI 선택 자유도를 줄이는 방법이어야 한다. 예: separate profiling victim 의
+  lane/slot timing prior, firmware-cycle marker 기반 alignment, 또는 M1/M5
+  likelihood 를 window 전체에서 marginalize 하는 penalized model.
+
+다음 단계
+- (h1) G200 oracle/window path 는 selection-bias negative 로 닫는다. ✅
+- (h2) 문서와 handoff 에 n56/n57 결과를 반영한다. ✅
+- (h3) 추가 capture 는 independent PoI selector 또는 penalized likelihood 모델
+  가 생기기 전까지 보류한다. ✅
+
+---
+
 ### 2026-05-11  Phase 4.6-G200 compact scout — G 확장 score-sharpness gate 완료
 
 가정

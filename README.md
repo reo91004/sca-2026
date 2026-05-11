@@ -20,7 +20,10 @@ Current NTRU+ conclusion, as of 2026-05-11:
 - A compact G=200 follow-up scout on calibrated lanes completed cleanly
   (`6400` traces, `0` timeouts) but did not improve the single-victim recovery
   claim: M1/full-stack had `0/16` top-100 and M5 had `1/16` top-100.  Treat
-  simple G expansion as a negative scout, not a new positive result.
+  simple G expansion as a negative scout, not a new positive result.  Follow-up
+  PoI/window diagnostics showed that apparent oracle-PoI gains are explained by
+  self-oracle selection bias, while attack-compatible PoI choices stay at
+  `0/16`-`1/16` top-100.
 - This is best stated as **partial NTT-coordinate information disclosure**, not
   full secret-key recovery.  Current lattice/full-key recovery remains
   infeasible under the measured recovery rate.

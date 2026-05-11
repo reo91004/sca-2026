@@ -232,6 +232,14 @@ the simple "increase G" path as a negative scout; further single-victim
 improvement needs a better timing/leakage model rather than more broad
 candidate-set unioning.
 
+A follow-up PoI/window diagnostic confirms that this is not solved by a local
+window search.  Secret-referenced oracle PoIs can make the G=200 trace appear
+strong (up to 16/16 top-100 at W=96), but the matching self-oracle null makes
+97-99% of all candidates top-100 as well.  Attack-compatible predicted,
+slot-calibrated, and γ-variance empirical PoIs remain at 0/16-1/16 top-100.
+Thus the G=200 window/oracle path is a negative diagnostic, not a hidden
+single-victim recovery result.
+
 **Top-recovery cases (M1 baseline)**:
 1. **lane=104 slot=0 f=2563 (|f_c|=894) rk=2** ★ — near-TOP-1, large-|f_c|
    on M1 channel
