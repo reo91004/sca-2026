@@ -49,6 +49,12 @@ NTT 좌표 회수 입증.
   counts 는 유의하지 않다. Single-victim section 은 leakage/candidate-export
   artifact 로 두고, paper-grade positive claim 은 Phase 4 의 TOP-1/top-rank
   cases 와 mechanistic leakage 에 둔다.
+- G=200 compact scout (`scripts/n55_phase46_g200_capture.py`) 도 완료했다:
+  fresh victim, calibrated lanes 0/64/80/128, G=200, N=8, T=6000, 6400 traces,
+  0 timeouts. 결과는 M1 baseline 0/16 top-100, M5 baseline 1/16 top-100,
+  full-stack 0/16 top-100. Best case 는 M5 baseline lane=80 slot=1 rk=36.
+  단순 G 확장만으로는 single-victim candidate-set null 을 깨는 sharpness 개선이
+  보이지 않았으므로 negative scout 로 둔다.
 
 ## 2. 관련 파일
 
@@ -252,6 +258,40 @@ linear interp 가 +3 coords/96 cases 회수.
 - candidate export: `results/ntruplus768/phase45/candidate_export.{md,npz}`
 - candidate pressure: `results/ntruplus768/phase45/candidate_pressure.md`
 - candidate null: `results/ntruplus768/phase45/candidate_null.md`
+
+### 4.1c Phase 4.6-G200 compact scout 완료 (2026-05-11) ★
+
+**목표**: Phase 4.5/4.6 candidate-set null 이후, γ design 수를 G=78 에서
+G=200 으로 늘리면 score sharpness 가 개선되는지 확인. 레포 비대화를 피하기
+위해 calibrated lanes 4개와 early basemul window (`T=6000`) 만 캡처.
+
+**과정 / 산출물**:
+- capture: `scripts/n55_phase46_g200_capture.py`
+- command: `python3 scripts/n55_phase46_g200_capture.py -K 1 -L 0,64,80,128 -N 8 -G 200 -s 6000 -o traces/ntruplus768/phase46/g200_calib_K1L4N8_s6000.npz`
+- trace: `traces/ntruplus768/phase46/g200_calib_K1L4N8_s6000.npz`
+  (`K=1 L=4 G=200 N=8 T=6000`, 6400 traces, 0 timeouts, elapsed 4902s)
+- analysis: `results/ntruplus768/phase46/g200_calib_K1L4N8_s6000.{npz,md}`
+
+**결과 (16 cases)**:
+| pipeline | top-1 | top-10 | top-100 | top-500 |
+|---|---:|---:|---:|---:|
+| M1 baseline | 0/16 | 0/16 | 0/16 | 3/16 |
+| M5 baseline | 0/16 | 0/16 | **1/16** | 2/16 |
+| M1 slot-PoI | 0/16 | 0/16 | 0/16 | 2/16 |
+| M5 slot-PoI | 0/16 | 0/16 | **1/16** | 1/16 |
+| Full stack | 0/16 | 0/16 | 0/16 | 1/16 |
+
+Best ranks: M5 baseline lane=80 slot=1 f=1724 rk=36; M5 slot-PoI lane=64
+slot=0 f=844 rk=87; full-stack best rk=286.
+
+**해석**:
+- Hardware plumbing 은 clean 하다. 그러나 TOP-1/TOP-10 은 0 이고, M1/full-stack
+  top-100 도 0/16 이다.
+- M5 의 1/16 top-100 은 uniform top-100 null 기대값 `16×100/3456≈0.46` 과
+  비교해 작은 scout positive 에 불과하다.
+- 결론: 단순 G 확장만으로는 score sharpness 문제가 해결되지 않는다. 추가 대형
+  capture 는 보류하고, 다음 단계는 timing/PoI 또는 leakage model 개선 가설이
+  있을 때만 진행.
 
 ### 4.2 Pending (Phase 5/6, design 단계)
 

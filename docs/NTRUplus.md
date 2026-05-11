@@ -13,6 +13,9 @@ attack-valid positive 결과를 확보했다. Multi-victim 결과는 240 cases �
 multi-lane 확장은 3 victims / 88 lanes / 352 cases 에서 M1 baseline 9 top-100,
 M5 baseline 12 top-100, full stack 8 top-100 이다. 최신 수치는
 `docs/HANDOFF.md` 와 `results/ntruplus768/phase45/SUMMARY.md` 를 우선한다.
+후속 G=200 compact scout 는 clean capture 였지만 M1/full-stack 0/16 top-100,
+M5 1/16 top-100 에 그쳐, 단순 γ design 확장만으로는 single-victim score
+sharpness 문제가 해결되지 않는 것으로 정리한다.
 
 SMAUG-T 단계의 교훈을 전제로, **natural `crypto_kem_dec` trace 에서만 main
 claim 을 만든다**. diagnostic sub-trigger / target dump / mismatch flag 는

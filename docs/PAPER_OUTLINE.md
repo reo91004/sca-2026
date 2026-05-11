@@ -3,7 +3,7 @@
 Working title: *NTT-Domain Selected-Lane CPA on NTRU+768 with
 Dual-Channel Hardware Models: A Single-Victim Power-Analysis Recovery*
 
-Last updated: 2026-05-11 (Phase 4.6 integrated).
+Last updated: 2026-05-11 (Phase 4.6 + G200 scout integrated).
 
 ## Authorship / Target venue
 
@@ -222,6 +222,15 @@ has expected 37.80 hits (z=-0.14).  This should be framed as a negative /
 diagnostic result for single-victim candidate-set recovery, while the paper's
 positive recovery evidence remains the Phase 4 multi-victim TOP-1/top-rank
 cases and mechanistic leakage analysis.
+
+A compact follow-up scout increased the γ design count from G=78 to G=200 on a
+fresh victim over the four calibrated lanes (0, 64, 80, 128), with N=8 and an
+early `T=6000` basemul window.  The run completed cleanly (6400 traces, 0
+timeouts), but did not materially sharpen recovery: M1 baseline and full stack
+had 0/16 top-100, while M5 baseline had 1/16 top-100 (best rk=36).  This closes
+the simple "increase G" path as a negative scout; further single-victim
+improvement needs a better timing/leakage model rather than more broad
+candidate-set unioning.
 
 **Top-recovery cases (M1 baseline)**:
 1. **lane=104 slot=0 f=2563 (|f_c|=894) rk=2** ★ — near-TOP-1, large-|f_c|

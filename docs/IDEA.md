@@ -35,6 +35,71 @@
 
 ## 실험 로그
 
+### 2026-05-11  Phase 4.6-G200 compact scout — G 확장 score-sharpness gate 완료
+
+가정
+- `candidate_null.md` 에서 Phase 4.5/4.6 raw top-100 candidate-set counts 가
+  set-size null 과 구분되지 않았다. 따라서 다음 gate 는 broad candidate union 이
+  아니라 **score sharpness** 개선이다.
+- 가장 직접적인 확인은 γ design 수를 G=78 에서 G=200 으로 늘리되, 레포/디스크
+  비대화를 피하기 위해 calibrated lanes 4개와 early basemul window 만 캡처하는
+  compact scout 이다.
+
+과정
+- capture script: `scripts/n55_phase46_g200_capture.py`
+- cmd:
+  `python3 scripts/n55_phase46_g200_capture.py -K 1 -L 0,64,80,128 -N 8 -G 200 -s 6000 -o traces/ntruplus768/phase46/g200_calib_K1L4N8_s6000.npz`
+- capture:
+  - fresh victim, lanes `[0, 64, 80, 128]`, G=200 (HW1+HW2+even HW3 subset),
+    N=8, T=6000, decimate=4.
+  - total `1×4×200×8 = 6400` traces.
+  - elapsed `4902.0s`, rate `1.31 tr/s`, timeouts `0`.
+  - output: `traces/ntruplus768/phase46/g200_calib_K1L4N8_s6000.npz`
+    with shape `(1, 4, 200, 8, 6000)`.
+- analysis:
+  `python3 scripts/n43_singleVictim_multilane.py --input traces/ntruplus768/phase46/g200_calib_K1L4N8_s6000.npz --out-prefix results/ntruplus768/phase46/g200_calib_K1L4N8_s6000`
+- result files:
+  `results/ntruplus768/phase46/g200_calib_K1L4N8_s6000.{npz,md}`
+
+결과 (수치)
+- Aggregate over 16 evaluated NTT coordinates:
+
+  | pipeline | top-1 | top-10 | top-100 | top-500 |
+  |---|---:|---:|---:|---:|
+  | M1 baseline (predict_poi) | 0/16 | 0/16 | 0/16 | 3/16 |
+  | M5 baseline (predict_poi) | 0/16 | 0/16 | **1/16** | 2/16 |
+  | M1 slot-PoI | 0/16 | 0/16 | 0/16 | 2/16 |
+  | M5 slot-PoI | 0/16 | 0/16 | **1/16** | 1/16 |
+  | Full stack (slot+Zsum) | 0/16 | 0/16 | 0/16 | 1/16 |
+
+- Best ranks:
+  - M5 baseline: lane=80 slot=1 true_f=1724 `|f_c|=1724`, rk=36.
+  - M5 slot-PoI: lane=64 slot=0 true_f=844 `|f_c|=844`, rk=87.
+  - M1 baseline best: lane=64 slot=0 true_f=844, rk=344.
+  - Full stack best: lane=64 slot=0 true_f=844, rk=286.
+
+해석
+- Hardware/capture plumbing 은 clean: 0 timeouts, compact trace shape 정상,
+  분석도 기존 n43 경로로 재현 가능.
+- 그러나 recovery gate 는 통과하지 못했다. TOP-1/TOP-10 은 0 이고, M1 및
+  full-stack top-100 도 0/16 이다. M5 의 1/16 top-100 은 calibrated-lane
+  scout 로는 유의미한 positive evidence 로 보기 어렵다. Uniform top-100 null
+  기대값도 `16×100/3456 ≈ 0.46` cases 이라, 관측 1 case 는 약한 신호다.
+- 단순히 G 를 78→200 으로 늘리는 것만으로는 Phase 4.5/4.6 single-victim
+  candidate-set null 을 깨지 못한다. 다음 개선은 더 큰 G 대형 캡처가 아니라
+  timing/PoI 재캘리브레이션, leakage model 분리, 또는 posterior 결합 모델의
+  sharpness 개선이어야 한다.
+- 따라서 paper 의 positive evidence 는 기존 Phase 4 TOP-1/top-rank 및
+  mechanistic leakage 에 유지하고, Phase 4.5/4.6(+G200)은 single-victim
+  확장의 variance/negative diagnostic 으로 정리한다.
+
+다음 단계
+- (g1) G=200 simple expansion gate 는 negative scout 로 닫는다. ✅
+- (g2) `docs/HANDOFF.md`, `docs/PAPER_OUTLINE.md`, README 에 G200 결론을 반영한다. ✅
+- (g3) 추가 대용량 capture 는 score model 개선 가설이 생길 때까지 보류한다. ✅
+
+---
+
 ### 2026-05-11  Phase 4.6 정리 — Wide-coverage 3rd victim 완료 + 3-victim aggregate
 
 가정

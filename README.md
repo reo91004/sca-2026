@@ -17,6 +17,10 @@ Current NTRU+ conclusion, as of 2026-05-11:
   (channel-mixed upper bound), but candidate-set-size null analysis shows the
   single-victim raw top-100 counts are not statistically meaningful recovery
   evidence.
+- A compact G=200 follow-up scout on calibrated lanes completed cleanly
+  (`6400` traces, `0` timeouts) but did not improve the single-victim recovery
+  claim: M1/full-stack had `0/16` top-100 and M5 had `1/16` top-100.  Treat
+  simple G expansion as a negative scout, not a new positive result.
 - This is best stated as **partial NTT-coordinate information disclosure**, not
   full secret-key recovery.  Current lattice/full-key recovery remains
   infeasible under the measured recovery rate.
