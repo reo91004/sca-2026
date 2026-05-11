@@ -33,6 +33,9 @@ NTT 좌표 회수 입증.
 - channel-mixed union upper bound: M1 ∪ M5 ∪ Full 은 29/352 top-100,
   192-lane projection 약 63 coords/victim. 이는 정보 누출 후보 pool 로만 쓰고,
   single-pipeline 공격 성능과 분리해서 보고한다.
+- all-channel hit-list 기준 top-100 union 은 37/352 이다. M1/M5/Full baseline
+  top-100 overlap 이 거의 없으므로, 다음 단계는 단일 `Zsum` 점수 강화보다
+  channel별 candidate evidence 를 보존한 후단 결합이 유망하다.
 
 ## 2. 관련 파일
 
@@ -228,6 +231,7 @@ linear interp 가 +3 coords/96 cases 회수.
 - analysis: `results/ntruplus768/phase45/wide_K1_L48_N8.{npz,md}`
 - latest summary: `results/ntruplus768/phase45/SUMMARY.md`
 - overlap/projection: `results/ntruplus768/phase45/overlap_projection.md`
+- channel hit-list: `results/ntruplus768/phase45/channel_hitlist.md`
 
 ### 4.2 Pending (Phase 5/6, design 단계)
 

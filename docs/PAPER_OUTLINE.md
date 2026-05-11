@@ -203,6 +203,12 @@ traces; diagnostic triggers are used only for label calibration.
 These union counts quantify the candidate information pool.  They should not
 be presented as one pipeline's standalone recovery rate.
 
+The broader all-channel hit-list (M1, M5, M1_slot, M5_slot, Full) has 37/352
+top-100 candidate coordinates.  Since M1/M5/Full overlap is essentially zero
+in the current aggregate, later key-recovery experiments should preserve
+channel-specific evidence rather than collapsing everything into one fused
+score too early.
+
 **Top-recovery cases (M1 baseline)**:
 1. **lane=104 slot=0 f=2563 (|f_c|=894) rk=2** ★ — near-TOP-1, large-|f_c|
    on M1 channel

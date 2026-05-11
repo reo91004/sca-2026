@@ -78,6 +78,15 @@
   - M1 ∪ M5 ∪ Full: 29/352 top-100, projected 63.3 coords/victim
   - 단, union 은 channel-mixed upper bound 이며 top-100 rank 를 perfect recovery 로
     취급하지 않는다. 본문 claim 은 single-pipeline 17-26 coords/victim 을 기본값으로 둔다.
+- **Channel hit-list 분석** (`scripts/n51_phase45_channel_hitlist.py`)
+  - output: `results/ntruplus768/phase45/channel_hitlist.{md,npz}`
+  - top-100 hits: M1 9, M5 12, M1_slot 8, M5_slot 10, Full 8, all-channel union 37.
+  - M1 ∩ M5 = 0, M1 ∩ Full = 0, M5 ∩ Full = 0. 현재 single-victim aggregate 에서는
+    fusion 이 같은 좌표를 더 강하게 만드는 것보다 서로 다른 channel 후보 pool 을
+    드러내는 성격이 강하다.
+  - |f_c| bin 기준 hits 는 large 쪽도 많다: M1 은 `>=768` 5/9, M5 는 `>=768` 5/12.
+    초기 small-|f_c| 중심 가설은 Phase 4 multi-key 결과에는 맞지만, single-victim
+    lane 확장에서는 large-|f_c| 후보 pool 도 별도로 살려야 한다.
 - M1 baseline top-100 hits 추가:
   - victim 3 lane=24 slot=0 f=1215 |f_c|=1215 rk=15
   - victim 3 lane=76 slot=1 f=1169 |f_c|=1169 rk=23
@@ -94,6 +103,9 @@
 - 여러 channel 을 union 하면 top-100 upper bound 는 최대 약 **63 coords/victim**
   까지 올라가지만, 이는 pipeline 하나의 공격 성능이 아니라 정보 누출 후보 pool
   크기다. 논문에서는 single-pipeline 수치와 union upper bound 를 분리해서 쓴다.
+- 다음 모델링은 `Zsum` 하나로 합치는 방향보다, M1/M5/slot/full score 를 별도
+  likelihood 로 보존하고 sparse/lattice 후단에서 candidate-set evidence 로
+  결합하는 쪽이 더 자연스럽다.
 - Phase 4 의 2 TOP-1 / 17 top-100 multi-victim 결과는 여전히 paper-grade 핵심.
   Phase 4.5/4.6 은 “한 victim 안에서 lane coverage 를 늘리면 partial
   NTT-coordinate disclosure 가 누적된다”는 보조/확장 claim 으로 두는 것이
