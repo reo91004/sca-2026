@@ -18,7 +18,8 @@ M5 1/16 top-100 에 그쳐, 단순 γ design 확장만으로는 single-victim sc
 sharpness 문제가 해결되지 않는 것으로 정리한다. 이후 PoI/window diagnostic 에서
 secret-referenced oracle PoI 는 좋아 보였지만 self-oracle null 이 이를 selection
 bias 로 설명했고, attack-compatible PoI choices 및 window reducers 는 회수
-개선을 만들지 못했다.
+개선을 만들지 못했다. Cross-validated window CPA 도 held-out γ fold 로 전이되는
+stable local-PoI evidence 를 찾지 못했다.
 
 SMAUG-T 단계의 교훈을 전제로, **natural `crypto_kem_dec` trace 에서만 main
 claim 을 만든다**. diagnostic sub-trigger / target dump / mismatch flag 는

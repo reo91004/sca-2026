@@ -61,7 +61,8 @@ NTT 좌표 회수 입증.
   top-100 이 되어 selection bias 로 판정. Attack-compatible `predict`/slot/
   γ-variance empirical PoI 는 회수 개선을 만들지 못했다. Window reducer sweep
   (`scripts/n58_*`) 도 mean/top-k/softmax/max 모두 top-10 0/16, 최선 top-100
-  1/16 에 그쳐 negative.
+  1/16 에 그쳐 negative. Cross-validated window CPA (`scripts/n59_*`) 역시
+  held-out γ fold 에서 top-10 0/16, 최선 top-100 1/16 으로 negative.
 
 ## 2. 관련 파일
 
@@ -115,6 +116,7 @@ NTT 좌표 회수 입증.
 | n56_phase46_g200_poi_diagnose.py | G200 PoI/window diagnostic (`pred`/slot/emp/winmax/oracle) |
 | n57_phase46_g200_oracle_null.py | G200 self-oracle selection-bias null |
 | n58_phase46_g200_window_reducers.py | G200 attack-compatible window reducer sweep |
+| n59_phase46_g200_cv_window.py | G200 cross-validated candidate/window CPA |
 
 ### 2.3 결과 파일 (results/ntruplus768/phase4/)
 
@@ -316,6 +318,8 @@ slot=0 f=844 rk=87; full-stack best rk=286.
   - outputs: `results/ntruplus768/phase46/g200_oracle_null_w{16,32,96}.{npz,md}`
 - Window reducer sweep: `scripts/n58_phase46_g200_window_reducers.py`
   - output: `results/ntruplus768/phase46/g200_window_reducers.{npz,md}`
+- Cross-validated window CPA: `scripts/n59_phase46_g200_cv_window.py`
+  - output: `results/ntruplus768/phase46/g200_cv_window.{npz,md}`
 
 **핵심 결과**:
 - Attack-compatible PoI choices:
@@ -337,12 +341,18 @@ slot=0 f=844 rk=87; full-stack best rk=286.
   - all top-10 are 0/16.
   - best top-100 is only 1/16 (M1 mean W=16, rank 75), not better than
     fixed-PoI M5 baseline 1/16.
+- Cross-validated window CPA:
+  - even/odd γ folds, candidate-specific PoI selected on one fold and evaluated
+    on held-out fold.
+  - all top-10 are 0/16.
+  - best top-100 is 1/16 (M1 W=16/32, rank 91), again not a recovery signal.
 
 **해석**:
 - Oracle PoI gain 은 leakage proof 가 아니라 sample-selection bias 로 설명된다.
 - 현재 G200 compact trace 에서는 sk-independent PoI refinement 로 score sharpness
   가 회복되지 않는다.
 - Candidate-independent window aggregation 도 현재 trace 를 rescue 하지 못한다.
+- Candidate-specific local PoI 선택도 held-out γ 로 전이되지 않는다.
 - 다음 capture 는 보류. 후속 실험은 independent PoI selector 또는 window
   marginalization 에 selection penalty 를 넣은 likelihood model 이 있어야 한다.
 

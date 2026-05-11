@@ -240,7 +240,10 @@ slot-calibrated, and γ-variance empirical PoIs remain at 0/16-1/16 top-100.
 Candidate-independent window reducers (mean, top-k mean, softmax, max) also
 remain at 0/16 top-10, with best top-100 only 1/16.  Thus the G=200
 window/oracle path is a negative diagnostic, not a hidden single-victim
-recovery result.
+recovery result.  A cross-validated version that selects candidate-local PoIs
+on one γ fold and evaluates on the held-out fold also remains at 0/16 top-10
+and best top-100 1/16, further indicating that local PoI gains do not transfer
+as stable attack evidence.
 
 **Top-recovery cases (M1 baseline)**:
 1. **lane=104 slot=0 f=2563 (|f_c|=894) rk=2** ★ — near-TOP-1, large-|f_c|

@@ -61,6 +61,11 @@
   - reducers: mean, top3, top5, top9, soft5, soft10, max.
   - models: M1, M5, Full (`z(M1)+z(M5)`).
   - output: `results/ntruplus768/phase46/g200_window_reducers.{npz,md}`
+- Cross-validated window CPA:
+  - script: `scripts/n59_phase46_g200_cv_window.py`
+  - split: even/odd γ folds. Select each candidate's best local sample on one
+    fold, evaluate on held-out fold, then average both directions.
+  - output: `results/ntruplus768/phase46/g200_cv_window.{npz,md}`
 
 결과 (수치)
 - Attack-compatible PoI choices do not recover:
@@ -114,6 +119,18 @@
   | M5 max | ±64 | 0/16 | 0/16 | 0/16 | 239 |
   | Full top9 | ±96 | 0/16 | 0/16 | 0/16 | 277 |
 
+- Cross-validated window CPA is also negative:
+
+  | W | model | top-1 | top-10 | top-100 | best rank | median rank |
+  |---:|---|---:|---:|---:|---:|---:|
+  | ±16 | M1 | 0/16 | 0/16 | 1/16 | 91 | 1096 |
+  | ±16 | M5 | 0/16 | 0/16 | 0/16 | 180 | 1535 |
+  | ±16 | Full | 0/16 | 0/16 | 0/16 | 116 | 1580 |
+  | ±32 | M1 | 0/16 | 0/16 | 1/16 | 91 | 1899 |
+  | ±32 | M5 | 0/16 | 0/16 | 0/16 | 572 | 2185 |
+  | ±96 | M1 | 0/16 | 0/16 | 0/16 | 322 | 1298 |
+  | ±96 | M5 | 0/16 | 0/16 | 0/16 | 330 | 2531 |
+
 해석
 - G200 trace 에서 secret-referenced oracle PoI 는 좋아 보이지만, 모든 후보가
   자기 best sample 을 고르면 null candidate 도 대부분 top-100 처럼 보인다.
@@ -129,6 +146,9 @@
 - Mean/top-k/softmax reducer 도 fixed-pred M5 1/16 top-100 보다 나아지지
   않았다. 즉 단순 window aggregation 은 현재 G200 trace 의 후단 rescue path 가
   아니다.
+- Cross-validated window CPA 에서도 selected PoI 가 held-out γ fold 로 전이되지
+  않았다. 이는 secret-referenced oracle gain 이 real stable timing signal 이라기보다
+  candidate/window overfit 에 가깝다는 결론을 더 강화한다.
 - 다음 실험은 더 넓은 unconstrained window 가 아니라, 독립 calibration 으로
   PoI 선택 자유도를 줄이는 방법이어야 한다. 예: separate profiling victim 의
   lane/slot timing prior, firmware-cycle marker 기반 alignment, 또는 M1/M5
@@ -140,6 +160,7 @@
 - (h3) 추가 capture 는 independent PoI selector 또는 penalized likelihood 모델
   가 생기기 전까지 보류한다. ✅
 - (h4) attack-compatible window reducer sweep 도 negative 로 닫는다. ✅
+- (h5) cross-validated window CPA 도 negative 로 닫는다. ✅
 
 ---
 
