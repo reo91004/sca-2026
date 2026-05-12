@@ -30,7 +30,7 @@ if str(_REPO) not in sys.path:
 
 import numpy as np  # noqa: E402
 
-from host.chosen_ct import reset_target, setup_session  # noqa: E402
+from host.smaug.chosen_ct import reset_target, setup_session  # noqa: E402
 from host.smaug import chosen as _chosen  # noqa: E402
 from host.smaug.ciphertext import Ciphertext  # noqa: E402
 from host.smaug import codec as _codec  # noqa: E402

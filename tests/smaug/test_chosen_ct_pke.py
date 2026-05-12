@@ -15,7 +15,7 @@ if str(_REPO) not in sys.path:
 
 import hashlib
 
-from host import chosen_ct  # noqa: E402
+from host.smaug import chosen_ct  # noqa: E402
 
 
 class _MockTarget:

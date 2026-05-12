@@ -38,7 +38,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
-from host.analysis.sparse_recover import accuracy  # noqa: E402
+from host.smaug.analysis.sparse_recover import accuracy  # noqa: E402
 from host.smaug import codec as _codec  # noqa: E402
 from host.smaug.params import SMAUG1  # noqa: E402
 

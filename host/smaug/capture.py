@@ -1,20 +1,15 @@
 #!/usr/bin/env python3
 """
-SCA 트레이스 캡처 (ChipWhisperer-Lite + CW308T-STM32F4 / STM32F415).
+SMAUG-T SCA 트레이스 캡처 (ChipWhisperer-Lite + CW308T-STM32F4 / STM32F415).
 
-트랙: **SMAUG-T / HQC 전용**. NTRU+ 트랙은 각 `scripts/ntruplus/n*` 캡처
-스크립트가 자체적으로 ChipWhisperer 통신을 수행한다.
-
-지원 타겟:
-    --target smaug : SMAUG-T KEM (firmware/simpleserial-smaug)
-    --target hqc   : HQC (firmware/simpleserial-hqc)
+타겟: SMAUG-T KEM (firmware/simpleserial-smaug)
 
 사용법:
     # SMAUG-T full pipeline (기본)
-    python3 host/capture.py -n 1000 -s 24400 -o traces/smaug1_dec.npz
+    python3 host/smaug/capture.py -n 1000 -s 24400 -o traces/smaug1_dec.npz
 
     # HQC custom RM encode_single ('e' 명령, 16바이트 응답)
-    python3 host/capture.py --target hqc -c e --send-len 1 --resp-len 16 \\
+    python3 host/smaug/capture.py --target hqc -c e --send-len 1 --resp-len 16 \\
         -n 1000 -s 24400 -o traces/hqc_custom_e.npz
 
 흐름:
@@ -29,7 +24,7 @@ SCA 트레이스 캡처 (ChipWhisperer-Lite + CW308T-STM32F4 / STM32F415).
     5. 트레이스를 numpy .npz로 저장: traces (N,T), responses (N,), timestamp 등.
 
 전제:
-    - host/upload.py 로 해당 firmware .hex 를 이미 플래시했을 것.
+    - host/smaug/upload.py 로 해당 firmware .hex 를 이미 플래시했을 것.
 """
 
 from __future__ import annotations
@@ -43,7 +38,7 @@ from pathlib import Path
 import chipwhisperer as cw
 import numpy as np
 
-from cw_serial import TARGET_SN, pick_serial
+from host.cw_serial import TARGET_SN, pick_serial
 
 
 def parse_args() -> argparse.Namespace:

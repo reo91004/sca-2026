@@ -11,7 +11,7 @@ _REPO = Path(__file__).resolve().parents[2]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
-from host.analysis import sparse_recover  # noqa: E402
+from host.smaug.analysis import sparse_recover  # noqa: E402
 
 
 def _synthetic_sk(n: int, hs: int, seed: int) -> np.ndarray:
