@@ -11,7 +11,7 @@ Two independent side-channel research tracks live in this repo:
 `FLOW.md` 에 있다:
 
 - [`docs/ntruplus/README.md`](docs/ntruplus/README.md) — Phase 0 → 4.6 overview, paper-grade results, reproduction (+ `experiments.md` for phase-by-phase log)
-- [`docs/smaug/FLOW.md`](docs/smaug/FLOW.md) — S1/S2/S2.x/S3/S1U/S4 + branch (C2, R, Y, D-Pair, S5) + PCO pilots 1~6
+- [`docs/smaug/README.md`](docs/smaug/README.md) — track overview, corrigendum, archived status (+ `experiments.md` for phase/branch/PCO pilot log)
 
 자세한 가정·수치·다음 단계는 각 트랙 `README.md` 를 따라가면 source-
 of-truth 문서들 (NTRU+ HANDOFF/PLAN/EXPERIMENTS, SMAUG-T IDEA + branch md)
@@ -81,5 +81,5 @@ python3 host/upload.py firmware/simpleserial-smaug/simpleserial-smaug-CW308_STM3
 
 이전 commit 들에 남아 있을 수 있는 "instrumented µ′-label" 결과 (예 :
 SMAUG-T `8 traces / 9 keypairs / 100%`) 는 **IND-CCA 위반** 이며 attack-valid
-주장에서 제외되었다. 자세한 내용은 [`docs/smaug/FLOW.md`](docs/smaug/FLOW.md)
+주장에서 제외되었다. 자세한 내용은 [`docs/smaug/README.md`](docs/smaug/README.md)
 와 메모리 `corrigendum_2026_05_04.md` 참조.
