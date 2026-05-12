@@ -10,7 +10,7 @@ Two independent side-channel research tracks live in this repo:
 각 트랙의 한 눈 timeline (problem → experiments → results) 은 트랙별
 `FLOW.md` 에 있다:
 
-- [`docs/ntruplus/FLOW.md`](docs/ntruplus/FLOW.md) — Phase 0 → 4.6 navigational summary
+- [`docs/ntruplus/README.md`](docs/ntruplus/README.md) — Phase 0 → 4.6 overview, paper-grade results, reproduction (+ `experiments.md` for phase-by-phase log)
 - [`docs/smaug/FLOW.md`](docs/smaug/FLOW.md) — S1/S2/S2.x/S3/S1U/S4 + branch (C2, R, Y, D-Pair, S5) + PCO pilots 1~6
 
 자세한 가정·수치·다음 단계는 각 트랙 `README.md` 를 따라가면 source-
