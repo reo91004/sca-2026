@@ -52,7 +52,7 @@ from host.chosen_ct import reset_target, setup_session  # noqa: E402
 from host.smaug import chosen as _chosen  # noqa: E402
 from host.smaug import codec as _codec  # noqa: E402
 from host.smaug import params as _params  # noqa: E402
-from scripts.s1_t_roundtrip import dump_sk_pke  # noqa: E402
+from scripts.smaug.s1_t_roundtrip import dump_sk_pke  # noqa: E402
 
 
 def _file_sha256(p: Path) -> str:

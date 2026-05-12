@@ -19,7 +19,7 @@ if str(_REPO) not in sys.path:
 
 import numpy as np  # noqa: E402
 
-from scripts.s2_z_lowdim_analyze import Config, Dataset, evaluate, load_dataset, summarize  # noqa: E402
+from scripts.smaug.s2_z_lowdim_analyze import Config, Dataset, evaluate, load_dataset, summarize  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:

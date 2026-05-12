@@ -35,7 +35,7 @@ from host.chosen_ct import reset_target  # noqa: E402
 from host.smaug import codec as _codec  # noqa: E402
 from host.smaug import params as _params  # noqa: E402
 from host.smaug.poly_mul import board_response_mod_p, negacyclic_mul_mod_p  # noqa: E402
-from scripts.s1_t_roundtrip import dump_sk_pke, int16_wrap, issue_u  # noqa: E402
+from scripts.smaug.s1_t_roundtrip import dump_sk_pke, int16_wrap, issue_u  # noqa: E402
 
 
 def _file_sha256(p: Path) -> str | None:

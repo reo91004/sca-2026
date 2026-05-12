@@ -38,7 +38,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
 from host.smaug.params import SMAUG1  # noqa: E402
-from scripts.s2_z_lowdim_analyze import (  # noqa: E402
+from scripts.smaug.s2_z_lowdim_analyze import (  # noqa: E402
     Config,
     Dataset,
     fit_predict_ridge,

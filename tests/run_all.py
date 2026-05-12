@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""tests/test_*.py 의 모든 test_* 함수를 raw 실행으로 돌린다.
+"""tests/{ntruplus,smaug}/test_*.py 의 모든 test_* 함수를 raw 실행으로 돌린다.
 
 pytest 가 없는 환경에서도 동작. 각 테스트는 raise 시 실패. 모두 통과
 하면 exit 0, 하나라도 실패하면 exit 1.
@@ -21,7 +21,7 @@ def main() -> int:
     if str(repo) not in sys.path:
         sys.path.insert(0, str(repo))
 
-    files = sorted(p for p in here.glob("test_*.py"))
+    files = sorted(p for p in here.rglob("test_*.py"))
     total = 0
     failed: list[tuple[str, str, str]] = []  # (file, fn, traceback)
 

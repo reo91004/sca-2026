@@ -19,8 +19,8 @@ if str(_REPO) not in sys.path:
 
 import numpy as np  # noqa: E402
 
-from scripts.s2_z_lowdim_analyze import Config, Dataset, load_dataset  # noqa: E402
-from scripts.s4_c2_pair_analyze import (  # noqa: E402
+from scripts.smaug.s2_z_lowdim_analyze import Config, Dataset, load_dataset  # noqa: E402
+from scripts.smaug.s4_c2_pair_analyze import (  # noqa: E402
     LABEL_KINDS,
     build_pair_dataset,
     evaluate,

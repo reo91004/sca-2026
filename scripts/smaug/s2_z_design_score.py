@@ -21,7 +21,7 @@ if str(_REPO) not in sys.path:
 import numpy as np  # noqa: E402
 
 from host.smaug.params import SMAUG1  # noqa: E402
-from scripts.s2_z_lowdim_analyze import label_from_toom, load_dataset  # noqa: E402
+from scripts.smaug.s2_z_lowdim_analyze import label_from_toom, load_dataset  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:

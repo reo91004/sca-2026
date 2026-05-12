@@ -1,26 +1,30 @@
 #!/usr/bin/env python3
-"""ntruplus576 펌웨어 baseline + chosen-CT plumbing smoke.
+"""ntruplus768 펌웨어 baseline + chosen-CT plumbing smoke.
 
 A 그룹 (k/e/d/p) — 정상 ct 파이프라인 mismatch=0 인지.
-B 그룹 (F/B/I/L/D) — pk dump 후 host-side AES-CTR 가짜 ct 도 reject 응답이
-   1B 로 정상 회신되는지 (실제 정합 ct 는 host-side encap 없이는 못 만드므로
-   여기선 "응답 형식 + 보드 미반응 없음" 만 본다).
+B 그룹 (F/B/I/L/D) — pk dump 후 host 가 만든 selected-lane chosen-CT 를
+   inject 하고, 'L' 의 sha3_256(ct_inj)[:16] 가 host 가 재계산한
+   sha3_256(host_ct)[:16] 와 일치하는지 검증 (codec parity gate).
 
-이 smoke 는 ntruplus576 hex 가 이미 플래시된 상태에서 동작한다.
+이 smoke 는 ntruplus768 hex 가 이미 플래시된 상태에서 동작한다.
 """
 
 from __future__ import annotations
 
+import hashlib
 import sys
 import time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "host"))
 
 import chipwhisperer as cw  # noqa: E402
 
 from cw_serial import pick_serial  # noqa: E402
+from ntruplus import inject as nti  # noqa: E402
+from ntruplus.chosen import selected_lane  # noqa: E402
+from ntruplus.params import CIPHERTEXTBYTES  # noqa: E402
 
 
 def hexdump16(b: bytes | None) -> str:
@@ -100,29 +104,38 @@ def main() -> int:
         expect(f"B[0] → 32B chunk = {hexdump16(b0)}",
                b0 is not None and len(b0) == 32, fatal=True)
 
-        # CT inject : 모두 0 으로 27 chunks (864 / 32 = 27)
-        zero_chunk = bytes(32)
-        N_CT_CHUNKS = 27  # ntruplus576 : POLYBYTES=864, chunk=32
+        # CT inject : host 가 만든 selected-lane chosen-CT.
+        #   c_ntt[4*lane] = gamma, 그 외 0  → board basemul 시 lane 만 살림.
+        # Phase 0b 의 핵심: host 의 12-bit pack 결과가 board 의 poly_frombytes
+        # 후 다시 sha3_256 하면 동일한 [:16] 지문을 만들어야 한다 (codec
+        # parity gate).
+        host_ct, _ = selected_lane(lane=3, gamma=42, slot=0)
+        N_CT_CHUNKS = nti.N_CT_CHUNKS  # 36 for ntruplus768
         for idx in range(N_CT_CHUNKS):
-            target.simpleserial_write("I", bytes([idx]) + zero_chunk)
+            chunk = host_ct[idx * 32:(idx + 1) * 32]
+            target.simpleserial_write("I", bytes([idx]) + chunk)
             r = target.simpleserial_read("r", 1, timeout=5000)
             if r is None or r[0] != 0:
                 expect(f"I[{idx}] → status = {r[0] if r else 'None'}", False, fatal=True)
-        expect(f"I × {N_CT_CHUNKS} (all zero) all status=0", True)
+        expect(f"I × {N_CT_CHUNKS} chunks (selected-lane) all status=0", True)
 
         target.simpleserial_write("L", b"")
         l_resp = target.simpleserial_read("r", 16, timeout=5000)
-        expect(f"L → sha3_256(0×864)[0:16] = {hexdump16(l_resp)}",
+        expect(f"L → board sha3_256(ct_inj)[:16] = {hexdump16(l_resp)}",
                l_resp is not None and len(l_resp) == 16, fatal=True)
+
+        host_fp = hashlib.sha3_256(host_ct).digest()[:16]
+        expect(f"L parity: host sha3_256(host_ct)[:16] = {hexdump16(host_fp)}",
+               bytes(l_resp) == host_fp, fatal=True)
 
         target.simpleserial_write("D", b"")
         d_inj = target.simpleserial_read("r", 1, timeout=10000)
-        # ss_enc was 0-init by 'F'. ss_dec from zero CT will be deterministic
-        # but very likely non-zero → mismatch=1. 형식만 확인 (값은 의미 없음).
-        expect(f"D (zeros ct) → mismatch flag = {d_inj[0] if d_inj else 'None'} (형식만)",
+        # ss_enc was 0-init by 'F'. chosen-CT decapsulation produces some
+        # ss_dec that very likely differs → mismatch=1. 형식만 확인.
+        expect(f"D (selected-lane ct) → mismatch flag = {d_inj[0] if d_inj else 'None'} (형식만)",
                d_inj is not None and len(d_inj) == 1, fatal=True)
 
-        # X : sk chunk dump (chunks 55 = 1760 / 32). 첫 chunk 만 확인.
+        # X : sk chunk dump (73 chunks for ntruplus768 = 2336 / 32). 첫 chunk 만.
         target.simpleserial_write("X", bytes([0]))
         x0 = target.simpleserial_read("r", 32, timeout=5000)
         expect(f"X[0] → 32B sk chunk = {hexdump16(x0)}",

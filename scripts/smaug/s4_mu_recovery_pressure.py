@@ -29,7 +29,7 @@ if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from host.smaug.params import SMAUG1  # noqa: E402
-from scripts.s2_z_lowdim_analyze import (  # noqa: E402
+from scripts.smaug.s2_z_lowdim_analyze import (  # noqa: E402
     Config,
     cached_labels,
     evaluate,

@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
 from host.smaug import codec as _codec  # noqa: E402
-from scripts.s2_z_lowdim_analyze import (  # noqa: E402
+from scripts.smaug.s2_z_lowdim_analyze import (  # noqa: E402
     LABEL_KINDS,
     Config,
     Dataset,

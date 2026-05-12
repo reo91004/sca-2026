@@ -15,13 +15,13 @@ from pathlib import Path
 
 import numpy as np
 
-_REPO = Path(__file__).resolve().parent.parent
+_REPO = Path(__file__).resolve().parents[2]
 if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from host.smaug import params  # noqa: E402
-from scripts.s2_z_lowdim_analyze import Config, label_from_mu_bits  # noqa: E402
-from scripts.s4_pair_distance_oracle import (  # noqa: E402
+from scripts.smaug.s2_z_lowdim_analyze import Config, label_from_mu_bits  # noqa: E402
+from scripts.smaug.s4_pair_distance_oracle import (  # noqa: E402
     PairDataset,
     auroc,
     evaluate_oracle,
