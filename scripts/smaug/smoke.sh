@@ -1,20 +1,18 @@
 #!/usr/bin/env bash
-# sca-2026 smoke test
-#   preflight -> build -> flash -> capture -> validate -> visualize
+# sca-2026 SMAUG-T smoke test
+#   preflight -> build -> flash -> capture
 #
-# 위치: scripts/smoke.sh (REPO_ROOT 한 단계 위가 레포 루트)
+# 위치: scripts/smaug/smoke.sh
 #
 # Usage:
-#   scripts/smoke.sh                                    # SMAUG-T level 1 (기본)
-#   TARGET=hqc-custom scripts/smoke.sh                  # HQC custom RM (encode_single)
-#   TARGET=hqc-pqclean scripts/smoke.sh                 # HQC PQClean code_encode (RS+RM)
-#   LEVEL=3 scripts/smoke.sh                            # SMAUG level 3
-#   NUM_TRACES=200 SAMPLES=8000 scripts/smoke.sh
-#   SKIP_BUILD=1 SKIP_FLASH=1 scripts/smoke.sh          # capture + viz only
-#   SKIP_CAPTURE=1 NPZ=traces/foo.npz scripts/smoke.sh  # re-visualize a saved file
+#   scripts/smaug/smoke.sh                              # SMAUG-T level 1 (기본)
+#   LEVEL=3 scripts/smaug/smoke.sh                      # SMAUG level 3
+#   NUM_TRACES=200 SAMPLES=8000 scripts/smaug/smoke.sh
+#   SKIP_BUILD=1 SKIP_FLASH=1 scripts/smaug/smoke.sh    # capture only
+#   SKIP_CAPTURE=1 NPZ=traces/foo.npz scripts/smaug/smoke.sh
 #
 # Env overrides:
-#   TARGET         smaug | hqc-custom | hqc-pqclean (기본 smaug)
+#   TARGET         smaug (기본 smaug; 다른 target 은 제거됨)
 #   LEVEL          SMAUG-T 보안 레벨 (1|3|5, 기본 1; TARGET=smaug 일 때만 사용)
 #   NUM_TRACES     캡처 트레이스 수 (기본 50)
 #   SAMPLES        트레이스당 ADC 샘플 (기본 24400)
@@ -22,7 +20,6 @@
 #   SERIAL         CW1173 시리얼 명시 (기본 자동 선택)
 #   CW_FW_PATH     ChipWhisperer 펌웨어 트리 (기본 makefile 값)
 #   NPZ            캡처 출력 .npz (기본 traces/smoke_<target>.npz)
-#   PNG            시각화 출력 .png (기본 NPZ 와 같은 stem + .png)
 
 set -euo pipefail
 
@@ -36,15 +33,13 @@ SKIP_BUILD="${SKIP_BUILD:-0}"
 SKIP_FLASH="${SKIP_FLASH:-0}"
 SKIP_CAPTURE="${SKIP_CAPTURE:-0}"
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-HOST_DIR="$REPO_ROOT/host"
-SCRIPTS_DIR="$REPO_ROOT/scripts"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+HOST_DIR="$REPO_ROOT/host/smaug"
 
 # ---- TARGET dispatch ---------------------------------------------------------
-# Each TARGET sets:
+# TARGET sets:
 #   FW_DIR, HEX_PATH, ELF_PATH, MAKE_ARGS  : build/flash inputs
-#   CAP_TARGET, CAP_CMD, CAP_SEND, CAP_RESP : capture.py args
-#   DO_MATCH_CHECK                          : 1 → SMAUG mismatch flag check
+#   CAP_CMD, CAP_SEND, CAP_RESP             : host.smaug.capture args
 #   NPZ_DEFAULT                             : default output path
 #   LIB_ARCHIVE                             : optional preflight check
 case "$TARGET" in
@@ -54,47 +49,18 @@ case "$TARGET" in
     ELF_PATH="$FW_DIR/simpleserial-smaug-CW308_STM32F4.elf"
     MAKE_ARGS=(PLATFORM=CW308_STM32F4 "SMAUG_LEVEL=$LEVEL")
     LIB_ARCHIVE="$REPO_ROOT/lib/crypto_kem/smaug${LEVEL}.a"
-    CAP_TARGET="smaug"
     CAP_CMD="p"        # full pipeline (keypair + enc + dec)
     CAP_SEND=0
     CAP_RESP=1         # 1-byte mismatch flag
-    DO_MATCH_CHECK=1
     NPZ_DEFAULT="$REPO_ROOT/traces/smoke_smaug${LEVEL}.npz"
     ;;
-  hqc-custom)
-    FW_DIR="$REPO_ROOT/firmware/simpleserial-hqc"
-    HEX_PATH="$FW_DIR/simpleserial-hqc-CW308_STM32F4.hex"
-    ELF_PATH="$FW_DIR/simpleserial-hqc-CW308_STM32F4.elf"
-    MAKE_ARGS=(PLATFORM=CW308_STM32F4 HQC_IMPL=custom)
-    LIB_ARCHIVE=""     # HQC has no .a archive; sources compiled in firmware build
-    CAP_TARGET="hqc"
-    CAP_CMD="e"        # encode_single (single-byte RM encode)
-    CAP_SEND=1         # 1-byte dummy
-    CAP_RESP=16        # 16-byte codeword
-    DO_MATCH_CHECK=0
-    NPZ_DEFAULT="$REPO_ROOT/traces/smoke_hqc_custom.npz"
-    ;;
-  hqc-pqclean)
-    FW_DIR="$REPO_ROOT/firmware/simpleserial-hqc"
-    HEX_PATH="$FW_DIR/simpleserial-hqc-CW308_STM32F4.hex"
-    ELF_PATH="$FW_DIR/simpleserial-hqc-CW308_STM32F4.elf"
-    MAKE_ARGS=(PLATFORM=CW308_STM32F4 HQC_IMPL=pqclean)
-    LIB_ARCHIVE=""
-    CAP_TARGET="hqc"
-    CAP_CMD="e"        # encode_single — same shape as custom for clean comparison
-    CAP_SEND=1
-    CAP_RESP=16
-    DO_MATCH_CHECK=0
-    NPZ_DEFAULT="$REPO_ROOT/traces/smoke_hqc_pqclean.npz"
-    ;;
   *)
-    echo "[FAIL] Unknown TARGET=$TARGET (smaug | hqc-custom | hqc-pqclean)" >&2
+    echo "[FAIL] Unknown TARGET=$TARGET (only smaug is supported)" >&2
     exit 1
     ;;
 esac
 
 NPZ="${NPZ:-$NPZ_DEFAULT}"
-PNG="${PNG:-${NPZ%.npz}.png}"
 
 c_red()  { printf '\033[31m%s\033[0m' "$*"; }
 c_grn()  { printf '\033[32m%s\033[0m' "$*"; }
@@ -130,7 +96,7 @@ if [[ "$SKIP_BUILD" != "1" && ! -d "$EFFECTIVE_CW_FW_PATH" ]]; then
     fail "CW_FW_PATH 가 디렉토리가 아님: $EFFECTIVE_CW_FW_PATH  (CW_FW_PATH 로 덮어쓰라)"
 fi
 
-# Python 의존성 (chipwhisperer/numpy 는 캡처/플래시에서, matplotlib 는 시각화에서 필요)
+# Python 의존성 (chipwhisperer/numpy 는 캡처/플래시에서 필요)
 py_check() {
     python3 - "$@" <<'PY' || return 1
 import importlib.util, sys
@@ -141,7 +107,7 @@ PY
 }
 need_py=()
 [[ "$SKIP_FLASH" != "1" || "$SKIP_CAPTURE" != "1" ]] && need_py+=(chipwhisperer numpy)
-need_py+=(numpy matplotlib)
+need_py+=(numpy)
 if missing="$(py_check "${need_py[@]}" 2>&1 || true)" && [[ -n "$missing" ]]; then
     # py_check 가 stderr 로 import 에러를 흘릴 수 있으므로, 마지막 줄만 메시지로 사용
     last="$(printf '%s\n' "$missing" | tail -n1)"
@@ -180,27 +146,28 @@ else
     # 0x08000000 베이스로 이미 정렬되어 있다.
     flash_args=("$HEX_PATH")
     [[ -n "$SERIAL" ]] && flash_args+=(--serial "$SERIAL")
-    python3 "$HOST_DIR/upload.py" "${flash_args[@]}"
+    python3 -m host.smaug.upload "${flash_args[@]}"
     ok "flash 완료"
 fi
 
 # ----------------------------------------------------------------- D. capture
 if [[ "$SKIP_CAPTURE" == "1" ]]; then
-    info "SKIP_CAPTURE=1 → 캡처 건너뜀 (검증/시각화는 기존 $NPZ 사용)"
+    info "SKIP_CAPTURE=1 → 캡처 건너뜀 (기존 $NPZ 사용)"
     [[ -f "$NPZ" ]] || fail "기존 .npz 없음: $NPZ"
 else
-    hdr "[D] capture traces  (target=$CAP_TARGET cmd='$CAP_CMD' send=$CAP_SEND resp=$CAP_RESP -> $NPZ)"
+    hdr "[D] capture traces  (cmd='$CAP_CMD' send=$CAP_SEND resp=$CAP_RESP -> $NPZ)"
     mkdir -p "$(dirname "$NPZ")"
     cap_args=(
-        --target "$CAP_TARGET"
         -n "$NUM_TRACES" -s "$SAMPLES" -g "$GAIN_DB"
         -c "$CAP_CMD" --send-len "$CAP_SEND" --resp-len "$CAP_RESP"
         -o "$NPZ"
+        --firmware-hex "$HEX_PATH"
+        --label "smoke_smaug${LEVEL}_${CAP_CMD}"
     )
     [[ -n "$SERIAL" ]] && cap_args+=(--serial "$SERIAL")
     # capture.py 는 timeouts > 0 이면 exit 2, 정상이면 0. 명시적으로 분기.
     set +e
-    python3 "$HOST_DIR/capture.py" "${cap_args[@]}"
+    python3 -m host.smaug.capture "${cap_args[@]}"
     rc=$?
     set -e
     case "$rc" in
@@ -211,12 +178,7 @@ else
 fi
 
 # --------------------------------------------------------- E. summary
-# smoke 는 build + flash + capture 까지가 SSOT — paper main flow 와 분리.
-# Visualization 은 history/scripts/util_plot_overview.py (legacy) 또는 inline
-# 분석 권장. paper main reproducer 는 scripts/run_attack.py + analyze_multi_seed.py.
+# smoke 는 build + flash + capture 까지가 SSOT — archived SMAUG-T 분석 flow 와 분리.
 hdr "[E] summary"
 ok "smoke 캡처 완료: $NPZ"
-info "다음 단계 — paper main reproducer:"
-info "  python3 scripts/run_attack.py -n 2     # 8 traces (paper main, 3.2 sec)"
-info "  python3 scripts/analyze_multi_seed.py traces/attack_const_c1.npz"
-info "또는 자세한 dev plot 은 history/scripts/util_plot_overview.py 참조"
+info "분석은 필요 시 docs/smaug/README.md 의 archived reproduction 명령을 사용"

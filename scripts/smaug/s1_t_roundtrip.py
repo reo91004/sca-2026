@@ -12,7 +12,7 @@ truth 를 신뢰할 수 있다).
 전제
 ====
 * firmware ``firmware/simpleserial-smaug/simpleserial-smaug-CW308_STM32F4.hex``
-  가 보드에 *이미 플래시* 되어 있어야 한다 (``host/upload.py`` 사용). 본
+  가 보드에 *이미 플래시* 되어 있어야 한다 (``python3 -m host.smaug.upload`` 사용). 본
   스크립트는 firmware 의 sha256 만 메타에 기록할 뿐 자동으로 플래시 하지 않는다.
 * SMAUG_NAMESPACE = smaug1 빌드. 다른 레벨은 응답 길이/포맷이 다르므로 별도
   실행 필요.

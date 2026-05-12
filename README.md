@@ -77,7 +77,7 @@ python3 scripts/smaug/s2_z_analyze.py --help
 
 ```bash
 # NTRU+
-make -C firmware/simpleserial-ntruplus PLATFORM=CW308_STM32F4
+make -C firmware/simpleserial-ntruplus PLATFORM=CW308_STM32F4 NTRUPLUS_LEVEL=768
 # (NTRU+ 캡처 스크립트가 hex 경로 hard-code 후 cw.program_target 자체 호출)
 
 # SMAUG-T

@@ -125,7 +125,7 @@ calibration are the paper-grade mechanisms.
 
 ```bash
 # NTRU+768 펌웨어 빌드
-make -C firmware/simpleserial-ntruplus PLATFORM=CW308_STM32F4
+make -C firmware/simpleserial-ntruplus PLATFORM=CW308_STM32F4 NTRUPLUS_LEVEL=768
 
 # 캡처 스크립트가 hex 경로를 hard-code 하므로 별도 upload 단계 없음
 # (각 `scripts/ntruplus/n01_phase1_capture.py` 같은 캡처가 자체 `cw.program_target`)
@@ -138,12 +138,14 @@ make -C firmware/simpleserial-ntruplus PLATFORM=CW308_STM32F4
 python3 scripts/ntruplus/n01_phase1_capture.py -K 8 -N 20 -s 24400 \
     -o traces/ntruplus768/phase1/d_map_K8N20.npz
 
-# Phase 3 — selected-lane wide-γ scout (lane=0, K=8, N=32, G=78)
-python3 scripts/ntruplus/n18_phase4_g78_capture.py -K 8 -N 32 -G 78 -L 0 \
+# Phase 3 — selected-lane wide-γ scout (lane=0, K=8, N=32, G=78 fixed)
+python3 scripts/ntruplus/n18_phase4_g78_capture.py -K 8 -N 32 -L 0 \
     -o traces/ntruplus768/phase3/wideg_lane0_K8N32.npz
 
 # Phase 4.5 — single-victim multi-lane main capture (victim 2)
-python3 scripts/ntruplus/n43_singleVictim_multilane.py -K 1 -L 24 -N 16 \
+python3 scripts/ntruplus/n18_phase4_g78_capture.py -K 1 \
+    -L 0,8,16,24,32,40,48,56,64,72,80,88,96,104,112,120,128,136,144,152,160,168,176,184 \
+    -N 16 \
     -o traces/ntruplus768/phase45/main_K1_L24_N16.npz
 
 # Phase 4.6 — G=200 compact scout

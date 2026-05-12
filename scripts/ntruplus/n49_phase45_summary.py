@@ -30,7 +30,7 @@ def main():
     combined_npz = P45 / "combined.npz"
     if not combined_npz.exists():
         print(f"[ERR] combined.npz not found at {combined_npz}")
-        print("      run scripts/n45_singleVictim_combine.py first")
+        print("      run scripts/ntruplus/n45_singleVictim_combine.py first")
         return 1
     z = np.load(combined_npz, allow_pickle=True)
     rows = list(z["rows"])

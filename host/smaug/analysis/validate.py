@@ -1,6 +1,6 @@
 """캡처 sanity 검증.
 
-scripts/smoke.sh 의 [E] validate 단계가 사용. 캡처 환경이 살아 있는지를
+smoke-style 캡처 점검에서 사용. 캡처 환경이 살아 있는지를
 형식·물리·로직 세 층으로 점검한다:
 
   1. 형식  : N/T/dtype 이 예상대로인지

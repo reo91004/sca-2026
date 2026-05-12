@@ -1,6 +1,6 @@
 """캡처 트레이스 .npz 표준 로더.
 
-`host/capture.py` 가 저장하는 .npz 는 다음 키를 갖는다:
+`host.smaug.capture` 가 저장하는 .npz 는 다음 키를 갖는다:
 
     traces      (N, T) float32   ADC 샘플
     responses   (N, R) uint8     SimpleSerial ack 페이로드 (R=resp_len)
@@ -56,7 +56,7 @@ def load_capture(path: str | Path) -> Capture:
 
     missing = [k for k in ("traces", "responses", "meta") if k not in npz.files]
     if missing:
-        raise ValueError(f"{p}: 필수 키 누락 {missing} (capture.py 산출물 아님)")
+        raise ValueError(f"{p}: 필수 키 누락 {missing} (host.smaug.capture 산출물 아님)")
 
     traces = npz["traces"]
     responses = npz["responses"]
@@ -91,7 +91,7 @@ def save_capture(
     responses: np.ndarray,
     meta: dict[str, Any],
 ) -> Path:
-    """capture.py 와 호환되는 형식으로 .npz 저장.
+    """host.smaug.capture 와 호환되는 형식으로 .npz 저장.
 
     분석 단계에서 합성/필터링한 트레이스를 다시 저장할 때 쓴다.
     """

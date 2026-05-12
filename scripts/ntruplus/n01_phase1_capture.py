@@ -25,7 +25,7 @@ later calibration use (clearly tagged as calibration-only — do not use as
 oracle labels under threat model).
 
 Usage:
-    python3 scripts/n01_phase1_capture.py -K 8 -N 20 -s 24400 \
+    python3 scripts/ntruplus/n01_phase1_capture.py -K 8 -N 20 -s 24400 \
         -o traces/ntruplus768/phase1/d_map.npz
 """
 

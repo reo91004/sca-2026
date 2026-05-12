@@ -4,7 +4,7 @@
 
 set -uo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
 
 SCOUT="traces/ntruplus768/phase45/scout_K1_L16_N8.npz"
@@ -23,14 +23,14 @@ echo "[$(date)] scout completed."
 
 # Scout analysis (M1+M5+full stack)
 echo "[$(date)] running scout analysis (n43)"
-python3 -u scripts/n43_singleVictim_multilane.py \
+python3 -u scripts/ntruplus/n43_singleVictim_multilane.py \
     --input "$SCOUT" --out-prefix "$SCOUT_OUT" \
     > "$LOG_DIR/scout_eval.log" 2>&1
 ec=$?
 echo "[$(date)] scout n43 exit=$ec"
 
 # Combine scout (single-victim, 1 batch)
-python3 -u scripts/n45_singleVictim_combine.py "$SCOUT" \
+python3 -u scripts/ntruplus/n45_singleVictim_combine.py "$SCOUT" \
     --out-prefix "$COMBINED_OUT" \
     > "$LOG_DIR/combine_scout.log" 2>&1
 echo "[$(date)] combined (scout only) → $COMBINED_OUT.{npz,md}"
@@ -54,7 +54,7 @@ fi
 # Start main capture
 echo "[$(date)] starting main capture (K=1 L=24 N=16) ~5h ETA"
 LANES_MAIN="0,8,16,24,32,40,48,56,64,72,80,88,96,104,112,120,128,136,144,152,160,168,176,184"
-python3 -u scripts/n18_phase4_g78_capture.py \
+python3 -u scripts/ntruplus/n18_phase4_g78_capture.py \
     -K 1 -L "$LANES_MAIN" -N 16 -o "$MAIN" \
     > "$LOG_DIR/main_capture.log" 2>&1
 ec=$?
@@ -62,10 +62,10 @@ echo "[$(date)] main capture exit=$ec"
 
 # Main analysis + final combine
 if [ -f "$MAIN" ]; then
-    python3 -u scripts/n43_singleVictim_multilane.py \
+    python3 -u scripts/ntruplus/n43_singleVictim_multilane.py \
         --input "$MAIN" --out-prefix "$MAIN_OUT" \
         > "$LOG_DIR/main_eval.log" 2>&1
-    python3 -u scripts/n45_singleVictim_combine.py "$SCOUT" "$MAIN" \
+    python3 -u scripts/ntruplus/n45_singleVictim_combine.py "$SCOUT" "$MAIN" \
         --out-prefix "$COMBINED_OUT" \
         > "$LOG_DIR/combine_final.log" 2>&1
     echo "[$(date)] main analysis + combined → $COMBINED_OUT"

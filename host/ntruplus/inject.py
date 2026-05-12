@@ -2,7 +2,7 @@
 
 Encapsulates the F → B* → I* → L → D pipeline so callers don't have to
 manage chunk indices, fingerprints, or response framing. Designed for
-use by host/capture.py and any per-design capture loop.
+use by per-design capture loops in scripts/ntruplus/.
 
 Firmware command set (see firmware/simpleserial-ntruplus/simpleserial-ntruplus.c):
 

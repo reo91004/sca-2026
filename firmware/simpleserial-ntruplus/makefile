@@ -2,11 +2,11 @@
 # ----------------------------------------------------------------------------
 # SimpleSerial-NTRU+ firmware for ChipWhisperer-Lite + CW308T-STM32F4 (STM32F415)
 #
-# Build (default level 576) :
+# Build (default level 768, the active sca-2026 target) :
 #   make PLATFORM=CW308_STM32F4
 #
 # Build other security levels :
-#   make PLATFORM=CW308_STM32F4 NTRUPLUS_LEVEL=768
+#   make PLATFORM=CW308_STM32F4 NTRUPLUS_LEVEL=576
 #   make PLATFORM=CW308_STM32F4 NTRUPLUS_LEVEL=864
 #   make PLATFORM=CW308_STM32F4 NTRUPLUS_LEVEL=1152
 # ----------------------------------------------------------------------------
@@ -19,7 +19,7 @@ PROJ_ROOT  ?= $(abspath $(CURDIR)/../..)
 CW_FW_PATH ?= /home/pacl/Documents/Repository/chipwhisperer/firmware/mcu
 
 # NTRU+ security level : 576 | 768 | 864 | 1152
-NTRUPLUS_LEVEL  ?= 576
+NTRUPLUS_LEVEL  ?= 768
 
 # Whitelist - reject anything else early so a typo doesn't silently link a
 # nonexistent archive.

@@ -2,7 +2,7 @@
 # Quick Phase 4.5 status check — run this when user wakes up.
 # Shows: which capture is running, what's complete, what results are ready.
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
 
 echo "=========================================="
@@ -50,7 +50,7 @@ ls results/ntruplus/phase45/figures/ 2>&1 | sed 's/^/    /'
 echo ""
 echo "=========================================="
 echo "Quick actions:"
-echo "  rerun analysis:  python3 scripts/n45_singleVictim_combine.py traces/ntruplus768/phase45/*.npz"
-echo "  regen figures:   python3 scripts/n49_phase45_summary.py"
+echo "  rerun analysis:  python3 scripts/ntruplus/n45_singleVictim_combine.py traces/ntruplus768/phase45/*.npz"
+echo "  regen figures:   python3 scripts/ntruplus/n49_phase45_summary.py"
 echo "  view summary:    cat results/ntruplus/phase45/SUMMARY.md"
 echo "=========================================="
