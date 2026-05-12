@@ -80,7 +80,7 @@ crossings and are nonnegative.
 Added `--c2-mode grid` to:
 
 ```text
-scripts/s2_z_capture_matrix.py
+scripts/smaug/s2_z_capture_matrix.py
 ```
 
 This crosses every public `c1` design with a list of constant `c2` values and
@@ -89,7 +89,7 @@ stores per-design `c2_alpha` metadata.
 Added paired analysis:
 
 ```text
-scripts/s4_c2_pair_analyze.py
+scripts/smaug/s4_c2_pair_analyze.py
 ```
 
 It finds same-`c1` pairs whose `c2` values differ by `--c2-delta`, builds
@@ -101,7 +101,7 @@ evaluates ridge predictors with held-out-key permutation null.
 First natural `Z` scout:
 
 ```bash
-python3 scripts/s2_z_capture_matrix.py \
+python3 scripts/smaug/s2_z_capture_matrix.py \
   --cmd Z \
   --num-keys 6 \
   -n 10 \
@@ -120,7 +120,7 @@ observations per key for `delta=1`.
 Primary analysis:
 
 ```bash
-python3 scripts/s4_c2_pair_analyze.py \
+python3 scripts/smaug/s4_c2_pair_analyze.py \
   --inputs traces/s4_c2_z_pair_d24n10_k*.npz \
   --label-kinds flip_byte_hw flip_block16_hw \
   --c2-delta 1 \
@@ -129,13 +129,13 @@ python3 scripts/s4_c2_pair_analyze.py \
   --ridge 10 \
   --feature-mode corr \
   --n-perm 300 \
-  --out-prefix results/s4_c2_z_pair_d24n10_flip_p300
+  --out-prefix results/smaug/s4_c2_z_pair_d24n10_flip_p300
 ```
 
 Control:
 
 ```bash
-python3 scripts/s2_z_capture_matrix.py \
+python3 scripts/smaug/s2_z_capture_matrix.py \
   --cmd Z \
   --num-keys 6 \
   -n 10 \
@@ -196,7 +196,7 @@ The added unit test verifies that `flip_byte_hw` equals the byte grouping of
 Capture:
 
 ```bash
-python3 -u scripts/s2_z_capture_matrix.py \
+python3 -u scripts/smaug/s2_z_capture_matrix.py \
   --cmd Z \
   --num-keys 6 \
   -n 10 \
@@ -218,7 +218,7 @@ All six planned keys completed with shape:
 Analysis:
 
 ```bash
-python3 scripts/s4_c2_pair_analyze.py \
+python3 scripts/smaug/s4_c2_pair_analyze.py \
   --inputs traces/s4_c2_z_pair_d24n10_k*.npz \
   --label-kinds flip_byte_hw flip_block16_hw \
   --c2-delta 1 \
@@ -227,7 +227,7 @@ python3 scripts/s4_c2_pair_analyze.py \
   --ridge 10 \
   --feature-mode corr \
   --n-perm 300 \
-  --out-prefix results/s4_c2_z_pair_d24n10_flip_p300
+  --out-prefix results/smaug/s4_c2_z_pair_d24n10_flip_p300
 ```
 
 Result:
@@ -264,7 +264,7 @@ Therefore the next valid pair is `15 -> 16`, not `0 -> 1` or `7 -> 8`.
 Capture:
 
 ```bash
-python3 -u scripts/s2_z_capture_matrix.py \
+python3 -u scripts/smaug/s2_z_capture_matrix.py \
   --cmd Z \
   --num-keys 6 \
   -n 10 \
@@ -286,7 +286,7 @@ All six keys completed with shape:
 Primary analysis:
 
 ```bash
-python3 scripts/s4_c2_pair_analyze.py \
+python3 scripts/smaug/s4_c2_pair_analyze.py \
   --inputs traces/s4_c2_z_pair_b15_16_d24n10_k*.npz \
   --label-kinds flip_byte_hw flip_block16_hw mu_delta_byte_hw \
   --c2-delta 1 \
@@ -295,7 +295,7 @@ python3 scripts/s4_c2_pair_analyze.py \
   --ridge 10 \
   --feature-mode corr \
   --n-perm 300 \
-  --out-prefix results/s4_c2_z_pair_b15_16_d24n10_flip_p300
+  --out-prefix results/smaug/s4_c2_z_pair_b15_16_d24n10_flip_p300
 ```
 
 Result:
@@ -320,13 +320,13 @@ mu_delta_byte_hw:
 Config sweep:
 
 ```bash
-python3 scripts/s4_c2_pair_analyze.py \
+python3 scripts/smaug/s4_c2_pair_analyze.py \
   --inputs traces/s4_c2_z_pair_b15_16_d24n10_k*.npz \
   --label-kinds flip_byte_hw flip_block16_hw \
   --c2-delta 1 \
   --sweep \
   --n-perm 100 \
-  --out-prefix results/s4_c2_z_pair_b15_16_d24n10_flip_sweep_p100
+  --out-prefix results/smaug/s4_c2_z_pair_b15_16_d24n10_flip_sweep_p100
 ```
 
 Best real-confirmed summaries:
@@ -351,7 +351,7 @@ still suppresses the materialization leakage."
 Capture:
 
 ```bash
-python3 -u scripts/s2_z_capture_matrix.py \
+python3 -u scripts/smaug/s2_z_capture_matrix.py \
   --cmd R \
   --num-keys 6 \
   -n 10 \
@@ -373,7 +373,7 @@ All six keys completed with shape:
 Analysis:
 
 ```bash
-python3 scripts/s4_c2_pair_analyze.py \
+python3 scripts/smaug/s4_c2_pair_analyze.py \
   --inputs traces/s4_c2_r_pair_b15_16_d24n10_k*.npz \
   --label-kinds flip_byte_hw flip_block16_hw mu_delta_byte_hw \
   --c2-delta 1 \
@@ -382,7 +382,7 @@ python3 scripts/s4_c2_pair_analyze.py \
   --ridge 10 \
   --feature-mode corr \
   --n-perm 300 \
-  --out-prefix results/s4_c2_r_pair_b15_16_d24n10_flip_p300
+  --out-prefix results/smaug/s4_c2_r_pair_b15_16_d24n10_flip_p300
 ```
 
 Result:
@@ -424,13 +424,13 @@ attack claim.
 Added:
 
 ```text
-scripts/s4_c2_pair_window_scan.py
+scripts/smaug/s4_c2_pair_window_scan.py
 ```
 
 Natural `Z`, signed pair label:
 
 ```bash
-python3 scripts/s4_c2_pair_window_scan.py \
+python3 scripts/smaug/s4_c2_pair_window_scan.py \
   --inputs traces/s4_c2_z_pair_b15_16_d24n10_k*.npz \
   --label-kind mu_delta_byte_hw \
   --c2-delta 1 \
@@ -442,7 +442,7 @@ python3 scripts/s4_c2_pair_window_scan.py \
   --stride 512 \
   --top-k 6 \
   --n-perm 200 \
-  --out results/s4_c2_z_pair_b15_16_window_scan_mu_delta_byte_w3976_s512_p200.txt
+  --out results/smaug/s4_c2_z_pair_b15_16_window_scan_mu_delta_byte_w3976_s512_p200.txt
 ```
 
 Best confirmed windows:
@@ -461,7 +461,7 @@ Best confirmed windows:
 Natural `Z`, absolute trace difference:
 
 ```bash
-python3 scripts/s4_c2_pair_window_scan.py \
+python3 scripts/smaug/s4_c2_pair_window_scan.py \
   --inputs traces/s4_c2_z_pair_b15_16_d24n10_k*.npz \
   --label-kind mu_delta_byte_hw \
   --c2-delta 1 \
@@ -474,7 +474,7 @@ python3 scripts/s4_c2_pair_window_scan.py \
   --top-k 6 \
   --n-perm 200 \
   --absolute-diff \
-  --out results/s4_c2_z_pair_b15_16_window_scan_mu_delta_byte_absdiff_w3976_s512_p200.txt
+  --out results/smaug/s4_c2_z_pair_b15_16_window_scan_mu_delta_byte_absdiff_w3976_s512_p200.txt
 ```
 
 Best confirmed window:
@@ -487,7 +487,7 @@ Best confirmed window:
 Diagnostic `R` calibration window scan:
 
 ```bash
-python3 scripts/s4_c2_pair_window_scan.py \
+python3 scripts/smaug/s4_c2_pair_window_scan.py \
   --inputs traces/s4_c2_r_pair_b15_16_d24n10_k*.npz \
   --label-kind mu_delta_byte_hw \
   --c2-delta 1 \
@@ -499,7 +499,7 @@ python3 scripts/s4_c2_pair_window_scan.py \
   --stride 256 \
   --top-k 6 \
   --n-perm 200 \
-  --out results/s4_c2_r_pair_b15_16_window_scan_mu_delta_byte_w1024_s256_p200.txt
+  --out results/smaug/s4_c2_r_pair_b15_16_window_scan_mu_delta_byte_w1024_s256_p200.txt
 ```
 
 Best confirmed windows:
@@ -534,7 +534,7 @@ natural oracle or final attack claim.
 Capture:
 
 ```bash
-python3 -u scripts/s2_z_capture_matrix.py \
+python3 -u scripts/smaug/s2_z_capture_matrix.py \
   --cmd Q \
   --num-keys 6 \
   -n 10 \
@@ -556,7 +556,7 @@ All six keys completed with shape:
 Full-window analysis:
 
 ```bash
-python3 scripts/s4_c2_pair_analyze.py \
+python3 scripts/smaug/s4_c2_pair_analyze.py \
   --inputs traces/s4_c2_q_pair_b15_16_d24n10_k*.npz \
   --label-kinds mu_delta_byte_hw flip_byte_hw flip_block16_hw \
   --c2-delta 1 \
@@ -565,7 +565,7 @@ python3 scripts/s4_c2_pair_analyze.py \
   --ridge 10 \
   --feature-mode corr \
   --n-perm 300 \
-  --out-prefix results/s4_c2_q_pair_b15_16_d24n10_full_p300
+  --out-prefix results/smaug/s4_c2_q_pair_b15_16_d24n10_full_p300
 ```
 
 Result:
@@ -586,7 +586,7 @@ flip_block16_hw:
 Window scan:
 
 ```bash
-python3 scripts/s4_c2_pair_window_scan.py \
+python3 scripts/smaug/s4_c2_pair_window_scan.py \
   --inputs traces/s4_c2_q_pair_b15_16_d24n10_k*.npz \
   --label-kind mu_delta_byte_hw \
   --c2-delta 1 \
@@ -598,7 +598,7 @@ python3 scripts/s4_c2_pair_window_scan.py \
   --stride 512 \
   --top-k 6 \
   --n-perm 200 \
-  --out results/s4_c2_q_pair_b15_16_window_scan_mu_delta_byte_w3976_s512_p200.txt
+  --out results/smaug/s4_c2_q_pair_b15_16_window_scan_mu_delta_byte_w3976_s512_p200.txt
 ```
 
 Best confirmed windows:
@@ -617,7 +617,7 @@ Best confirmed windows:
 p500 confirmation for the best window:
 
 ```bash
-python3 scripts/s4_c2_pair_analyze.py \
+python3 scripts/smaug/s4_c2_pair_analyze.py \
   --inputs traces/s4_c2_q_pair_b15_16_d24n10_k*.npz \
   --label-kinds mu_delta_byte_hw \
   --c2-delta 1 \
@@ -627,7 +627,7 @@ python3 scripts/s4_c2_pair_analyze.py \
   --ridge 10 \
   --feature-mode corr \
   --n-perm 500 \
-  --out-prefix results/s4_c2_q_pair_b15_16_mu_delta_byte_w9216_13192_p500
+  --out-prefix results/smaug/s4_c2_q_pair_b15_16_mu_delta_byte_w9216_13192_p500
 ```
 
 Result:

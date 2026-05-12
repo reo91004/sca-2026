@@ -36,32 +36,32 @@ NTT 좌표 회수 입증.
 - all-channel hit-list 기준 top-100 union 은 37/352 이다. M1/M5/Full baseline
   top-100 overlap 이 거의 없으므로, 다음 단계는 단일 `Zsum` 점수 강화보다
   channel별 candidate evidence 를 보존한 후단 결합이 유망하다.
-- `scripts/n52_phase45_candidate_export.py` 로 352 rows × 5 channels 의 top-100
-  candidate residues 를 `results/ntruplus768/phase45/candidate_export.npz` 에
+- `scripts/ntruplus/n52_phase45_candidate_export.py` 로 352 rows × 5 channels 의 top-100
+  candidate residues 를 `results/ntruplus/phase45/candidate_export.npz` 에
   저장했다. 다음 recovery-pressure 실험은 trace 재로딩 없이 이 파일에서 시작.
-- `scripts/n53_phase45_candidate_pressure.py` 결과 all-channel union 은 top-10
+- `scripts/ntruplus/n53_phase45_candidate_pressure.py` 결과 all-channel union 은 top-10
   4/352, top-50 18/352, top-100 37/352. 평균 all-channel candidate set size 는
   top-10 에서 41.2, top-100 에서 371.2 이므로 현재는 direct recovery 보다
   candidate-set constraint 로 해석해야 한다.
-- `scripts/n54_phase45_candidate_null.py` 로 candidate-set size 를 반영한
+- `scripts/ntruplus/n54_phase45_candidate_null.py` 로 candidate-set size 를 반영한
   uniform-rank null 을 계산했다. all-channel top-100 은 observed 37/352,
   null expected 37.80, z=-0.14. 즉 Phase 4.5/4.6 raw top-100 candidate-set
   counts 는 유의하지 않다. Single-victim section 은 leakage/candidate-export
   artifact 로 두고, paper-grade positive claim 은 Phase 4 의 TOP-1/top-rank
   cases 와 mechanistic leakage 에 둔다.
-- G=200 compact scout (`scripts/n55_phase46_g200_capture.py`) 도 완료했다:
+- G=200 compact scout (`scripts/ntruplus/n55_phase46_g200_capture.py`) 도 완료했다:
   fresh victim, calibrated lanes 0/64/80/128, G=200, N=8, T=6000, 6400 traces,
   0 timeouts. 결과는 M1 baseline 0/16 top-100, M5 baseline 1/16 top-100,
   full-stack 0/16 top-100. Best case 는 M5 baseline lane=80 slot=1 rk=36.
   단순 G 확장만으로는 single-victim candidate-set null 을 깨는 sharpness 개선이
   보이지 않았으므로 negative scout 로 둔다.
-- G=200 follow-up PoI/window diagnostic (`scripts/n56_*`, `scripts/n57_*`) 도
+- G=200 follow-up PoI/window diagnostic (`scripts/ntruplus/n56_*`, `scripts/ntruplus/n57_*`) 도
   완료했다. Secret-referenced oracle PoI 는 W=96 에서 M1/M5 모두 16/16
   top-100 처럼 보였지만, self-oracle null 에서도 candidate 의 97-99% 가
   top-100 이 되어 selection bias 로 판정. Attack-compatible `predict`/slot/
   γ-variance empirical PoI 는 회수 개선을 만들지 못했다. Window reducer sweep
-  (`scripts/n58_*`) 도 mean/top-k/softmax/max 모두 top-10 0/16, 최선 top-100
-  1/16 에 그쳐 negative. Cross-validated window CPA (`scripts/n59_*`) 역시
+  (`scripts/ntruplus/n58_*`) 도 mean/top-k/softmax/max 모두 top-10 0/16, 최선 top-100
+  1/16 에 그쳐 negative. Cross-validated window CPA (`scripts/ntruplus/n59_*`) 역시
   held-out γ fold 에서 top-10 0/16, 최선 top-100 1/16 으로 negative.
 
 ## 2. 관련 파일
@@ -118,7 +118,7 @@ NTT 좌표 회수 입증.
 | n58_phase46_g200_window_reducers.py | G200 attack-compatible window reducer sweep |
 | n59_phase46_g200_cv_window.py | G200 cross-validated candidate/window CPA |
 
-### 2.3 결과 파일 (results/ntruplus768/phase4/)
+### 2.3 결과 파일 (results/ntruplus/phase4/)
 
 | File | Comment |
 |---|---|
@@ -136,9 +136,9 @@ NTT 좌표 회수 입증.
 
 | File | Comment |
 |---|---|
-| `docs/IDEA.md` | **메인 실험 로그** — Phase 4 entries (a)-(q8) |
-| `docs/NTRUplus.md` | 초기 plan (largely unchanged) |
-| `docs/HANDOFF.md` | 이 문서 |
+| `docs/ntruplus/EXPERIMENTS.md` | **메인 실험 로그** — Phase 4 entries (a)-(q8) |
+| `docs/ntruplus/PLAN.md` | 초기 plan (largely unchanged) |
+| `docs/ntruplus/HANDOFF.md` | 이 문서 |
 | `host/ntruplus/` | host-side NTRU+ 패키지 (codec, ntt, params 등) |
 
 ## 3. Paper-grade 핵심 결과
@@ -225,8 +225,8 @@ linear interp 가 +3 coords/96 cases 회수.
 
 **관련 산출물**:
 - traces: `traces/ntruplus768/phase45/{scout_K1_L16_N8, main_K1_L24_N16}.npz`
-- 분석: `results/ntruplus768/phase45/{scout, main, combined, SUMMARY}.{npz, md}`
-- figures: `results/ntruplus768/phase45/figures/F10/F11/F12.png`
+- 분석: `results/ntruplus/phase45/{scout, main, combined, SUMMARY}.{npz, md}`
+- figures: `results/ntruplus/phase45/figures/F10/F11/F12.png`
 
 ### 4.1b Phase 4.6 완료 (2026-05-10/11) ★
 
@@ -254,7 +254,7 @@ linear interp 가 +3 coords/96 cases 회수.
   coordinate yield 에 victim-to-victim variance 가 큼.
 - 보수적 paper claim: 192-lane single-victim coverage 에서 약 17-26 top-100
   NTT-coordinate disclosures / victim. Full key recovery 는 여전히 infeasible.
-- `scripts/n50_phase45_overlap_projection.py` 로 union/overlap 을 재계산했다.
+- `scripts/ntruplus/n50_phase45_overlap_projection.py` 로 union/overlap 을 재계산했다.
   M1 ∪ M5 ∪ Full top-100 은 29/352 이고 192-lane projection 은 약 63
   coords/victim 이지만, channel-mixed information-pool upper bound 로만 취급한다.
 - `candidate_null.md` 반영 후 더 강한 정정: raw top-100 candidate-set counts 는
@@ -264,13 +264,13 @@ linear interp 가 +3 coords/96 cases 회수.
 
 **관련 산출물**:
 - trace: `traces/ntruplus768/phase45/wide_K1_L48_N8.npz`
-- analysis: `results/ntruplus768/phase45/wide_K1_L48_N8.{npz,md}`
-- latest summary: `results/ntruplus768/phase45/SUMMARY.md`
-- overlap/projection: `results/ntruplus768/phase45/overlap_projection.md`
-- channel hit-list: `results/ntruplus768/phase45/channel_hitlist.md`
-- candidate export: `results/ntruplus768/phase45/candidate_export.{md,npz}`
-- candidate pressure: `results/ntruplus768/phase45/candidate_pressure.md`
-- candidate null: `results/ntruplus768/phase45/candidate_null.md`
+- analysis: `results/ntruplus/phase45/wide_K1_L48_N8.{npz,md}`
+- latest summary: `results/ntruplus/phase45/SUMMARY.md`
+- overlap/projection: `results/ntruplus/phase45/overlap_projection.md`
+- channel hit-list: `results/ntruplus/phase45/channel_hitlist.md`
+- candidate export: `results/ntruplus/phase45/candidate_export.{md,npz}`
+- candidate pressure: `results/ntruplus/phase45/candidate_pressure.md`
+- candidate null: `results/ntruplus/phase45/candidate_null.md`
 
 ### 4.1c Phase 4.6-G200 compact scout 완료 (2026-05-11) ★
 
@@ -279,11 +279,11 @@ G=200 으로 늘리면 score sharpness 가 개선되는지 확인. 레포 비대
 위해 calibrated lanes 4개와 early basemul window (`T=6000`) 만 캡처.
 
 **과정 / 산출물**:
-- capture: `scripts/n55_phase46_g200_capture.py`
-- command: `python3 scripts/n55_phase46_g200_capture.py -K 1 -L 0,64,80,128 -N 8 -G 200 -s 6000 -o traces/ntruplus768/phase46/g200_calib_K1L4N8_s6000.npz`
+- capture: `scripts/ntruplus/n55_phase46_g200_capture.py`
+- command: `python3 scripts/ntruplus/n55_phase46_g200_capture.py -K 1 -L 0,64,80,128 -N 8 -G 200 -s 6000 -o traces/ntruplus768/phase46/g200_calib_K1L4N8_s6000.npz`
 - trace: `traces/ntruplus768/phase46/g200_calib_K1L4N8_s6000.npz`
   (`K=1 L=4 G=200 N=8 T=6000`, 6400 traces, 0 timeouts, elapsed 4902s)
-- analysis: `results/ntruplus768/phase46/g200_calib_K1L4N8_s6000.{npz,md}`
+- analysis: `results/ntruplus/phase46/g200_calib_K1L4N8_s6000.{npz,md}`
 
 **결과 (16 cases)**:
 | pipeline | top-1 | top-10 | top-100 | top-500 |
@@ -312,14 +312,14 @@ slot=0 f=844 rk=87; full-stack best rk=286.
 선택 편향을 null 로 검증.
 
 **과정 / 산출물**:
-- PoI diagnostic: `scripts/n56_phase46_g200_poi_diagnose.py`
-  - outputs: `results/ntruplus768/phase46/g200_poi_diag_w{16,32,64,96}.{npz,md}`
-- Oracle-selection null: `scripts/n57_phase46_g200_oracle_null.py`
-  - outputs: `results/ntruplus768/phase46/g200_oracle_null_w{16,32,96}.{npz,md}`
-- Window reducer sweep: `scripts/n58_phase46_g200_window_reducers.py`
-  - output: `results/ntruplus768/phase46/g200_window_reducers.{npz,md}`
-- Cross-validated window CPA: `scripts/n59_phase46_g200_cv_window.py`
-  - output: `results/ntruplus768/phase46/g200_cv_window.{npz,md}`
+- PoI diagnostic: `scripts/ntruplus/n56_phase46_g200_poi_diagnose.py`
+  - outputs: `results/ntruplus/phase46/g200_poi_diag_w{16,32,64,96}.{npz,md}`
+- Oracle-selection null: `scripts/ntruplus/n57_phase46_g200_oracle_null.py`
+  - outputs: `results/ntruplus/phase46/g200_oracle_null_w{16,32,96}.{npz,md}`
+- Window reducer sweep: `scripts/ntruplus/n58_phase46_g200_window_reducers.py`
+  - output: `results/ntruplus/phase46/g200_window_reducers.{npz,md}`
+- Cross-validated window CPA: `scripts/ntruplus/n59_phase46_g200_cv_window.py`
+  - output: `results/ntruplus/phase46/g200_cv_window.{npz,md}`
 
 **핵심 결과**:
 - Attack-compatible PoI choices:
@@ -415,7 +415,7 @@ single-victim aggregate 는 sparse {-1,0,+1} f_coeff recovery 에 쓰기 부족�
 7. **Limitations**: Full sk recovery 불가 (~7% partial), CW-Lite SNR 한계.
 8. **Future work**: Phase 5/6, lattice attack, profiled extension.
 
-### 5.2 Figures (생성 완료, `results/ntruplus768/phase4/figures/`)
+### 5.2 Figures (생성 완료, `results/ntruplus/phase4/figures/`)
 
 생성된 8종 paper figures:
 - **F1_b_vs_fc.png** (n41) — b vs |f_centered| scatter, recovery threshold
@@ -439,23 +439,23 @@ single-victim aggregate 는 sparse {-1,0,+1} f_coeff recovery 에 쓰기 부족�
 cd /home/pacl/Documents/Repository/sca-2026
 
 # 가장 최신 결과 확인
-python3 scripts/n24_combined_analysis.py
-python3 scripts/n39_full_stack.py
-ls -la docs/IDEA.md docs/HANDOFF.md
+python3 scripts/ntruplus/n24_combined_analysis.py
+python3 scripts/ntruplus/n39_full_stack.py
+ls -la docs/ntruplus/EXPERIMENTS.md docs/ntruplus/HANDOFF.md
 ls -la traces/ntruplus768/phase3/wideg_*.npz
-ls -la results/ntruplus768/phase4/
+ls -la results/ntruplus/phase4/
 ```
 
 가장 중요한 reference 문서:
-1. `docs/IDEA.md` — Phase 4 entry (q8) 가 최종 cumulative
-2. `docs/HANDOFF.md` — 이 문서 (paper outline 포함)
+1. `docs/ntruplus/EXPERIMENTS.md` — Phase 4 entry (q8) 가 최종 cumulative
+2. `docs/ntruplus/HANDOFF.md` — 이 문서 (paper outline 포함)
 3. `host/ntruplus/` — NTRU+ codec/NTT 라이브러리 (수정 거의 없음)
 
 핵심 reference scripts (pipeline 핵심):
-- `scripts/n23_wideg_K4_attack.py` — 새 batch attack-valid 평가
-- `scripts/n24_combined_analysis.py` — 누적 통계 update (batch 추가 시)
-- `scripts/n39_full_stack.py` — full pipeline 실행 (M1+M5 Zsum + per-slot)
-- `scripts/n40_full_stack_ncurve.py` — N-curve 분석
+- `scripts/ntruplus/n23_wideg_K4_attack.py` — 새 batch attack-valid 평가
+- `scripts/ntruplus/n24_combined_analysis.py` — 누적 통계 update (batch 추가 시)
+- `scripts/ntruplus/n39_full_stack.py` — full pipeline 실행 (M1+M5 Zsum + per-slot)
+- `scripts/ntruplus/n40_full_stack_ncurve.py` — N-curve 분석
 
 ## 7. Task list status
 

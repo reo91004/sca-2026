@@ -47,13 +47,13 @@ A permutation null over key labels gives z-scores.
 
 ## Implementation
 
-- `scripts/s2_z_capture_matrix.py` accepts `--cmd D`. The first response is the
+- `scripts/smaug/s2_z_capture_matrix.py` accepts `--cmd D`. The first response is the
   1-byte `mismatch` flag; only ack length and determinism are validated.
-- `scripts/s4_pair_distance_oracle.py` builds same-`c1` `c2` pairs from the
+- `scripts/smaug/s4_pair_distance_oracle.py` builds same-`c1` `c2` pairs from the
   matrix capture, computes per-pair feature differences, evaluates held-out
   AUROC and ridge regression byte-HW metrics, runs a permutation null over key
   labels, and reports per-key AUROC.
-- `tests/test_pair_oracle.py` covers AUROC ties/edge cases, the
+- `tests/smaug/test_pair_oracle.py` covers AUROC ties/edge cases, the
   XOR-of-`mu_bits` round-trip for `flip_any` and `flip_byte_hw`, and synthetic
   perfect/random fixtures for the held-out evaluator.
 
@@ -81,7 +81,7 @@ The control is required to rule out public-`c2` packing leakage.
 ## D Smoke
 
 ```bash
-python3 -u scripts/s2_z_capture_matrix.py \
+python3 -u scripts/smaug/s2_z_capture_matrix.py \
   --cmd D --num-keys 1 -n 3 --samples 24400 \
   --design-mode detector-grid --coefs 0,8 --detector-alphas 128 \
   --c2-mode grid --c2-grid 15,16 \
@@ -100,7 +100,7 @@ Result:
 ## D Scout (full crypto_kem_dec, 6 keys × 12 c1 × 2 c2 × 10 traces)
 
 ```bash
-python3 -u scripts/s2_z_capture_matrix.py \
+python3 -u scripts/smaug/s2_z_capture_matrix.py \
   --cmd D --num-keys 6 -n 10 --samples 24400 \
   --design-mode detector-grid --coefs 0,8,16,24 --detector-alphas 64,128,192 \
   --c2-mode grid --c2-grid 15,16 \

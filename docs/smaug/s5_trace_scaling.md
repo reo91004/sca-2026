@@ -47,14 +47,14 @@ mu_byte_hw, sample_range=1024:5000
 Commands:
 
 ```bash
-python3 scripts/s2_z_lowdim_analyze.py \
+python3 scripts/smaug/s2_z_lowdim_analyze.py \
   --inputs traces/s4_r_mu_roundpack_d12n10_diversity_k*.npz \
   --label-kinds mu_byte_hw \
   --sample-range 1024:5000 \
   --max-traces N \
   --block 8 --n-features 32 --ridge 10 --feature-mode corr \
   --n-perm 200 \
-  --out-prefix results/s5_scaling_r_mu_byte_seg1024_5000_nN_p200
+  --out-prefix results/smaug/s5_scaling_r_mu_byte_seg1024_5000_nN_p200
 ```
 
 Results:
@@ -231,7 +231,7 @@ scaling hint, it was recaptured independently at `N=20`.
 Capture:
 
 ```bash
-python3 -u scripts/s2_z_capture_matrix.py \
+python3 -u scripts/smaug/s2_z_capture_matrix.py \
   --cmd Q \
   --num-keys 6 \
   -n 20 \
@@ -255,7 +255,7 @@ all designs: 20/20 captures
 First confirmation on the previous best window:
 
 ```bash
-python3 scripts/s4_c2_pair_analyze.py \
+python3 scripts/smaug/s4_c2_pair_analyze.py \
   --inputs traces/s5_c2_q_pair_b15_16_d24n20_k*.npz \
   --label-kinds mu_delta_byte_hw \
   --sample-range 9216:13192 \
@@ -263,7 +263,7 @@ python3 scripts/s4_c2_pair_analyze.py \
   --c2-delta 1 \
   --block 8 --n-features 32 --ridge 10 --feature-mode corr \
   --n-perm 500 \
-  --out-prefix results/s5_c2q_d24n20_mu_delta_byte_w9216_13192_p500
+  --out-prefix results/smaug/s5_c2q_d24n20_mu_delta_byte_w9216_13192_p500
 ```
 
 Result:
@@ -282,14 +282,14 @@ N=10, 9216:13192: exact z -0.18, rMAE z +0.14, corr z +1.99
 Window scan on the new `N=20` capture:
 
 ```bash
-python3 scripts/s4_c2_pair_window_scan.py \
+python3 scripts/smaug/s4_c2_pair_window_scan.py \
   --inputs traces/s5_c2_q_pair_b15_16_d24n20_k*.npz \
   --label-kind mu_delta_byte_hw \
   --c2-delta 1 \
   --block 8 --n-features 32 --ridge 10 --feature-mode corr \
   --window 3976 --stride 512 --top-k 8 \
   --n-perm 300 \
-  --out results/s5_c2q_d24n20_window_scan_mu_delta_byte_w3976_s512_p300.txt
+  --out results/smaug/s5_c2q_d24n20_window_scan_mu_delta_byte_w3976_s512_p300.txt
 ```
 
 Best real-only window:
@@ -301,7 +301,7 @@ Best real-only window:
 Higher-permutation confirmation:
 
 ```bash
-python3 scripts/s4_c2_pair_analyze.py \
+python3 scripts/smaug/s4_c2_pair_analyze.py \
   --inputs traces/s5_c2_q_pair_b15_16_d24n20_k*.npz \
   --label-kinds mu_delta_byte_hw \
   --sample-range 7680:11656 \
@@ -309,7 +309,7 @@ python3 scripts/s4_c2_pair_analyze.py \
   --c2-delta 1 \
   --block 8 --n-features 32 --ridge 10 --feature-mode corr \
   --n-perm 1000 \
-  --out-prefix results/s5_c2q_d24n20_mu_delta_byte_w7680_11656_p1000
+  --out-prefix results/smaug/s5_c2q_d24n20_mu_delta_byte_w7680_11656_p1000
 ```
 
 Result:

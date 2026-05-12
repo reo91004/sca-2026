@@ -29,8 +29,8 @@ This is not attack-valid, but it is the cleanest leakage-localization gadget.
 Rechecked command:
 
 ```bash
-python3 scripts/s1_t_final_analysis.py --out-prefix results/recheck_s1_final --n-shuffles 50
-python3 scripts/s1_t_recover_bayes.py --out-prefix results/recheck_s1_recover_bayes --conservative --margin-thresh 1.0
+python3 scripts/smaug/s1_t_final_analysis.py --out-prefix results/smaug/recheck_s1_final --n-shuffles 50
+python3 scripts/smaug/s1_t_recover_bayes.py --out-prefix results/smaug/recheck_s1_recover_bayes --conservative --margin-thresh 1.0
 ```
 
 Result:
@@ -58,7 +58,7 @@ sanity; analysis must use the trace and public chosen-CT labels only.
 Rechecked command:
 
 ```bash
-python3 scripts/s2_z_analyze.py --out-prefix results/recheck_s2_z_final --n-shuffles 50
+python3 scripts/smaug/s2_z_analyze.py --out-prefix results/smaug/recheck_s2_z_final --n-shuffles 50
 ```
 
 Result:
@@ -82,7 +82,7 @@ key.
 Command:
 
 ```bash
-python3 scripts/s2_z_multivariate.py --sweep --n-perm 100 --out-prefix results/s2_z_multivariate
+python3 scripts/smaug/s2_z_multivariate.py --sweep --n-perm 100 --out-prefix results/smaug/s2_z_multivariate
 ```
 
 Meaning: train a profiling model on known-key `Z` captures and predict a
@@ -116,15 +116,15 @@ cross-key trace identity.
 Capture commands:
 
 ```bash
-python3 scripts/s2_z_capture_matrix.py --num-keys 2 -n 5 --coefs 0,64 --tag s2_z_matrix_smoke
-python3 scripts/s2_z_capture_matrix.py --num-keys 12 -n 20 --coefs 0,64,128,192 --tag s2_z_matrix_pilot_d4n20
+python3 scripts/smaug/s2_z_capture_matrix.py --num-keys 2 -n 5 --coefs 0,64 --tag s2_z_matrix_smoke
+python3 scripts/smaug/s2_z_capture_matrix.py --num-keys 12 -n 20 --coefs 0,64,128,192 --tag s2_z_matrix_pilot_d4n20
 ```
 
 Analysis commands:
 
 ```bash
-python3 scripts/s2_z_matrix_analyze.py --inputs traces/s2_z_matrix_pilot_d4n20_k*.npz --block 32 --n-features 128 --ridge 10 --n-perm 100 --out-prefix results/s2_z_matrix_pilot_d4n20
-python3 scripts/s2_z_matrix_analyze.py --inputs traces/s2_z_matrix_pilot_d4n20_k*.npz --block 8 --n-features 256 --ridge 1 --n-perm 100 --out-prefix results/s2_z_matrix_pilot_d4n20_best
+python3 scripts/smaug/s2_z_matrix_analyze.py --inputs traces/s2_z_matrix_pilot_d4n20_k*.npz --block 32 --n-features 128 --ridge 10 --n-perm 100 --out-prefix results/smaug/s2_z_matrix_pilot_d4n20
+python3 scripts/smaug/s2_z_matrix_analyze.py --inputs traces/s2_z_matrix_pilot_d4n20_k*.npz --block 8 --n-features 256 --ridge 1 --n-perm 100 --out-prefix results/smaug/s2_z_matrix_pilot_d4n20_best
 ```
 
 Implementation fix before capture: `setup_session(..., fresh_key=False,
@@ -159,10 +159,10 @@ byte/chunk/evaluation states before returning to full 256-coordinate recovery.
 Command:
 
 ```bash
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_pilot_d4n20_k*.npz --sweep --n-perm 100 --out-prefix results/s2_z_lowdim_pilot_d4n20
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_pilot_d4n20_k*.npz --label-kinds support16 --block 32 --n-features 32 --ridge 100 --feature-mode snr --n-perm 1000 --out-prefix results/s2_z_lowdim_support16_confirm
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_pilot_d4n20_k*.npz --label-kinds sum16 --block 16 --n-features 64 --ridge 100 --feature-mode snr --n-perm 1000 --out-prefix results/s2_z_lowdim_sum16_confirm
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_pilot_d4n20_k*.npz --label-kinds support16 sum16 eval64_support eval64_sum --diff-base 0 --sweep --n-perm 100 --out-prefix results/s2_z_lowdim_diff_pilot_d4n20
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_pilot_d4n20_k*.npz --sweep --n-perm 100 --out-prefix results/smaug/s2_z_lowdim_pilot_d4n20
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_pilot_d4n20_k*.npz --label-kinds support16 --block 32 --n-features 32 --ridge 100 --feature-mode snr --n-perm 1000 --out-prefix results/smaug/s2_z_lowdim_support16_confirm
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_pilot_d4n20_k*.npz --label-kinds sum16 --block 16 --n-features 64 --ridge 100 --feature-mode snr --n-perm 1000 --out-prefix results/smaug/s2_z_lowdim_sum16_confirm
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_pilot_d4n20_k*.npz --label-kinds support16 sum16 eval64_support eval64_sum --diff-base 0 --sweep --n-perm 100 --out-prefix results/smaug/s2_z_lowdim_diff_pilot_d4n20
 ```
 
 Meaning: instead of predicting all 256 ternary coefficients, each `(key,
@@ -207,16 +207,16 @@ supports random public multi-term `c1` designs.
 Capture commands:
 
 ```bash
-python3 scripts/s2_z_capture_matrix.py --num-keys 1 -n 3 --design-mode random-multiterm --num-designs 2 --terms 3 --design-seed 20260505 --tag s2_z_matrix_randmt_smoke
-python3 scripts/s2_z_capture_matrix.py --num-keys 12 -n 10 --design-mode random-multiterm --num-designs 8 --terms 4 --design-seed 20260505 --tag s2_z_matrix_randmt_d8n10
+python3 scripts/smaug/s2_z_capture_matrix.py --num-keys 1 -n 3 --design-mode random-multiterm --num-designs 2 --terms 3 --design-seed 20260505 --tag s2_z_matrix_randmt_smoke
+python3 scripts/smaug/s2_z_capture_matrix.py --num-keys 12 -n 10 --design-mode random-multiterm --num-designs 8 --terms 4 --design-seed 20260505 --tag s2_z_matrix_randmt_d8n10
 ```
 
 Analysis commands:
 
 ```bash
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_d8n10_k*.npz --label-kinds prod16_sum prod16_abs prod16_hw prod64_sum prod64_hw --sweep --n-perm 100 --out-prefix results/s2_z_lowdim_randmt_d8n10
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_d8n10_k*.npz --label-kinds prod16_abs prod16_hw prod64_hw --diff-base 0 --sweep --n-perm 100 --out-prefix results/s2_z_lowdim_randmt_d8n10_diff
-python3 scripts/s2_z_matrix_analyze.py --inputs traces/s2_z_matrix_randmt_d8n10_k*.npz --block 8 --n-features 256 --ridge 1 --n-perm 100 --out-prefix results/s2_z_matrix_randmt_d8n10
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_d8n10_k*.npz --label-kinds prod16_sum prod16_abs prod16_hw prod64_sum prod64_hw --sweep --n-perm 100 --out-prefix results/smaug/s2_z_lowdim_randmt_d8n10
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_d8n10_k*.npz --label-kinds prod16_abs prod16_hw prod64_hw --diff-base 0 --sweep --n-perm 100 --out-prefix results/smaug/s2_z_lowdim_randmt_d8n10_diff
+python3 scripts/smaug/s2_z_matrix_analyze.py --inputs traces/s2_z_matrix_randmt_d8n10_k*.npz --block 8 --n-features 256 --ridge 1 --n-perm 100 --out-prefix results/smaug/s2_z_matrix_randmt_d8n10
 ```
 
 Result:
@@ -246,16 +246,16 @@ key/session variation dominate the full `Z` trace representation.
 Window scan:
 
 ```bash
-python3 scripts/s2_z_window_scan.py --window 2048 --smooth 64 --top-k 8 --out-prefix results/s2_z_window_scan_w2048
+python3 scripts/smaug/s2_z_window_scan.py --window 2048 --smooth 64 --top-k 8 --out-prefix results/smaug/s2_z_window_scan_w2048
 ```
 
 Follow-up analyses:
 
 ```bash
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_d8n10_k*.npz --label-kinds prod16_abs prod16_hw prod64_hw --sample-range 2438:4486 --sweep --n-perm 100 --out-prefix results/s2_z_lowdim_randmt_win_2438_4486
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_d8n10_k*.npz --label-kinds prod16_abs prod16_hw prod64_hw --sample-range 10682:12730 --sweep --n-perm 100 --out-prefix results/s2_z_lowdim_randmt_win_10682_12730
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_d8n10_k*.npz --label-kinds prod16_abs prod16_hw prod64_hw --sample-range 17731:19779 --sweep --n-perm 100 --out-prefix results/s2_z_lowdim_randmt_win_17731_19779
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_d8n10_k*.npz --label-kinds prod64_hw --sample-range 17731:19779 --block 16 --n-features 32 --ridge 100 --feature-mode corr --n-perm 1000 --out-prefix results/s2_z_lowdim_randmt_win_17731_19779_prod64hw_confirm
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_d8n10_k*.npz --label-kinds prod16_abs prod16_hw prod64_hw --sample-range 2438:4486 --sweep --n-perm 100 --out-prefix results/smaug/s2_z_lowdim_randmt_win_2438_4486
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_d8n10_k*.npz --label-kinds prod16_abs prod16_hw prod64_hw --sample-range 10682:12730 --sweep --n-perm 100 --out-prefix results/smaug/s2_z_lowdim_randmt_win_10682_12730
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_d8n10_k*.npz --label-kinds prod16_abs prod16_hw prod64_hw --sample-range 17731:19779 --sweep --n-perm 100 --out-prefix results/smaug/s2_z_lowdim_randmt_win_17731_19779
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_d8n10_k*.npz --label-kinds prod64_hw --sample-range 17731:19779 --block 16 --n-features 32 --ridge 100 --feature-mode corr --n-perm 1000 --out-prefix results/smaug/s2_z_lowdim_randmt_win_17731_19779_prod64hw_confirm
 ```
 
 Meaning: compare diagnostic `T`, diagnostic `V`, and proxy `Z` key-dependent
@@ -292,16 +292,16 @@ attack success.
 Capture:
 
 ```bash
-python3 scripts/s2_z_capture_matrix.py --num-keys 1 -n 3 --samples 2048 --adc-offset 17731 --design-mode random-multiterm --num-designs 2 --terms 4 --design-seed 20260505 --tag s2_z_matrix_randmt_win17731_smoke
-python3 scripts/s2_z_capture_matrix.py --num-keys 12 -n 20 --samples 2048 --adc-offset 17731 --design-mode random-multiterm --num-designs 8 --terms 4 --design-seed 20260505 --tag s2_z_matrix_randmt_win17731_d8n20
+python3 scripts/smaug/s2_z_capture_matrix.py --num-keys 1 -n 3 --samples 2048 --adc-offset 17731 --design-mode random-multiterm --num-designs 2 --terms 4 --design-seed 20260505 --tag s2_z_matrix_randmt_win17731_smoke
+python3 scripts/smaug/s2_z_capture_matrix.py --num-keys 12 -n 20 --samples 2048 --adc-offset 17731 --design-mode random-multiterm --num-designs 8 --terms 4 --design-seed 20260505 --tag s2_z_matrix_randmt_win17731_d8n20
 ```
 
 Analysis:
 
 ```bash
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kinds prod64_hw --block 16 --n-features 32 --ridge 100 --feature-mode corr --n-perm 1000 --out-prefix results/s2_z_lowdim_randmt_win17731_d8n20_prod64hw
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kinds prod64_hw prod16_hw prod16_abs --sweep --n-perm 100 --out-prefix results/s2_z_lowdim_randmt_win17731_d8n20_sweep
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kinds prod16_hw --block 16 --n-features 64 --ridge 100 --feature-mode snr --n-perm 1000 --out-prefix results/s2_z_lowdim_randmt_win17731_d8n20_prod16hw_confirm
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kinds prod64_hw --block 16 --n-features 32 --ridge 100 --feature-mode corr --n-perm 1000 --out-prefix results/smaug/s2_z_lowdim_randmt_win17731_d8n20_prod64hw
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kinds prod64_hw prod16_hw prod16_abs --sweep --n-perm 100 --out-prefix results/smaug/s2_z_lowdim_randmt_win17731_d8n20_sweep
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kinds prod16_hw --block 16 --n-features 64 --ridge 100 --feature-mode snr --n-perm 1000 --out-prefix results/smaug/s2_z_lowdim_randmt_win17731_d8n20_prod16hw_confirm
 ```
 
 Result:
@@ -328,7 +328,7 @@ label/window alignment is improved.
 
 Implementation update:
 
-- `scripts/s2_z_lowdim_analyze.py` now has Toom-Cook labels derived from
+- `scripts/smaug/s2_z_lowdim_analyze.py` now has Toom-Cook labels derived from
   `smaug1.a` disassembly: a 256-coefficient input is split into four 64-coef
   chunks, seven wrapped int16 evaluation arrays are formed, and per-evaluation
   Karatsuba operand/convolution HW labels are tested.
@@ -340,11 +340,11 @@ Implementation update:
 Analysis:
 
 ```bash
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kinds qprod16_hibyte --block 16 --n-features 64 --ridge 100 --feature-mode snr --n-perm 1000 --out-prefix results/s2_z_lowdim_randmt_win17731_d8n20_qprod16_hibyte_confirm
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kinds toom7_mul16_hw toom7_mul4_hw toom7_conv16_hw --sweep --n-perm 100 --out-prefix results/s2_z_lowdim_randmt_win17731_d8n20_toom7_sweep
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kinds toom0_mul4_hw toom1_mul4_hw toom2_mul4_hw toom3_mul4_hw toom4_mul4_hw toom5_mul4_hw toom6_mul4_hw --sweep --n-perm 100 --out-prefix results/s2_z_lowdim_randmt_win17731_d8n20_toom_points_mul4_sweep
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kinds toom0_conv16_hw toom1_conv16_hw toom2_conv16_hw toom3_conv16_hw toom4_conv16_hw toom5_conv16_hw toom6_conv16_hw --sweep --n-perm 100 --out-prefix results/s2_z_lowdim_randmt_win17731_d8n20_toom_points_conv16_sweep
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kinds toom2_conv16_hw --block 8 --n-features 128 --ridge 10 --feature-mode corr --n-perm 1000 --out-prefix results/s2_z_lowdim_randmt_win17731_d8n20_toom2_conv16_confirm
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kinds qprod16_hibyte --block 16 --n-features 64 --ridge 100 --feature-mode snr --n-perm 1000 --out-prefix results/smaug/s2_z_lowdim_randmt_win17731_d8n20_qprod16_hibyte_confirm
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kinds toom7_mul16_hw toom7_mul4_hw toom7_conv16_hw --sweep --n-perm 100 --out-prefix results/smaug/s2_z_lowdim_randmt_win17731_d8n20_toom7_sweep
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kinds toom0_mul4_hw toom1_mul4_hw toom2_mul4_hw toom3_mul4_hw toom4_mul4_hw toom5_mul4_hw toom6_mul4_hw --sweep --n-perm 100 --out-prefix results/smaug/s2_z_lowdim_randmt_win17731_d8n20_toom_points_mul4_sweep
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kinds toom0_conv16_hw toom1_conv16_hw toom2_conv16_hw toom3_conv16_hw toom4_conv16_hw toom5_conv16_hw toom6_conv16_hw --sweep --n-perm 100 --out-prefix results/smaug/s2_z_lowdim_randmt_win17731_d8n20_toom_points_conv16_sweep
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kinds toom2_conv16_hw --block 8 --n-features 128 --ridge 10 --feature-mode corr --n-perm 1000 --out-prefix results/smaug/s2_z_lowdim_randmt_win17731_d8n20_toom2_conv16_confirm
 ```
 
 Result:
@@ -393,23 +393,23 @@ implementation-state label.
 
 Implementation:
 
-- `scripts/s2_z_lowdim_analyze.py` now supports `--max-traces`,
+- `scripts/smaug/s2_z_lowdim_analyze.py` now supports `--max-traces`,
   `--max-designs`, and `--design-offset` for ablations.
-- `scripts/s2_z_design_score.py` scores random public 4-term `c1` designs on
+- `scripts/smaug/s2_z_design_score.py` scores random public 4-term `c1` designs on
   synthetic SMAUG1-sparse secrets only. It maximizes `toom2_conv16_hw` label
   variation/effective rank without using target keys.
-- `scripts/s2_z_capture_matrix.py` now accepts `--design-file`, using the
+- `scripts/smaug/s2_z_capture_matrix.py` now accepts `--design-file`, using the
   scorer's JSON `selected` design set directly.
-- `scripts/s2_z_label_pressure.py` compares trace-predicted or oracle labels
+- `scripts/smaug/s2_z_label_pressure.py` compares trace-predicted or oracle labels
   against random sparse secret candidates.
 
 Ablation on the original random-multiterm focused dataset:
 
 ```bash
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kinds toom2_conv16_hw --max-traces 5 --block 8 --n-features 128 --ridge 10 --feature-mode corr --n-perm 500 --out-prefix results/s2_z_lowdim_randmt_win17731_d8n20_toom2_conv16_n5_confirm
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kinds toom2_conv16_hw --max-traces 10 --block 8 --n-features 128 --ridge 10 --feature-mode corr --n-perm 500 --out-prefix results/s2_z_lowdim_randmt_win17731_d8n20_toom2_conv16_n10_confirm
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kinds toom2_conv16_hw --max-designs 4 --block 8 --n-features 128 --ridge 10 --feature-mode corr --n-perm 500 --out-prefix results/s2_z_lowdim_randmt_win17731_d8n20_toom2_conv16_d4_confirm
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kinds toom2_conv16_hw --design-offset 4 --max-designs 4 --block 8 --n-features 128 --ridge 10 --feature-mode corr --n-perm 500 --out-prefix results/s2_z_lowdim_randmt_win17731_d8n20_toom2_conv16_d4b_confirm
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kinds toom2_conv16_hw --max-traces 5 --block 8 --n-features 128 --ridge 10 --feature-mode corr --n-perm 500 --out-prefix results/smaug/s2_z_lowdim_randmt_win17731_d8n20_toom2_conv16_n5_confirm
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kinds toom2_conv16_hw --max-traces 10 --block 8 --n-features 128 --ridge 10 --feature-mode corr --n-perm 500 --out-prefix results/smaug/s2_z_lowdim_randmt_win17731_d8n20_toom2_conv16_n10_confirm
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kinds toom2_conv16_hw --max-designs 4 --block 8 --n-features 128 --ridge 10 --feature-mode corr --n-perm 500 --out-prefix results/smaug/s2_z_lowdim_randmt_win17731_d8n20_toom2_conv16_d4_confirm
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kinds toom2_conv16_hw --design-offset 4 --max-designs 4 --block 8 --n-features 128 --ridge 10 --feature-mode corr --n-perm 500 --out-prefix results/smaug/s2_z_lowdim_randmt_win17731_d8n20_toom2_conv16_d4b_confirm
 ```
 
 Result:
@@ -428,9 +428,9 @@ not visible in the measured power trace.
 Scored-design generation and capture:
 
 ```bash
-python3 scripts/s2_z_design_score.py --num-secrets 512 --num-candidates 512 --top-k 12 --select-k 8 --out-json results/s2_z_scored_designs_toom2_512x512.json --out-txt results/s2_z_design_score_toom2_512x512.txt
-python3 scripts/s2_z_capture_matrix.py --num-keys 1 -n 3 --samples 2048 --adc-offset 17731 --design-file results/s2_z_scored_designs_toom2_512x512.json --tag s2_z_matrix_scored_toom2_smoke
-python3 scripts/s2_z_capture_matrix.py --num-keys 12 -n 20 --samples 2048 --adc-offset 17731 --design-file results/s2_z_scored_designs_toom2_512x512.json --tag s2_z_matrix_scored_toom2_d8n20
+python3 scripts/smaug/s2_z_design_score.py --num-secrets 512 --num-candidates 512 --top-k 12 --select-k 8 --out-json results/smaug/s2_z_scored_designs_toom2_512x512.json --out-txt results/smaug/s2_z_design_score_toom2_512x512.txt
+python3 scripts/smaug/s2_z_capture_matrix.py --num-keys 1 -n 3 --samples 2048 --adc-offset 17731 --design-file results/smaug/s2_z_scored_designs_toom2_512x512.json --tag s2_z_matrix_scored_toom2_smoke
+python3 scripts/smaug/s2_z_capture_matrix.py --num-keys 12 -n 20 --samples 2048 --adc-offset 17731 --design-file results/smaug/s2_z_scored_designs_toom2_512x512.json --tag s2_z_matrix_scored_toom2_d8n20
 ```
 
 Capture result:
@@ -443,10 +443,10 @@ Capture result:
 Analysis:
 
 ```bash
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_scored_toom2_d8n20_k*.npz --label-kinds toom2_conv16_hw --block 8 --n-features 128 --ridge 10 --feature-mode corr --n-perm 1000 --out-prefix results/s2_z_lowdim_scored_toom2_d8n20_toom2_conv16_confirm
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_scored_toom2_d8n20_k*.npz --label-kinds toom0_conv16_hw toom1_conv16_hw toom2_conv16_hw toom3_conv16_hw toom4_conv16_hw toom5_conv16_hw toom6_conv16_hw toom0_mul4_hw toom1_mul4_hw toom2_mul4_hw toom3_mul4_hw toom4_mul4_hw toom5_mul4_hw toom6_mul4_hw --sweep --n-perm 100 --out-prefix results/s2_z_lowdim_scored_toom2_d8n20_toom_points_sweep
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_scored_toom2_d8n20_k*.npz --label-kinds toom6_conv16_hw --block 8 --n-features 32 --ridge 1 --feature-mode corr --n-perm 1000 --out-prefix results/s2_z_lowdim_scored_toom2_d8n20_toom6_conv16_confirm
-python3 scripts/s2_z_label_pressure.py --inputs traces/s2_z_matrix_scored_toom2_d8n20_k*.npz --label-kind toom6_conv16_hw --block 8 --n-features 32 --ridge 1 --feature-mode corr --n-candidates 5000 --score-mode z --prediction-mode trace --out results/s2_z_label_pressure_scored_toom6_trace_z_n5000.txt
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_scored_toom2_d8n20_k*.npz --label-kinds toom2_conv16_hw --block 8 --n-features 128 --ridge 10 --feature-mode corr --n-perm 1000 --out-prefix results/smaug/s2_z_lowdim_scored_toom2_d8n20_toom2_conv16_confirm
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_scored_toom2_d8n20_k*.npz --label-kinds toom0_conv16_hw toom1_conv16_hw toom2_conv16_hw toom3_conv16_hw toom4_conv16_hw toom5_conv16_hw toom6_conv16_hw toom0_mul4_hw toom1_mul4_hw toom2_mul4_hw toom3_mul4_hw toom4_mul4_hw toom5_mul4_hw toom6_mul4_hw --sweep --n-perm 100 --out-prefix results/smaug/s2_z_lowdim_scored_toom2_d8n20_toom_points_sweep
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_scored_toom2_d8n20_k*.npz --label-kinds toom6_conv16_hw --block 8 --n-features 32 --ridge 1 --feature-mode corr --n-perm 1000 --out-prefix results/smaug/s2_z_lowdim_scored_toom2_d8n20_toom6_conv16_confirm
+python3 scripts/smaug/s2_z_label_pressure.py --inputs traces/s2_z_matrix_scored_toom2_d8n20_k*.npz --label-kind toom6_conv16_hw --block 8 --n-features 32 --ridge 1 --feature-mode corr --n-candidates 5000 --score-mode z --prediction-mode trace --out results/smaug/s2_z_label_pressure_scored_toom6_trace_z_n5000.txt
 ```
 
 Result:
@@ -480,7 +480,7 @@ key must stay held out from both design selection and model fitting.
 
 Implementation:
 
-- `scripts/s2_z_leakage_select.py` performs nested selection. For each outer
+- `scripts/smaug/s2_z_leakage_select.py` performs nested selection. For each outer
   held-out key, all candidate design subsets of size `K` are scored by
   leave-one-key validation on the remaining profiling keys. The selected subset
   is then used to train on all profiling keys and evaluate the held-out key.
@@ -490,11 +490,11 @@ Implementation:
 Analysis:
 
 ```bash
-python3 scripts/s2_z_leakage_select.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kind toom2_conv16_hw --select-k 4 --n-perm 50 --out results/s2_z_leakage_select_randmt_toom2_d4_p50.txt
-python3 scripts/s2_z_leakage_select.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kind toom2_conv16_hw --select-k 4 --selection-metric rounded_mae --n-perm 30 --out results/s2_z_leakage_select_randmt_toom2_d4_rmae_p30.txt
-python3 scripts/s2_z_leakage_select.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kind toom2_conv16_hw --select-k 3 --selection-metric corr --n-perm 30 --out results/s2_z_leakage_select_randmt_toom2_d3_corr_p30.txt
-python3 scripts/s2_z_leakage_select.py --inputs traces/s2_z_matrix_scored_toom2_d8n20_k*.npz --label-kind toom2_conv16_hw --select-k 4 --selection-metric corr --n-perm 30 --out results/s2_z_leakage_select_scored_toom2_d4_corr_p30.txt
-python3 scripts/s2_z_leakage_select.py --inputs traces/s2_z_matrix_scored_toom2_d8n20_k*.npz --label-kind toom6_conv16_hw --block 8 --n-features 32 --ridge 1 --feature-mode corr --select-k 4 --selection-metric exact --n-perm 30 --out results/s2_z_leakage_select_scored_toom6_d4_exact_p30.txt
+python3 scripts/smaug/s2_z_leakage_select.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kind toom2_conv16_hw --select-k 4 --n-perm 50 --out results/smaug/s2_z_leakage_select_randmt_toom2_d4_p50.txt
+python3 scripts/smaug/s2_z_leakage_select.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kind toom2_conv16_hw --select-k 4 --selection-metric rounded_mae --n-perm 30 --out results/smaug/s2_z_leakage_select_randmt_toom2_d4_rmae_p30.txt
+python3 scripts/smaug/s2_z_leakage_select.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kind toom2_conv16_hw --select-k 3 --selection-metric corr --n-perm 30 --out results/smaug/s2_z_leakage_select_randmt_toom2_d3_corr_p30.txt
+python3 scripts/smaug/s2_z_leakage_select.py --inputs traces/s2_z_matrix_scored_toom2_d8n20_k*.npz --label-kind toom2_conv16_hw --select-k 4 --selection-metric corr --n-perm 30 --out results/smaug/s2_z_leakage_select_scored_toom2_d4_corr_p30.txt
+python3 scripts/smaug/s2_z_leakage_select.py --inputs traces/s2_z_matrix_scored_toom2_d8n20_k*.npz --label-kind toom6_conv16_hw --block 8 --n-features 32 --ridge 1 --feature-mode corr --select-k 4 --selection-metric exact --n-perm 30 --out results/smaug/s2_z_leakage_select_scored_toom6_d4_exact_p30.txt
 ```
 
 Result:
@@ -539,7 +539,7 @@ attack-valid.
 Rechecked command:
 
 ```bash
-python3 scripts/s3_v_analyze_2sk.py --sk-a traces/s3_v_skA_a4_n200.npz --sk-b traces/s3_v_skB_a4_n200.npz --out-prefix results/recheck_s3_v_2sk
+python3 scripts/smaug/s3_v_analyze_2sk.py --sk-a traces/s3_v_skA_a4_n200.npz --sk-b traces/s3_v_skB_a4_n200.npz --out-prefix results/smaug/recheck_s3_v_2sk
 ```
 
 Result:
@@ -561,7 +561,7 @@ small diagnostic check before adding more firmware instrumentation.
 
 Implementation:
 
-- `scripts/s3_v_lowdim_analyze.py` wraps existing single-design `V` captures as
+- `scripts/smaug/s3_v_lowdim_analyze.py` wraps existing single-design `V` captures as
   a one-design matrix dataset and reuses the same low-dimensional evaluator and
   permutation null as S2.
 - Current data has only 5 keys and one public monomial design
@@ -570,8 +570,8 @@ Implementation:
 Analysis:
 
 ```bash
-python3 scripts/s3_v_lowdim_analyze.py --inputs traces/s3_v*_a4_n200.npz --label-kinds toom0_conv16_hw toom1_conv16_hw toom2_conv16_hw toom3_conv16_hw toom4_conv16_hw toom5_conv16_hw toom6_conv16_hw --sweep --n-perm 50 --out-prefix results/s3_v_lowdim_toom_conv_sweep_p50
-python3 scripts/s3_v_lowdim_analyze.py --inputs traces/s3_v*_a4_n200.npz --label-kinds toom2_conv16_hw --block 8 --n-features 128 --ridge 10 --feature-mode corr --n-perm 500 --out-prefix results/s3_v_lowdim_toom2_fixed_p500
+python3 scripts/smaug/s3_v_lowdim_analyze.py --inputs traces/s3_v*_a4_n200.npz --label-kinds toom0_conv16_hw toom1_conv16_hw toom2_conv16_hw toom3_conv16_hw toom4_conv16_hw toom5_conv16_hw toom6_conv16_hw --sweep --n-perm 50 --out-prefix results/smaug/s3_v_lowdim_toom_conv_sweep_p50
+python3 scripts/smaug/s3_v_lowdim_analyze.py --inputs traces/s3_v*_a4_n200.npz --label-kinds toom2_conv16_hw --block 8 --n-features 128 --ridge 10 --feature-mode corr --n-perm 500 --out-prefix results/smaug/s3_v_lowdim_toom2_fixed_p500
 ```
 
 Result:
@@ -597,10 +597,10 @@ Implementation:
   `(coef, alpha)` slots. The firmware builds a public `host_b` polynomial,
   triggers only around `poly_mul_acc(sk[component], host_b, out)`, and returns
   the first 32 output bytes for sanity.
-- `scripts/s1_u_capture_matrix.py` captures multiple public designs per key.
+- `scripts/smaug/s1_u_capture_matrix.py` captures multiple public designs per key.
   By default it sends `alpha << 8`, matching the `c1 << 8` convention inside
   `Z`/`vec_vec_mult_add`.
-- `scripts/s2_z_lowdim_analyze.py` can now also load `cmd=U`,
+- `scripts/smaug/s2_z_lowdim_analyze.py` can now also load `cmd=U`,
   `capture_kind=u_matrix` files, so the same Toom labels and permutation null
   can be applied to isolated multi-term multiplication traces.
 
@@ -609,8 +609,8 @@ First hardware smoke to run after flashing the rebuilt firmware:
 ```bash
 make -C firmware/simpleserial-smaug PLATFORM=CW308_STM32F4 SMAUG_LEVEL=1
 python3 host/upload.py firmware/simpleserial-smaug/simpleserial-smaug-CW308_STM32F4.hex
-python3 scripts/s1_u_capture_matrix.py --num-keys 1 -n 5 --num-designs 2 --terms 4 --tag s1_u_matrix_smoke
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s1_u_matrix_smoke_k*.npz --label-kinds toom2_conv16_hw --block 8 --n-features 64 --ridge 10 --feature-mode corr --n-perm 20 --out-prefix results/s1_u_lowdim_smoke_toom2
+python3 scripts/smaug/s1_u_capture_matrix.py --num-keys 1 -n 5 --num-designs 2 --terms 4 --tag s1_u_matrix_smoke
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s1_u_matrix_smoke_k*.npz --label-kinds toom2_conv16_hw --block 8 --n-features 64 --ridge 10 --feature-mode corr --n-perm 20 --out-prefix results/smaug/s1_u_lowdim_smoke_toom2
 ```
 
 Interpretation target:
@@ -624,12 +624,12 @@ Hardware result:
 
 ```bash
 python3 host/upload.py firmware/simpleserial-smaug/simpleserial-smaug-CW308_STM32F4.hex
-python3 scripts/s1_u_capture_matrix.py --num-keys 1 -n 5 --num-designs 2 --terms 4 --tag s1_u_matrix_smoke
-python3 scripts/s1_u_capture_matrix.py --num-keys 6 -n 20 --num-designs 8 --terms 4 --design-seed 20260505 --tag s1_u_matrix_randmt_d8n20_scout
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s1_u_matrix_randmt_d8n20_scout_k*.npz --label-kinds toom2_conv16_hw --block 8 --n-features 128 --ridge 10 --feature-mode corr --n-perm 200 --out-prefix results/s1_u_lowdim_randmt_d8n20_scout_toom2_fixed_p200
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s1_u_matrix_randmt_d8n20_scout_k*.npz --label-kinds toom0_conv16_hw toom1_conv16_hw toom2_conv16_hw toom3_conv16_hw toom4_conv16_hw toom5_conv16_hw toom6_conv16_hw --sweep --n-perm 50 --out-prefix results/s1_u_lowdim_randmt_d8n20_scout_toom_conv_sweep_p50
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s1_u_matrix_randmt_d8n20_scout_k*.npz --label-kinds toom3_conv16_hw --block 8 --n-features 128 --ridge 1 --feature-mode snr --n-perm 500 --out-prefix results/s1_u_lowdim_randmt_d8n20_scout_toom3_confirm_p500
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s1_u_matrix_randmt_d8n20_scout_k*.npz --label-kinds toom3_conv16_hw --sample-range 11000:15000 --block 8 --n-features 128 --ridge 1 --feature-mode snr --n-perm 500 --out-prefix results/s1_u_lowdim_randmt_d8n20_scout_toom3_win11000_15000_p500
+python3 scripts/smaug/s1_u_capture_matrix.py --num-keys 1 -n 5 --num-designs 2 --terms 4 --tag s1_u_matrix_smoke
+python3 scripts/smaug/s1_u_capture_matrix.py --num-keys 6 -n 20 --num-designs 8 --terms 4 --design-seed 20260505 --tag s1_u_matrix_randmt_d8n20_scout
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s1_u_matrix_randmt_d8n20_scout_k*.npz --label-kinds toom2_conv16_hw --block 8 --n-features 128 --ridge 10 --feature-mode corr --n-perm 200 --out-prefix results/smaug/s1_u_lowdim_randmt_d8n20_scout_toom2_fixed_p200
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s1_u_matrix_randmt_d8n20_scout_k*.npz --label-kinds toom0_conv16_hw toom1_conv16_hw toom2_conv16_hw toom3_conv16_hw toom4_conv16_hw toom5_conv16_hw toom6_conv16_hw --sweep --n-perm 50 --out-prefix results/smaug/s1_u_lowdim_randmt_d8n20_scout_toom_conv_sweep_p50
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s1_u_matrix_randmt_d8n20_scout_k*.npz --label-kinds toom3_conv16_hw --block 8 --n-features 128 --ridge 1 --feature-mode snr --n-perm 500 --out-prefix results/smaug/s1_u_lowdim_randmt_d8n20_scout_toom3_confirm_p500
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s1_u_matrix_randmt_d8n20_scout_k*.npz --label-kinds toom3_conv16_hw --sample-range 11000:15000 --block 8 --n-features 128 --ridge 1 --feature-mode snr --n-perm 500 --out-prefix results/smaug/s1_u_lowdim_randmt_d8n20_scout_toom3_win11000_15000_p500
 ```
 
 - Firmware upload passed with the new `U` command.
@@ -673,7 +673,7 @@ Karatsuba operands:
 
 Implementation:
 
-- `scripts/s2_z_lowdim_analyze.py` now supports lower-level labels:
+- `scripts/smaug/s2_z_lowdim_analyze.py` now supports lower-level labels:
   `toom{i}_kara{0,1,2}_conv8_hw`, `toom{i}_kara{0,1,2}_mul4_hw`,
   `toom{i}_kara{0,1,2}_op8_hw`, and `toom{i}_sec8_hw`.
 - These labels are still diagnostic and high-level relative to actual C
@@ -683,10 +683,10 @@ Implementation:
 Analysis on the `U` scout:
 
 ```bash
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s1_u_matrix_randmt_d8n20_scout_k*.npz --label-kinds toom3_sec8_hw toom3_kara0_conv8_hw toom3_kara1_conv8_hw toom3_kara2_conv8_hw toom3_kara0_mul4_hw toom3_kara1_mul4_hw toom3_kara2_mul4_hw toom3_kara0_op8_hw toom3_kara1_op8_hw toom3_kara2_op8_hw --sweep --n-perm 100 --out-prefix results/s1_u_lowdim_randmt_d8n20_scout_toom3_kara_low_sweep_p100
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s1_u_matrix_randmt_d8n20_scout_k*.npz --label-kinds toom3_kara2_conv8_hw --block 16 --n-features 64 --ridge 1 --feature-mode corr --n-perm 500 --out-prefix results/s1_u_lowdim_randmt_d8n20_scout_toom3_kara2_conv8_confirm_p500
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kinds toom3_kara2_conv8_hw --block 16 --n-features 64 --ridge 1 --feature-mode corr --n-perm 500 --out-prefix results/s2_z_lowdim_randmt_win17731_d8n20_toom3_kara2_conv8_confirm_p500
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_d8n10_k*.npz --label-kinds toom3_kara2_conv8_hw --block 16 --n-features 64 --ridge 1 --feature-mode corr --n-perm 300 --out-prefix results/s2_z_lowdim_randmt_d8n10_toom3_kara2_conv8_confirm_p300
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s1_u_matrix_randmt_d8n20_scout_k*.npz --label-kinds toom3_sec8_hw toom3_kara0_conv8_hw toom3_kara1_conv8_hw toom3_kara2_conv8_hw toom3_kara0_mul4_hw toom3_kara1_mul4_hw toom3_kara2_mul4_hw toom3_kara0_op8_hw toom3_kara1_op8_hw toom3_kara2_op8_hw --sweep --n-perm 100 --out-prefix results/smaug/s1_u_lowdim_randmt_d8n20_scout_toom3_kara_low_sweep_p100
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s1_u_matrix_randmt_d8n20_scout_k*.npz --label-kinds toom3_kara2_conv8_hw --block 16 --n-features 64 --ridge 1 --feature-mode corr --n-perm 500 --out-prefix results/smaug/s1_u_lowdim_randmt_d8n20_scout_toom3_kara2_conv8_confirm_p500
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kinds toom3_kara2_conv8_hw --block 16 --n-features 64 --ridge 1 --feature-mode corr --n-perm 500 --out-prefix results/smaug/s2_z_lowdim_randmt_win17731_d8n20_toom3_kara2_conv8_confirm_p500
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_d8n10_k*.npz --label-kinds toom3_kara2_conv8_hw --block 16 --n-features 64 --ridge 1 --feature-mode corr --n-perm 300 --out-prefix results/smaug/s2_z_lowdim_randmt_d8n10_toom3_kara2_conv8_confirm_p300
 ```
 
 Result:
@@ -719,17 +719,17 @@ set leaks in the `V` replay of `vec_vec_mult_add`.
 
 Implementation:
 
-- `scripts/s2_z_capture_matrix.py` now supports `--cmd V`, reusing the same
+- `scripts/smaug/s2_z_capture_matrix.py` now supports `--cmd V`, reusing the same
   resident-key, design-matrix, round-trip, and ack-determinism checks as `Z`.
-- `scripts/s2_z_lowdim_analyze.py` can load matrix captures with `cmd=V`.
+- `scripts/smaug/s2_z_lowdim_analyze.py` can load matrix captures with `cmd=V`.
 
 Capture and analysis:
 
 ```bash
-python3 scripts/s2_z_capture_matrix.py --cmd V --num-keys 1 -n 3 --design-mode random-multiterm --num-designs 2 --terms 4 --design-seed 20260505 --tag s3_v_matrix_randmt_smoke
-python3 scripts/s2_z_capture_matrix.py --cmd V --num-keys 6 -n 20 --design-mode random-multiterm --num-designs 8 --terms 4 --design-seed 20260505 --tag s3_v_matrix_randmt_d8n20_scout
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s3_v_matrix_randmt_d8n20_scout_k*.npz --label-kinds toom3_kara2_conv8_hw --block 16 --n-features 64 --ridge 1 --feature-mode corr --n-perm 500 --out-prefix results/s3_v_lowdim_matrix_randmt_d8n20_scout_toom3_kara2_conv8_confirm_p500
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s3_v_matrix_randmt_d8n20_scout_k*.npz --label-kinds toom3_sec8_hw toom3_kara0_conv8_hw toom3_kara1_conv8_hw toom3_kara2_conv8_hw toom3_kara0_mul4_hw toom3_kara1_mul4_hw toom3_kara2_mul4_hw toom3_kara0_op8_hw toom3_kara1_op8_hw toom3_kara2_op8_hw --sweep --n-perm 100 --out-prefix results/s3_v_lowdim_matrix_randmt_d8n20_scout_toom3_kara_low_sweep_p100
+python3 scripts/smaug/s2_z_capture_matrix.py --cmd V --num-keys 1 -n 3 --design-mode random-multiterm --num-designs 2 --terms 4 --design-seed 20260505 --tag s3_v_matrix_randmt_smoke
+python3 scripts/smaug/s2_z_capture_matrix.py --cmd V --num-keys 6 -n 20 --design-mode random-multiterm --num-designs 8 --terms 4 --design-seed 20260505 --tag s3_v_matrix_randmt_d8n20_scout
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s3_v_matrix_randmt_d8n20_scout_k*.npz --label-kinds toom3_kara2_conv8_hw --block 16 --n-features 64 --ridge 1 --feature-mode corr --n-perm 500 --out-prefix results/smaug/s3_v_lowdim_matrix_randmt_d8n20_scout_toom3_kara2_conv8_confirm_p500
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s3_v_matrix_randmt_d8n20_scout_k*.npz --label-kinds toom3_sec8_hw toom3_kara0_conv8_hw toom3_kara1_conv8_hw toom3_kara2_conv8_hw toom3_kara0_mul4_hw toom3_kara1_mul4_hw toom3_kara2_mul4_hw toom3_kara0_op8_hw toom3_kara1_op8_hw toom3_kara2_op8_hw --sweep --n-perm 100 --out-prefix results/smaug/s3_v_lowdim_matrix_randmt_d8n20_scout_toom3_kara_low_sweep_p100
 ```
 
 Result:
@@ -767,26 +767,26 @@ Important implementation finding:
   first computes `a >> mod`, calls `poly_mul_acc(a_unshifted, b, tmp)`, then
   shifts the product back left before adding into the output. Therefore the
   actual `V` multiplication state is not `poly_mul_acc(sk, c1 << 8)`.
-- `scripts/s2_z_lowdim_analyze.py` keeps the old `toom*` labels for the `U`
+- `scripts/smaug/s2_z_lowdim_analyze.py` keeps the old `toom*` labels for the `U`
   shifted-public hypothesis and adds `vtoom*` labels for the `V`/`W` internal
   hypothesis: unshifted public operand first, secret operand second.
 - `firmware/simpleserial-smaug/simpleserial-smaug.c` adds command `W`:
   payload `component`, replay `load_from_string_sk` + `load_from_string`, then
   trigger only around `poly_mul_acc(c1_component_unshifted, sk_component, out)`.
-- `scripts/s2_z_capture_matrix.py` now supports `--cmd W`. Since `W` returns a
+- `scripts/smaug/s2_z_capture_matrix.py` now supports `--cmd W`. Since `W` returns a
   raw product sanity response rather than `mu'`, capture checks only response
   length and ack determinism, not round-trip `mu'`.
 
 Capture and analysis:
 
 ```bash
-python3 scripts/s2_z_capture_matrix.py --cmd W --num-keys 1 -n 3 --design-mode random-multiterm --num-designs 2 --terms 4 --design-seed 20260505 --tag s3_w_component_randmt_smoke
-python3 scripts/s2_z_capture_matrix.py --cmd W --num-keys 6 -n 20 --design-mode random-multiterm --num-designs 8 --terms 4 --design-seed 20260505 --tag s3_w_component_randmt_d8n20_scout
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s3_w_component_randmt_d8n20_scout_k*.npz --label-kinds toom3_kara2_conv8_hw --block 16 --n-features 64 --ridge 1 --feature-mode corr --n-perm 500 --out-prefix results/s3_w_lowdim_component_randmt_d8n20_scout_toom3_kara2_conv8_confirm_p500
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s3_w_component_randmt_d8n20_scout_k*.npz --label-kinds vtoom3_kara2_conv8_hw --block 16 --n-features 64 --ridge 1 --feature-mode corr --n-perm 500 --out-prefix results/s3_w_lowdim_component_randmt_d8n20_scout_vtoom3_kara2_conv8_confirm_p500
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s3_w_component_randmt_d8n20_scout_k*.npz --label-kinds vtoom3_sec8_hw vtoom3_kara0_conv8_hw vtoom3_kara1_conv8_hw vtoom3_kara2_conv8_hw vtoom3_kara0_mul4_hw vtoom3_kara1_mul4_hw vtoom3_kara2_mul4_hw vtoom3_kara0_op8_hw vtoom3_kara1_op8_hw vtoom3_kara2_op8_hw --sweep --n-perm 100 --out-prefix results/s3_w_lowdim_component_randmt_d8n20_scout_vtoom3_kara_low_sweep_p100
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s3_w_component_randmt_d8n20_scout_k*.npz --label-kinds prod16_sum prod16_abs prod16_hw prod64_sum prod64_hw qprod16_hw qprod16_hibyte qprod64_hw qprod64_hibyte --sweep --n-perm 100 --out-prefix results/s3_w_lowdim_component_randmt_d8n20_scout_prod_sweep_p100
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s3_v_matrix_randmt_d8n20_scout_k*.npz --label-kinds vtoom3_kara0_conv8_hw vtoom3_kara1_conv8_hw vtoom3_kara2_conv8_hw vtoom3_kara0_mul4_hw vtoom3_kara1_mul4_hw vtoom3_kara2_mul4_hw --sweep --n-perm 100 --out-prefix results/s3_v_lowdim_matrix_randmt_d8n20_scout_vtoom3_kara_sweep_p100
+python3 scripts/smaug/s2_z_capture_matrix.py --cmd W --num-keys 1 -n 3 --design-mode random-multiterm --num-designs 2 --terms 4 --design-seed 20260505 --tag s3_w_component_randmt_smoke
+python3 scripts/smaug/s2_z_capture_matrix.py --cmd W --num-keys 6 -n 20 --design-mode random-multiterm --num-designs 8 --terms 4 --design-seed 20260505 --tag s3_w_component_randmt_d8n20_scout
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s3_w_component_randmt_d8n20_scout_k*.npz --label-kinds toom3_kara2_conv8_hw --block 16 --n-features 64 --ridge 1 --feature-mode corr --n-perm 500 --out-prefix results/smaug/s3_w_lowdim_component_randmt_d8n20_scout_toom3_kara2_conv8_confirm_p500
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s3_w_component_randmt_d8n20_scout_k*.npz --label-kinds vtoom3_kara2_conv8_hw --block 16 --n-features 64 --ridge 1 --feature-mode corr --n-perm 500 --out-prefix results/smaug/s3_w_lowdim_component_randmt_d8n20_scout_vtoom3_kara2_conv8_confirm_p500
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s3_w_component_randmt_d8n20_scout_k*.npz --label-kinds vtoom3_sec8_hw vtoom3_kara0_conv8_hw vtoom3_kara1_conv8_hw vtoom3_kara2_conv8_hw vtoom3_kara0_mul4_hw vtoom3_kara1_mul4_hw vtoom3_kara2_mul4_hw vtoom3_kara0_op8_hw vtoom3_kara1_op8_hw vtoom3_kara2_op8_hw --sweep --n-perm 100 --out-prefix results/smaug/s3_w_lowdim_component_randmt_d8n20_scout_vtoom3_kara_low_sweep_p100
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s3_w_component_randmt_d8n20_scout_k*.npz --label-kinds prod16_sum prod16_abs prod16_hw prod64_sum prod64_hw qprod16_hw qprod16_hibyte qprod64_hw qprod64_hibyte --sweep --n-perm 100 --out-prefix results/smaug/s3_w_lowdim_component_randmt_d8n20_scout_prod_sweep_p100
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s3_v_matrix_randmt_d8n20_scout_k*.npz --label-kinds vtoom3_kara0_conv8_hw vtoom3_kara1_conv8_hw vtoom3_kara2_conv8_hw vtoom3_kara0_mul4_hw vtoom3_kara1_mul4_hw vtoom3_kara2_mul4_hw --sweep --n-perm 100 --out-prefix results/smaug/s3_v_lowdim_matrix_randmt_d8n20_scout_vtoom3_kara_sweep_p100
 ```
 
 Result:
@@ -832,20 +832,20 @@ nontrivial, we captured `V` with constant nonzero `c2`.
 
 Implementation:
 
-- `scripts/s2_z_lowdim_analyze.py` now supports `vtmp*`, `vshift*`, `vadd*`,
+- `scripts/smaug/s2_z_lowdim_analyze.py` now supports `vtmp*`, `vshift*`, `vadd*`,
   and `vdelta*` labels:
   - `vtmp*`: approximate `poly_mul_acc(c1_unshifted, sk)` result,
   - `vshift*`: `tmp << LOG_P`,
   - `vadd*`: `(c2 << 11) + (tmp << LOG_P)`,
   - `vdelta*`: Hamming distance between `c2 << 11` and the post-add output.
-- `scripts/s2_z_capture_matrix.py` now supports `--c2-mode constant
+- `scripts/smaug/s2_z_capture_matrix.py` now supports `--c2-mode constant
   --c2-alpha A`; old captures default to `c2=0` in the analyzer.
 
 Analysis on existing `c2=0` `V`/`W` captures:
 
 ```bash
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s3_v_matrix_randmt_d8n20_scout_k*.npz --label-kinds vtmp16_hw vtmp64_hw vtmp16_lohw vtmp16_hihw vshift16_hw vshift64_hw vshift16_hihw vadd16_hw vadd64_hw vdelta16_hw vdelta64_hw --sweep --n-perm 100 --out-prefix results/s3_v_lowdim_matrix_randmt_d8n20_scout_vecadd_sweep_p100
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s3_w_component_randmt_d8n20_scout_k*.npz --label-kinds vtmp16_hw vtmp64_hw vtmp16_lohw vtmp16_hihw vshift16_hw vshift64_hw vshift16_hihw vadd16_hw vadd64_hw vdelta16_hw vdelta64_hw --sweep --n-perm 100 --out-prefix results/s3_w_lowdim_component_randmt_d8n20_scout_vecadd_sweep_p100
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s3_v_matrix_randmt_d8n20_scout_k*.npz --label-kinds vtmp16_hw vtmp64_hw vtmp16_lohw vtmp16_hihw vshift16_hw vshift64_hw vshift16_hihw vadd16_hw vadd64_hw vdelta16_hw vdelta64_hw --sweep --n-perm 100 --out-prefix results/smaug/s3_v_lowdim_matrix_randmt_d8n20_scout_vecadd_sweep_p100
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s3_w_component_randmt_d8n20_scout_k*.npz --label-kinds vtmp16_hw vtmp64_hw vtmp16_lohw vtmp16_hihw vshift16_hw vshift64_hw vshift16_hihw vadd16_hw vadd64_hw vdelta16_hw vdelta64_hw --sweep --n-perm 100 --out-prefix results/smaug/s3_w_lowdim_component_randmt_d8n20_scout_vecadd_sweep_p100
 ```
 
 Result on existing captures: negative. Several labels produced exact z-scores
@@ -856,10 +856,10 @@ and `vdelta` equivalent to shifted product labels.
 Nonzero-`c2` capture and analysis:
 
 ```bash
-python3 scripts/s2_z_capture_matrix.py --cmd V --c2-mode constant --c2-alpha 8 --num-keys 1 -n 3 --design-mode random-multiterm --num-designs 2 --terms 4 --design-seed 20260505 --tag s3_v_matrix_randmt_c2a8_smoke
-python3 scripts/s2_z_capture_matrix.py --cmd V --c2-mode constant --c2-alpha 8 --num-keys 6 -n 20 --design-mode random-multiterm --num-designs 8 --terms 4 --design-seed 20260505 --tag s3_v_matrix_randmt_c2a8_d8n20_scout
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s3_v_matrix_randmt_c2a8_d8n20_scout_k*.npz --label-kinds vtmp16_lohw vtmp16_hw vshift16_hw vshift64_hw vadd16_hw vadd64_hw vdelta16_hw vdelta64_hw --sweep --n-perm 100 --out-prefix results/s3_v_lowdim_matrix_randmt_c2a8_d8n20_scout_vecadd_sweep_p100
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s3_v_matrix_randmt_c2a8_d8n20_scout_k*.npz --label-kinds vdelta64_hw --block 16 --n-features 128 --ridge 10 --feature-mode corr --n-perm 500 --out-prefix results/s3_v_lowdim_matrix_randmt_c2a8_d8n20_scout_vdelta64_confirm_p500
+python3 scripts/smaug/s2_z_capture_matrix.py --cmd V --c2-mode constant --c2-alpha 8 --num-keys 1 -n 3 --design-mode random-multiterm --num-designs 2 --terms 4 --design-seed 20260505 --tag s3_v_matrix_randmt_c2a8_smoke
+python3 scripts/smaug/s2_z_capture_matrix.py --cmd V --c2-mode constant --c2-alpha 8 --num-keys 6 -n 20 --design-mode random-multiterm --num-designs 8 --terms 4 --design-seed 20260505 --tag s3_v_matrix_randmt_c2a8_d8n20_scout
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s3_v_matrix_randmt_c2a8_d8n20_scout_k*.npz --label-kinds vtmp16_lohw vtmp16_hw vshift16_hw vshift64_hw vadd16_hw vadd64_hw vdelta16_hw vdelta64_hw --sweep --n-perm 100 --out-prefix results/smaug/s3_v_lowdim_matrix_randmt_c2a8_d8n20_scout_vecadd_sweep_p100
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s3_v_matrix_randmt_c2a8_d8n20_scout_k*.npz --label-kinds vdelta64_hw --block 16 --n-features 128 --ridge 10 --feature-mode corr --n-perm 500 --out-prefix results/smaug/s3_v_lowdim_matrix_randmt_c2a8_d8n20_scout_vdelta64_confirm_p500
 ```
 
 Result:
@@ -893,7 +893,7 @@ are computed from profiling keys only.
 
 Implementation:
 
-- `scripts/s2_z_lowdim_analyze.py` now supports
+- `scripts/smaug/s2_z_lowdim_analyze.py` now supports
   `--residualize two-way`.
 - The residualization is fold-local. Feature selection, ridge fitting, and the
   permutation null all run after this transform.
@@ -903,9 +903,9 @@ Implementation:
 Commands:
 
 ```bash
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s3_v_matrix_randmt_c2a8_d8n20_scout_k*.npz --label-kinds vdelta64_hw vshift64_hw --block 16 --n-features 128 --ridge 10 --feature-mode corr --residualize two-way --n-perm 300 --out-prefix results/s4_resid_v_c2a8_d8n20_vdelta_vshift_p300
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kinds toom2_conv16_hw toom3_kara2_conv8_hw --block 8 --n-features 128 --ridge 10 --feature-mode corr --residualize two-way --n-perm 300 --out-prefix results/s4_resid_z_win17731_d8n20_toom_candidates_p300
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s3_w_component_randmt_d8n20_scout_k*.npz --label-kinds vtoom3_kara1_conv8_hw vtoom3_kara2_conv8_hw vtoom3_kara2_op8_hw --block 16 --n-features 64 --ridge 1 --feature-mode corr --residualize two-way --n-perm 300 --out-prefix results/s4_resid_w_component_d8n20_vtoom3_candidates_p300
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s3_v_matrix_randmt_c2a8_d8n20_scout_k*.npz --label-kinds vdelta64_hw vshift64_hw --block 16 --n-features 128 --ridge 10 --feature-mode corr --residualize two-way --n-perm 300 --out-prefix results/smaug/s4_resid_v_c2a8_d8n20_vdelta_vshift_p300
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s2_z_matrix_randmt_win17731_d8n20_k*.npz --label-kinds toom2_conv16_hw toom3_kara2_conv8_hw --block 8 --n-features 128 --ridge 10 --feature-mode corr --residualize two-way --n-perm 300 --out-prefix results/smaug/s4_resid_z_win17731_d8n20_toom_candidates_p300
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s3_w_component_randmt_d8n20_scout_k*.npz --label-kinds vtoom3_kara1_conv8_hw vtoom3_kara2_conv8_hw vtoom3_kara2_op8_hw --block 16 --n-features 64 --ridge 1 --feature-mode corr --residualize two-way --n-perm 300 --out-prefix results/smaug/s4_resid_w_component_d8n20_vtoom3_candidates_p300
 ```
 
 Results:
@@ -1022,13 +1022,13 @@ claims must come from `D`; `Z`/`R`/`Q`/`Y` results stay diagnostic.
 
 ### Phase 0 — Tooling
 
-- `scripts/s2_z_capture_matrix.py` accepts `--cmd D`. The `D` response is
+- `scripts/smaug/s2_z_capture_matrix.py` accepts `--cmd D`. The `D` response is
   the 1-byte `mismatch` flag; only ack length and determinism are
   validated, mu' round-trip is skipped.
-- `scripts/s4_pair_distance_oracle.py` is a new analyzer that builds same-`c1`
+- `scripts/smaug/s4_pair_distance_oracle.py` is a new analyzer that builds same-`c1`
   paired-`c2` features, evaluates held-out AUROC on `flip_any`, and returns
   ridge-regression rMAE/corr on `flip_byte_hw` as a secondary metric.
-- `tests/test_pair_oracle.py` covers AUROC ties/edge cases, the
+- `tests/smaug/test_pair_oracle.py` covers AUROC ties/edge cases, the
   XOR-of-`mu_bits` round-trip for `flip_any` and `flip_byte_hw`, and synthetic
   fixtures.
 - `python3 tests/run_all.py` passes 82/82 (9 new oracle tests).
@@ -1048,7 +1048,7 @@ predominantly the `indcpa_dec` portion of `crypto_kem_dec`.
 ### Phase 1.1 — D Scout (early window) and the α-bug
 
 ```bash
-python3 -u scripts/s2_z_capture_matrix.py \
+python3 -u scripts/smaug/s2_z_capture_matrix.py \
   --cmd D --num-keys 6 -n 10 --samples 24400 \
   --design-mode detector-grid --coefs 0,8,16,24 --detector-alphas 64,128,192 \
   --c2-mode grid --c2-grid 15,16 \
@@ -1112,7 +1112,7 @@ overfit on noise correlations rather than localized leakage).
 ### Phase 1.2 — D Control (c1=0)
 
 ```bash
-python3 -u scripts/s2_z_capture_matrix.py \
+python3 -u scripts/smaug/s2_z_capture_matrix.py \
   --cmd D --num-keys 6 -n 10 --samples 24400 \
   --design-mode detector-grid --coefs 0,8,16,24 --detector-alphas 0 \
   --c2-mode grid --c2-grid 15,16 \
@@ -1181,7 +1181,7 @@ this SCA setup to provide an attack-valid c2-paired oracle.**
 ### Phase 2.1 — c2 Staircase (3 secret-dependent pair types)
 
 ```bash
-python3 -u scripts/s2_z_capture_matrix.py \
+python3 -u scripts/smaug/s2_z_capture_matrix.py \
   --cmd D --num-keys 6 -n 10 --samples 24400 \
   --design-mode detector-grid --coefs 0,8,16,24 --detector-alphas 64 \
   --c2-mode grid --c2-grid 7,8,15,16,23,24 \
@@ -1228,7 +1228,7 @@ on the natural D trace.
 ### Phase 2.2 — Multi-term c1
 
 ```bash
-python3 -u scripts/s2_z_capture_matrix.py \
+python3 -u scripts/smaug/s2_z_capture_matrix.py \
   --cmd D --num-keys 6 -n 10 --samples 24400 \
   --design-mode random-multiterm --num-designs 8 --terms 4 \
   --design-seed 20260508 --c2-mode grid --c2-grid 15,16 \
@@ -1284,7 +1284,7 @@ The two methodological wins from this branch are:
 
 The reusable artifact from this branch is the `D` capture path
 (`--cmd D` in the matrix capture, the new `s4_pair_distance_oracle.py`
-analyzer, and `tests/test_pair_oracle.py` with 9 oracle-specific tests).
+analyzer, and `tests/smaug/test_pair_oracle.py` with 9 oracle-specific tests).
 
 ### Final Pivot Recommendation
 

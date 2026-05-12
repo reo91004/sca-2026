@@ -3,7 +3,7 @@
 마지막 업데이트: 2026-05-11.
 
 이 문서는 NTRU+ chosen-CT SCA 프로젝트의 **실험 로그**다. 전략·gate·계획 자체는
-`docs/NTRUplus.md` 에 있다. 본 문서는 매 phase / 실험마다 아래 형식으로 누적
+`docs/ntruplus/PLAN.md` 에 있다. 본 문서는 매 phase / 실험마다 아래 형식으로 누적
 기록한다. 세션이 끊겨도 다시 읽으면 어디까지 했는지, 다음에 무엇을 해야 하는지
 바로 복구 가능해야 한다.
 
@@ -46,26 +46,26 @@
 
 과정
 - PoI/window diagnostic:
-  - script: `scripts/n56_phase46_g200_poi_diagnose.py`
+  - script: `scripts/ntruplus/n56_phase46_g200_poi_diagnose.py`
   - inputs: `traces/ntruplus768/phase46/g200_calib_K1L4N8_s6000.npz`
   - windows: ±16, ±32, ±64, ±96 around `predict_poi(lane)`.
   - outputs:
-    `results/ntruplus768/phase46/g200_poi_diag_w{16,32,64,96}.{npz,md}`
+    `results/ntruplus/phase46/g200_poi_diag_w{16,32,64,96}.{npz,md}`
 - Oracle-selection null:
-  - script: `scripts/n57_phase46_g200_oracle_null.py`
+  - script: `scripts/ntruplus/n57_phase46_g200_oracle_null.py`
   - windows: ±16, ±32, ±96.
   - outputs:
-    `results/ntruplus768/phase46/g200_oracle_null_w{16,32,96}.{npz,md}`
+    `results/ntruplus/phase46/g200_oracle_null_w{16,32,96}.{npz,md}`
 - Attack-compatible window reducer sweep:
-  - script: `scripts/n58_phase46_g200_window_reducers.py`
+  - script: `scripts/ntruplus/n58_phase46_g200_window_reducers.py`
   - reducers: mean, top3, top5, top9, soft5, soft10, max.
   - models: M1, M5, Full (`z(M1)+z(M5)`).
-  - output: `results/ntruplus768/phase46/g200_window_reducers.{npz,md}`
+  - output: `results/ntruplus/phase46/g200_window_reducers.{npz,md}`
 - Cross-validated window CPA:
-  - script: `scripts/n59_phase46_g200_cv_window.py`
+  - script: `scripts/ntruplus/n59_phase46_g200_cv_window.py`
   - split: even/odd γ folds. Select each candidate's best local sample on one
     fold, evaluate on held-out fold, then average both directions.
-  - output: `results/ntruplus768/phase46/g200_cv_window.{npz,md}`
+  - output: `results/ntruplus/phase46/g200_cv_window.{npz,md}`
 
 결과 (수치)
 - Attack-compatible PoI choices do not recover:
@@ -175,9 +175,9 @@
   compact scout 이다.
 
 과정
-- capture script: `scripts/n55_phase46_g200_capture.py`
+- capture script: `scripts/ntruplus/n55_phase46_g200_capture.py`
 - cmd:
-  `python3 scripts/n55_phase46_g200_capture.py -K 1 -L 0,64,80,128 -N 8 -G 200 -s 6000 -o traces/ntruplus768/phase46/g200_calib_K1L4N8_s6000.npz`
+  `python3 scripts/ntruplus/n55_phase46_g200_capture.py -K 1 -L 0,64,80,128 -N 8 -G 200 -s 6000 -o traces/ntruplus768/phase46/g200_calib_K1L4N8_s6000.npz`
 - capture:
   - fresh victim, lanes `[0, 64, 80, 128]`, G=200 (HW1+HW2+even HW3 subset),
     N=8, T=6000, decimate=4.
@@ -186,9 +186,9 @@
   - output: `traces/ntruplus768/phase46/g200_calib_K1L4N8_s6000.npz`
     with shape `(1, 4, 200, 8, 6000)`.
 - analysis:
-  `python3 scripts/n43_singleVictim_multilane.py --input traces/ntruplus768/phase46/g200_calib_K1L4N8_s6000.npz --out-prefix results/ntruplus768/phase46/g200_calib_K1L4N8_s6000`
+  `python3 scripts/ntruplus/n43_singleVictim_multilane.py --input traces/ntruplus768/phase46/g200_calib_K1L4N8_s6000.npz --out-prefix results/ntruplus/phase46/g200_calib_K1L4N8_s6000`
 - result files:
-  `results/ntruplus768/phase46/g200_calib_K1L4N8_s6000.{npz,md}`
+  `results/ntruplus/phase46/g200_calib_K1L4N8_s6000.{npz,md}`
 
 결과 (수치)
 - Aggregate over 16 evaluated NTT coordinates:
@@ -224,7 +224,7 @@
 
 다음 단계
 - (g1) G=200 simple expansion gate 는 negative scout 로 닫는다. ✅
-- (g2) `docs/HANDOFF.md`, `docs/PAPER_OUTLINE.md`, README 에 G200 결론을 반영한다. ✅
+- (g2) `docs/ntruplus/HANDOFF.md`, `docs/ntruplus/PAPER_OUTLINE.md`, README 에 G200 결론을 반영한다. ✅
 - (g3) 추가 대용량 capture 는 score model 개선 가설이 생길 때까지 보류한다. ✅
 
 ---
@@ -246,8 +246,8 @@
   - K=1 L=48 stride=4 (calibrated 0/64/80/128 모두 포함) G=78 N=8
     = 1×48×78×8 = 29,952 traces, `T=24400`.
   - trace: `traces/ntruplus768/phase45/wide_K1_L48_N8.npz` (약 745 MB)
-  - analysis: `results/ntruplus768/phase45/wide_K1_L48_N8.{npz,md}`
-  - combined summary: `results/ntruplus768/phase45/{combined,SUMMARY}.{npz,md}`
+  - analysis: `results/ntruplus/phase45/wide_K1_L48_N8.{npz,md}`
+  - combined summary: `results/ntruplus/phase45/{combined,SUMMARY}.{npz,md}`
 
 결과 (수치)
 - **victim 3 (8ce340e4bdfa80fc), 48 lanes, 192 cases**
@@ -266,14 +266,14 @@
   | M1 slot-PoI (interp) | 0/352 | 0/352 | 8/352 | 48/352 |
   | M5 slot-PoI (interp) | 0/352 | 1/352 | 10/352 | 47/352 |
   | Full stack | 0/352 | 1/352 | **8/352** | 46/352 |
-- **Overlap/projection 분석** (`scripts/n50_phase45_overlap_projection.py`)
-  - output: `results/ntruplus768/phase45/overlap_projection.{md,npz}`
+- **Overlap/projection 분석** (`scripts/ntruplus/n50_phase45_overlap_projection.py`)
+  - output: `results/ntruplus/phase45/overlap_projection.{md,npz}`
   - M1 baseline ∪ M5 baseline: 21/352 top-100, projected 45.8 coords/victim
   - M1 ∪ M5 ∪ Full: 29/352 top-100, projected 63.3 coords/victim
   - 단, union 은 channel-mixed upper bound 이며 top-100 rank 를 perfect recovery 로
     취급하지 않는다. 본문 claim 은 single-pipeline 17-26 coords/victim 을 기본값으로 둔다.
-- **Channel hit-list 분석** (`scripts/n51_phase45_channel_hitlist.py`)
-  - output: `results/ntruplus768/phase45/channel_hitlist.{md,npz}`
+- **Channel hit-list 분석** (`scripts/ntruplus/n51_phase45_channel_hitlist.py`)
+  - output: `results/ntruplus/phase45/channel_hitlist.{md,npz}`
   - top-100 hits: M1 9, M5 12, M1_slot 8, M5_slot 10, Full 8, all-channel union 37.
   - M1 ∩ M5 = 0, M1 ∩ Full = 0, M5 ∩ Full = 0. 현재 single-victim aggregate 에서는
     fusion 이 같은 좌표를 더 강하게 만드는 것보다 서로 다른 channel 후보 pool 을
@@ -281,23 +281,23 @@
   - |f_c| bin 기준 hits 는 large 쪽도 많다: M1 은 `>=768` 5/9, M5 는 `>=768` 5/12.
     초기 small-|f_c| 중심 가설은 Phase 4 multi-key 결과에는 맞지만, single-victim
     lane 확장에서는 large-|f_c| 후보 pool 도 별도로 살려야 한다.
-- **Candidate export** (`scripts/n52_phase45_candidate_export.py`)
-  - output: `results/ntruplus768/phase45/candidate_export.{md,npz}`
+- **Candidate export** (`scripts/ntruplus/n52_phase45_candidate_export.py`)
+  - output: `results/ntruplus/phase45/candidate_export.{md,npz}`
   - 352 rows × 5 channels 에 대해 top-100 candidate residues 를 저장.
   - true top-100 rows 의 Markdown hit-list 도 생성. 예: victim 235e27a0 lane=104
     slot=0 true f=2563 는 M1 rank 2, top5 candidates `3213,475,2563,2061,2349`.
   - 다음 sparse/candidate-set recovery 는 rank summary 가 아니라 이 candidate
     export 를 입력으로 쓰는 것이 좋다.
-- **Candidate pressure curve** (`scripts/n53_phase45_candidate_pressure.py`)
-  - output: `results/ntruplus768/phase45/candidate_pressure.{md,npz}`
+- **Candidate pressure curve** (`scripts/ntruplus/n53_phase45_candidate_pressure.py`)
+  - output: `results/ntruplus/phase45/candidate_pressure.{md,npz}`
   - single-channel top-10 은 M1 1/352, M5 1/352, Full 1/352 수준.
   - all-channel union: top-5 2/352, top-10 4/352, top-20 5/352, top-50 18/352,
     top-100 37/352.
   - all-channel union 의 평균 후보집합 크기: top-10 set 41.2, top-100 set 371.2.
     따라서 현재 결과는 direct recovery 라기보다 후보집합 제약이며,
     후단 consistency/prior 없이는 full key recovery 로 이어지지 않는다.
-- **Candidate-set null significance** (`scripts/n54_phase45_candidate_null.py`)
-  - output: `results/ntruplus768/phase45/candidate_null.{md,npz}`
+- **Candidate-set null significance** (`scripts/ntruplus/n54_phase45_candidate_null.py`)
+  - output: `results/ntruplus/phase45/candidate_null.{md,npz}`
   - single-channel top-100 은 null 과 구분되지 않음:
     M1 obs 9 vs exp 10.19 (z=-0.38), M5 obs 12 vs exp 10.19 (z=0.58),
     Full obs 8 vs exp 10.19 (z=-0.69).
@@ -339,7 +339,7 @@
   가장 안전하다.
 
 다음 단계
-- (s2) `docs/HANDOFF.md`, `docs/PAPER_OUTLINE.md` 를 3-victim aggregate 로 갱신. ✅
+- (s2) `docs/ntruplus/HANDOFF.md`, `docs/ntruplus/PAPER_OUTLINE.md` 를 3-victim aggregate 로 갱신. ✅
 - (s3) capture-free 추가 분석: M1/M5/Full union top-100, victim별 projection,
   hit overlap 을 정리해 paper §5.2 수치 확정. ✅
 - (s4) 새 대용량 capture 는 보류. 레포 비대화 방지를 위해 `traces/`는 추가
@@ -364,7 +364,7 @@
   Phase 4 multi-key 데이터의 sk-independent firmware constant 가정).
 
 과정
-- (r0) **per-key 분포 분석** (`scripts/n42_per_key_distribution.py`)
+- (r0) **per-key 분포 분석** (`scripts/ntruplus/n42_per_key_distribution.py`)
   - 240 cases / 60 unique sks (batch 마다 다른 sk_blob hash 확인 — 모든 cross-batch
     intersection 0):
     | pipeline | mean t100 / lane / victim | max | ≥1 t100 keys | ≥2 |
@@ -380,7 +380,7 @@
     116,128,140,152,164" -N 8 -o traces/ntruplus768/phase45/scout_K1_L16_N8.npz`
   - K=1 fixed sk, 16 lanes (calibrated 0/64/80/128 + 12 새 lanes 균등 분포),
     G=78 (HW1+HW2), N=8 = 1 × 16 × 78 × 8 = 9984 traces.
-  - 평가: `scripts/n43_singleVictim_multilane.py`. M1 baseline (모든 lanes,
+  - 평가: `scripts/ntruplus/n43_singleVictim_multilane.py`. M1 baseline (모든 lanes,
     profile-free) + Full stack (calibrated lanes only, profiled approximation).
 - (r1') **추가 capture-free 도구 / paper figures** ✅ (capture 진행 동안 작업)
   - **n44_paper_figures_extra.py**: F6 N-curve, F7 σ_α saturation, F8 dual
@@ -395,16 +395,16 @@
   - **n48_corr_by_N.py**: F9 corr saturation curve from K=4 N=64 16-case
     data (mechanistic σ_α-bounded ceiling 시각화).
   - **n49_phase45_summary.py**: F10/F11/F12 figures + SUMMARY.md (post-main).
-  - **scripts/run_phase45_chain.sh**: scout → analyze → main → analyze → combine
+  - **scripts/ntruplus/run_phase45_chain.sh**: scout → analyze → main → analyze → combine
     자동 chain (사용자 부재 동안 진행).
-  - **scripts/phase45_status.sh**: 한 명령어로 전체 진행 상황 확인.
-  - **docs/PAPER_OUTLINE.md**: paper full outline (§1-§8 + appendices).
+  - **scripts/ntruplus/phase45_status.sh**: 한 명령어로 전체 진행 상황 확인.
+  - **docs/ntruplus/PAPER_OUTLINE.md**: paper full outline (§1-§8 + appendices).
 - (r1'') **자동화 chain 시작** (2026-05-10 01:42 KST) — sleep 시간 동안:
   - scout (1.6h, ~03:00 끝) → 분석 → main capture (5h, ~08:00 끝) →
     합산 → SUMMARY.md + F10/F11/F12 figures.
   - main capture spec: K=1 L=24 stride=8 (lanes 0/8/16/.../184 incl 0/64/80/128
     calibrated) N=16 G=78 = 1×24×78×16 = 29,952 traces.
-  - 사용자 깨어났을 때: `bash scripts/phase45_status.sh` 로 진행 확인.
+  - 사용자 깨어났을 때: `bash scripts/ntruplus/phase45_status.sh` 로 진행 확인.
 
 - (r2) **scout 완료 + 첫 결과** ★ (2026-05-10 03:31 KST, 2h 7m capture)
   - file: `traces/ntruplus768/phase45/scout_K1_L16_N8.npz` (226 MB)
@@ -489,7 +489,7 @@
       (mean), 3.75-4.4% top-100, 192-lane projection ~30 coords/victim
     - 두 결과는 일관: 같은 attack 의 multi-key statistical view vs
       single-victim accumulation view.
-- (r5) **Figures F10/F11/F12** ✅ — `results/ntruplus768/phase45/figures/`
+- (r5) **Figures F10/F11/F12** ✅ — `results/ntruplus/phase45/figures/`
   - F10: per-victim recovery summary (M1 baseline + Full stack 비교)
   - F11: lane × victim heatmap (top-100 hits)
   - F12: cumulative coords vs lanes covered (192-lane projection 라인 포함)
@@ -580,7 +580,7 @@ attack-valid (paper 의 recovery 결과로 사용 가능):
   M3 montgomery / M4 low-byte / M5 high-byte). capture 필요 없음. ✅
   결과: 5 변형 모두 mean SNR 0.12-0.16, max SNR 0.47-0.81, P(true ≥ null99)
   0.000 (M2 만 0.021). HW 모델 변경으로는 천장 못 깸. SNR 자체가 limiting.
-- (b) **G 확장 capture** ✅ — `scripts/n18_phase4_g78_capture.py` K=1 L=1 (lane 0)
+- (b) **G 확장 capture** ✅ — `scripts/ntruplus/n18_phase4_g78_capture.py` K=1 L=1 (lane 0)
   G=78 (HW=1+HW=2) N=32, 24 min capture, 0 timeouts.
   attack-valid `n19_wideg_attack.py`: 4 cases (single key × lane 0 × 4 slots).
   V2 mean pctile 25.50, V2w 29.70, top1 = 0/4. P(true ≥ null99) = 0.000.
@@ -666,7 +666,7 @@ attack-valid (paper 의 recovery 결과로 사용 가능):
   SNR median 0.075, max 0.515. **1/32 회수**: key 5 slot 2 (f=872, SNR=0.515,
   V2_T=0.515 > null99=0.504 → V2 pct 99.54). lane=128 회수율 재현.
 - (n7) **최종 누적** (5 batches, K=36 effective keys × 4 slots = **144 cases**)
-  — `scripts/n24_combined_analysis.py`:
+  — `scripts/ntruplus/n24_combined_analysis.py`:
   - V2 (fixed PoI) recovery: top-1 1/144 (0.69%), top-10 1/144, **top-100
     8/144 (5.56%)**, top-500 22/144 (15.28%), ≥ null 99-th 4/144 (2.78%).
   - V2w (per-cand best PoI in ±10): top-10 1/144, **top-100 9/144 (6.25%)**,
@@ -700,7 +700,7 @@ attack-valid (paper 의 recovery 결과로 사용 가능):
     Lane=0 과 lane=128 (basemul 시작 / 중간) 둘 다 가능, lane=80 (iter=40
     부근) 은 SNR outlier.
 
-- (o) **lane=80 outlier 원인 분리** (`scripts/n25_lane_snr_compare.py`) — 진단
+- (o) **lane=80 outlier 원인 분리** (`scripts/ntruplus/n25_lane_snr_compare.py`) — 진단
   (true f 사용). lane∈{0, 80, 128} 6 batches 160 cases.
   - SNR @ predicted PoI: lane=0 median 0.080, lane=80 **0.016**, lane=128 0.084.
     → lane=80 5× 낮음.
@@ -735,8 +735,8 @@ attack-valid (paper 의 recovery 결과로 사용 가능):
   - 이 발견은 회수 가능성을 **6.25% 보다 더 위로 끌어올릴 가능성** 시사.
     sk-independent PoI calibration (예: HW(γ) corr-based scan) 다음 단계.
 
-- (o3) **sk-indep PoI calibration 시도** (`scripts/n26_skindep_poi_v2.py`,
-  `scripts/n27_v2w_window_sweep.py`) — lane=64 K=8 데이터 대상.
+- (o3) **sk-indep PoI calibration 시도** (`scripts/ntruplus/n26_skindep_poi_v2.py`,
+  `scripts/ntruplus/n27_v2w_window_sweep.py`) — lane=64 K=8 데이터 대상.
   - 방법 A — γ-variance peak: per-sample variance of mean-over-N traces
     across G=78 γ trials, search ±50 of predict_poi. → empirical PoI
     median drift **−14** (반대 방향, oracle 는 +10). 분산 peak 가 basemul
@@ -755,8 +755,8 @@ attack-valid (paper 의 recovery 결과로 사용 가능):
     upper bound 는 lane=128 (4/64=6.25%) 와 lane=0 (5/80=6.25%) 와 통계적
     범위 내.
 
-- (q) **N-saturation 메커니즘 규명** ★ (`scripts/n28_n64_diagnose.py`,
-  `scripts/n29_noise_decompose.py`) — paper-grade insight.
+- (q) **N-saturation 메커니즘 규명** ★ (`scripts/ntruplus/n28_n64_diagnose.py`,
+  `scripts/ntruplus/n29_noise_decompose.py`) — paper-grade insight.
   - **현상**: K=4 N=64 lane=0 데이터에서 corr/predicted ratio (formula
     `SNR/√(SNR²+1/N)`) 가 N 증가에 따라 단조 감소: N=2 0.766, N=4 0.590,
     N=8 0.488, N=16 0.430, N=32 0.335, **N=64 0.274**. → SNR formula
@@ -774,14 +774,14 @@ attack-valid (paper 의 recovery 결과로 사용 가능):
     - 임계 SNR 식별: corr ≥ 0.5 (≈ null max) 회수 가능 ↔ b·σ_HW ≥ σ_α.
       σ_α ≈ 0.0027, σ_HW ≈ 1.5 → b ≥ 0.0018 필요. 측정 b 분포: 0.00002–
       0.00082, median 0.00033. **b ≥ 0.0018 인 (k, slot) 만 회수**.
-  - **α-removal 시도 실패** (`scripts/n30_alpha_removal.py`): leave-one-out
+  - **α-removal 시도 실패** (`scripts/ntruplus/n30_alpha_removal.py`): leave-one-out
     cross-key mean 으로 α[g] 추정 → V2 CPA 수행. 24 keys × 4 slots 중
     raw top-100 5/96 → α-corrected 1/96 (악화).
     이유: 추정한 α[g] 가 random f 평균 해도 H_true 와 상관 (특히 K=4 batch
     에서 sample size 제한). → simple cross-key average 로 α 분리 불가.
 
 - (q2) **Profiled PoI 시도 (lane-specific median offset)**
-  (`scripts/n31_profiled_poi.py`) — lane→time mapping 은 sk-independent
+  (`scripts/ntruplus/n31_profiled_poi.py`) — lane→time mapping 은 sk-independent
   (firmware/hardware 상수). n25 oracle median drift 적용:
   - lane=0 +24, lane=64 +10, lane=80 −12, lane=128 −2.
   - 결과 (208 cases): predict_poi top-100 **9/208**, profiled **8/208**.
@@ -791,14 +791,14 @@ attack-valid (paper 의 recovery 결과로 사용 가능):
     개별 case 의 ±20-30 sample 변동은 여전. 평균 +24 인 lane=0 에 +24
     적용 시 실제 +0 인 case 는 −24 로 PoI 미스.
 
-- (q3) **PoI ensemble (max(predict, profiled))** (`scripts/n32_poi_ensemble.py`):
+- (q3) **PoI ensemble (max(predict, profiled))** (`scripts/ntruplus/n32_poi_ensemble.py`):
   ensemble top-100 9/208 (predict 와 동일). null99 평균 0.444 (predict)
   → 0.487 (ensemble 후) — 10% 증가. 추가 PoI 의 신호 ↑ 와 null ↑ 가 상쇄.
   → **단순 PoI 변형으로 ceiling 못 깸**. fundamental limit 는 σ_α/(b·σ_HW)
   비율 — 단일 (key, slot) 에서 b 가 작으면 PoI quality 와 무관.
 
-- (q3b) **per-(lane, slot) drift 패턴 발견** ★ (`scripts/n34_per_slot_drift.py`,
-  `scripts/n35_per_slot_profiled.py`) — paper-grade calibration insight.
+- (q3b) **per-(lane, slot) drift 패턴 발견** ★ (`scripts/ntruplus/n34_per_slot_drift.py`,
+  `scripts/ntruplus/n35_per_slot_profiled.py`) — paper-grade calibration insight.
   - n34 oracle drift weighted-by-peak_corr median per (lane, slot):
     | lane\slot | 0 | 1 | 2 | 3 | spread |
     |---|---:|---:|---:|---:|---:|
@@ -823,8 +823,8 @@ attack-valid (paper 의 recovery 결과로 사용 가능):
     candidate quality 측면에서 가치.
 
 - (q5) **HW 모델 변형: Montgomery (M5) 가 별도 leak channel** ★★
-  (`scripts/n36_hw_models_n64.py`, `scripts/n37_montgomery_all.py`,
-  `scripts/n38_zsum_ensemble.py`) — paper-major finding.
+  (`scripts/ntruplus/n36_hw_models_n64.py`, `scripts/ntruplus/n37_montgomery_all.py`,
+  `scripts/ntruplus/n38_zsum_ensemble.py`) — paper-major finding.
   - **배경**: basemul 의 실제 연산은 `r[0] = montgomery_reduce(c[0]·f_ntt[0] - …)`.
     M1 (HW(γ·f mod q)) 은 mod-q 의 결과 HW 를 modeling 하지만 montgomery
     reduction 의 실제 결과는 다른 값 (γ·f / R mod q where R=2^16).
@@ -863,7 +863,7 @@ attack-valid (paper 의 recovery 결과로 사용 가능):
       perfect 회수 가능 후보.
 
 - (q6) **★★★ Full attack stack: per-slot PoI + Zsum ensemble** —
-  paper-major final result (`scripts/n39_full_stack.py`).
+  paper-major final result (`scripts/ntruplus/n39_full_stack.py`).
   - 결합: per-(lane, slot) median drift offset (n34) + M1+M5 Z-score sum (n38).
   - 208 cases 결과:
     | pipeline | top-1 | top-10 | top-100 | top-500 |
@@ -933,7 +933,7 @@ attack-valid (paper 의 recovery 결과로 사용 가능):
     structurally-determined NTT 좌표 ~7% (top-100) 회수, 2 perfect TOP-1
     (1 case at N=2, 1 case at N=16). 회수 lane: 0/64/80/128 모든 4 lanes."
 
-- (q7) **Full-stack N-curve** ★ (`scripts/n40_full_stack_ncurve.py`) —
+- (q7) **Full-stack N-curve** ★ (`scripts/ntruplus/n40_full_stack_ncurve.py`) —
   paper-quality minimum-traces analysis on top-recovered cases.
   | case | N=2 | N=4 | N=8 | N=16 | N=32 | M1@N=32 |
   |---|---:|---:|---:|---:|---:|---:|
@@ -949,7 +949,7 @@ attack-valid (paper 의 recovery 결과로 사용 가능):
     (ii) M5+slot-PoI Zsum (Montgomery channel) 이 large-|f_c| (f=882,
     N=16 sufficient). 두 channel 이 다른 sk-구조 좌표 군 회수.
 
-- (q4) **b 분포 종합** ★ (`scripts/n33_b_distribution.py`) — 208 cases.
+- (q4) **b 분포 종합** ★ (`scripts/ntruplus/n33_b_distribution.py`) — 208 cases.
   - **b @ predict_poi**: median 0.00020, max 0.00196.
   - **b @ oracle peak** (true f label): median 0.00043 (≈ 2× predict), max 0.00277.
   - σ_a @ oracle: median 0.0029 (saturating noise).
@@ -996,7 +996,7 @@ attack-valid (paper 의 recovery 결과로 사용 가능):
   - lane=64 의 underperformance 는 predict_poi formula 의 +10 bias 때문 —
     refined PoI 로 9.4% intrinsic ceiling 달성 가능 (현재 1/3 회수).
 
-- (n5) **최종 종합** (`scripts/n24_combined_analysis.py` updated) —
+- (n5) **최종 종합** (`scripts/ntruplus/n24_combined_analysis.py` updated) —
   4 batches, **K=28 effective keys × 4 slots = 112 cases**:
   - V2 (fixed PoI) recovery: top-1 1/112 (0.89%), top-10 1/112, **top-100 7/112
     (6.25%)**, top-500 18/112 (16.07%), ≥ null 99-th 3/112 (2.68%).
@@ -1021,7 +1021,7 @@ attack-valid (paper 의 recovery 결과로 사용 가능):
   - **lane 별 회수율 (top-100)**: lane=0 (5/80=6.25%), lane=128 (3/32=9.4%),
     lane=80 (0/16=0%). lane=80 은 outlier — basemul iter=40 의 SNR 저하.
 
-- (n3) **종합 분석** (`scripts/n24_combined_analysis.py`) — 모든 batch 합쳐
+- (n3) **종합 분석** (`scripts/ntruplus/n24_combined_analysis.py`) — 모든 batch 합쳐
   K=4+8+8 = K=20 keys × 4 slots = **80 cases**:
   - V2 (fixed predicted PoI 3014) recovery rates:
     - top-1: 1/80 (1.25%)
@@ -1068,12 +1068,12 @@ attack-valid (paper 의 recovery 결과로 사용 가능):
   - **attack 가 회수 가능한 좌표는 sk 구조에 의존**: 키 별로 0-N 좌표만 leak.
     잔여 좌표는 SNR 부족으로 회수 불가. 이는 회수 가능성과 회수 가능량 사이의
     기본 trade-off.
-- (c) **PoI alignment 진단** (`scripts/n20_poi_drift.py`) ✅ — true f 라벨로
+- (c) **PoI alignment 진단** (`scripts/ntruplus/n20_poi_drift.py`) ✅ — true f 라벨로
   per-(key, lane, slot) 의 best |corr| sample 위치를 ±50 안에서 찾음.
   결과: drift mean=+0.17, std=22.9, max |drift|=49 sample. drift 분포가 거의
   균등 ([-50,-20]:20, [-20,-10]:13, …, [+20,+50]:20). |corr|@predicted PoI
   median=0.112, |corr|max median=0.341.
-- (d) **drift = noise vs sk-dependent?** (`scripts/n21_drift_pattern.py`) ✅
+- (d) **drift = noise vs sk-dependent?** (`scripts/ntruplus/n21_drift_pattern.py`) ✅
   — N=8 을 첫 4 / 마지막 4 traces 두 half 로 나눠 각자의 best PoI 위치 비교.
   결과: |t_A − t_B| median=24 sample, |diff|≤5 fraction=0.219, |diff|≤10
   fraction=0.323. 두 half 가 일관된 best-PoI 잡으면 sk-dependent 신호 (N
@@ -1092,7 +1092,7 @@ attack-valid (paper 의 recovery 결과로 사용 가능):
   아니라 lane 의 4 coefficient 모두에 정보 leak 한다는 가설.
 
 과정
-- `scripts/n11_phase3_corr_plot.py` 의 변형으로 lane 0 의 PoI 3014 에서
+- `scripts/ntruplus/n11_phase3_corr_plot.py` 의 변형으로 lane 0 의 PoI 3014 에서
   4 라벨 (HW(γ·f[i] mod q), i=0..3) 각각의 |corr| 를 sample 별로 계산.
 
 결과 (수치) — lane 0, slot=0 chosen-CT:
@@ -1130,7 +1130,7 @@ attack-valid (paper 의 recovery 결과로 사용 가능):
 과정
 - v3 PASS lanes 의 PoI: lane 0 → 3014, lane 80 → 4342, lane 128 → 5126.
   3 점 fit: base=3014, α (per-iter) ≈ 33.0 cycles. (lane 128 정확 fit: 3014 + 33·64 = 5126 ✓.)
-- `scripts/n10_phase3_basemul_model.py --per-iter 33 --window 20` 으로
+- `scripts/ntruplus/n10_phase3_basemul_model.py --per-iter 33 --window 20` 으로
   모든 lane 에 대해 예측 PoI ±20 window 안 per-sample max\|corr\| 와
   500-shuffle null 비교. 라벨은 HW(γ·f mod q).
 - 라벨 entropy 도 측정: 12개 γ × f_lane 의 label HW 분산 (=`label var`).
@@ -1177,11 +1177,11 @@ attack-valid (paper 의 recovery 결과로 사용 가능):
   의 f-dependence 만 남는다.
 
 과정
-- 캡처: `scripts/n05_phase3_scout.py --lanes 0,1,2,3,8,32,80,128
+- 캡처: `scripts/ntruplus/n05_phase3_scout.py --lanes 0,1,2,3,8,32,80,128
   --gammas 1,2,4,8,16,32,64,128,256,512,1024,2048 -N 10
   -o traces/ntruplus768/phase3/scout_hw1.npz`. shape (8, 12, 10, 24400),
   918s. 0 timeout, all mismatches=0.
-- 분석: `scripts/n06_phase3_analyze.py`. HW(γ)-only control 이 γ HW std=0
+- 분석: `scripts/ntruplus/n06_phase3_analyze.py`. HW(γ)-only control 이 γ HW std=0
   으로 자동 skip. 300-permutation null per lane.
 
 결과 (수치)
@@ -1220,7 +1220,7 @@ attack-valid (paper 의 recovery 결과로 사용 가능):
   γ HW 가 varied → public-design control 가능.
 
 과정
-- 캡처: `scripts/n05_phase3_scout.py --gammas 1,2,4,8,16,32,64,128,
+- 캡처: `scripts/ntruplus/n05_phase3_scout.py --gammas 1,2,4,8,16,32,64,128,
   3456,3455,3453,3449,3441,3425,3393,3329 -N 10 -o scout_g16.npz`.
   shape (8, 16, 10, 24400), 918s.
 - 분석: `n06_phase3_analyze.py` 에 **HW(γ) only 라벨로 추가 corr 계산 +
@@ -1265,10 +1265,10 @@ attack-valid (paper 의 recovery 결과로 사용 가능):
 
 과정
 - decimate=4 (1 sample/cycle, full 24400 cycle) 로 캡처.
-- 캡처: `scripts/n05_phase3_scout.py --lanes 0,1,2,3,8,32,80,128
+- 캡처: `scripts/ntruplus/n05_phase3_scout.py --lanes 0,1,2,3,8,32,80,128
   --gammas 1,2,4,16,64,256 -N 10` →
   `traces/ntruplus768/phase3/scout.npz` (8, 6, 10, 24400) = 480 traces, 349s.
-- 분석: `scripts/n06_phase3_analyze.py` — label = HW(γ·f mod q) (`modq_hw`)
+- 분석: `scripts/ntruplus/n06_phase3_analyze.py` — label = HW(γ·f mod q) (`modq_hw`)
   와 raw value (`modq_value`) 두 가지. 300-permutation null per lane.
 
 결과 (수치) — 라벨 = HW
@@ -1325,7 +1325,7 @@ attack-valid (paper 의 recovery 결과로 사용 가능):
   null 분포에서 얼마나 벗어나는지 본다.
 
 과정
-- 분석: `scripts/n03_phase2_skunpack.py`. per-cell |corr| 계산 후 cell 별
+- 분석: `scripts/ntruplus/n03_phase2_skunpack.py`. per-cell |corr| 계산 후 cell 별
   null p99.9 로 임계 → "임계 초과 cell 비율" 을 reference null 의 동량과 비교.
 - 3 시나리오:
   1. sk-byte (early window 0-5k, bytes 0-64)
@@ -1371,7 +1371,7 @@ z_per_cell 분포 (셋 다): mean ≈ 0.0, std ≈ 1.0 — null 분포 그 자�
   cycle 에 대응되어야 함.
 
 과정
-- 캡처: `scripts/n04_decap_timeline.py --decimate 4 -K 4 -N 4`.
+- 캡처: `scripts/ntruplus/n04_decap_timeline.py --decimate 4 -K 4 -N 4`.
 - 분석: cross-key SNR 을 cycle 구간 별로 집계.
 
 결과 (수치)
@@ -1422,12 +1422,12 @@ z_per_cell 분포 (셋 다): mean ≈ 0.0, std ≈ 1.0 — null 분포 그 자�
 과정
 - 펌웨어: `simpleserial-ntruplus-CW308_STM32F4-ntruplus768.hex` 플래시
   (sha256 `55c92fbd1e2c459f…`).
-- capture: `scripts/n01_phase1_capture.py -K 8 -N 20 -s 24400 -o
+- capture: `scripts/ntruplus/n01_phase1_capture.py -K 8 -N 20 -s 24400 -o
   traces/ntruplus768/phase1/d_map.npz`. K 키마다 `k → e → d×20`. sk/pk dump
   도 calibration 용으로 보존 (`calibration_only_sk = True`).
-- 분석: `scripts/n02_phase1_analyze.py --n-shuffles 200`. cross-key SNR,
+- 분석: `scripts/ntruplus/n02_phase1_analyze.py --n-shuffles 200`. cross-key SNR,
   pairwise max\|t\| (28 페어), 200-permutation null.
-- 시각화: `scripts/n02b_phase1_plot.py` — 3-stack overview PNG 생성.
+- 시각화: `scripts/ntruplus/n02b_phase1_plot.py` — 3-stack overview PNG 생성.
 
 결과 (수치)
 - 캡처 137 s, 0 timeout, mismatches=0 (valid CT 전부 OK).
@@ -1484,7 +1484,7 @@ z_per_cell 분포 (셋 다): mean ≈ 0.0, std ≈ 1.0 — null 분포 그 자�
 과정
 - `host/upload.py` 로 `simpleserial-ntruplus-CW308_STM32F4-ntruplus768.hex`
   플래시 (sha256 `55c92fbd…`).
-- `tests/smoke_ntruplus.py` 실행. (a) `k/e/d/p` baseline, (b) `F/B`,
+- `tests/ntruplus/smoke_ntruplus.py` 실행. (a) `k/e/d/p` baseline, (b) `F/B`,
   (c) host `selected_lane(lane=3, γ=42, slot=0)` 36 chunk 주입, (d) `L`
   지문이 host 의 `sha3_256(host_ct)[:16]` 와 정확히 일치하는지, (e) `D`
   응답 형식, (f) `X[0]` sk chunk dump.
@@ -1522,7 +1522,7 @@ z_per_cell 분포 (셋 다): mean ≈ 0.0, std ≈ 1.0 — null 분포 그 자�
 과정
 - 공식 NTRU+ repo clone: `/tmp/ntruplus_src/NTRUplus`. 공식 final 은
   768/864/1152 만 — 576 은 비공식. **primary target 을 ntruplus768 로 변경**
-  (`docs/NTRUplus.md` 갱신).
+  (`docs/ntruplus/PLAN.md` 갱신).
 - 로컬 archive 의 ntt.c.o `.rodata` 추출 후 zetas[192] entry 192 개를
   `struct.unpack('<' + 'h'*20, …)` 로 디코드. 첫 20 entry 가 upstream
   `ntt.c` const table 과 정확히 일치. 192-entry 전체는 binary 동일성을
@@ -1540,7 +1540,7 @@ z_per_cell 분포 (셋 다): mean ≈ 0.0, std ≈ 1.0 — null 분포 그 자�
   - `sk.py`      — sk blob 파싱 helper.
   - `inject.py`  — F/B/I/L/D/X SimpleSerial wrappers + sha3-256 fingerprint
                    parity check.
-- 테스트 작성: `tests/test_ntruplus_host.py`. 7 케이스:
+- 테스트 작성: `tests/ntruplus/test_ntruplus_host.py`. 7 케이스:
   1. zetas 크기,
   2. codec 랜덤 round-trip (8 polys, mod-q 동치),
   3. codec edge-cases (0, q-1, -(q-1)/2),
@@ -1551,7 +1551,7 @@ z_per_cell 분포 (셋 다): mean ≈ 0.0, std ≈ 1.0 — null 분포 그 자�
      m[28..31] = γ·f_ntt[28..31] mod q, 그 외 모든 위치 0.
 
 결과 (수치)
-- 7/7 테스트 통과. `python3 tests/test_ntruplus_host.py` 종료 코드 0.
+- 7/7 테스트 통과. `python3 tests/ntruplus/test_ntruplus_host.py` 종료 코드 0.
 - lane isolation 케이스 검증으로 **Phase 3 selected-lane 공격의 수학적
   토대 입증**. (host 에서 만든 12-bit pack ciphertext bytes 가 보드 basemul
   결과로 단일 lane 만 살리도록 의도된 sparsity 를 정확히 만들어낸다.)
@@ -1569,7 +1569,7 @@ z_per_cell 분포 (셋 다): mean ≈ 0.0, std ≈ 1.0 — null 분포 그 자�
   필수.
 
 다음 단계
-- Phase 0b: 보드 smoke (`tests/smoke_ntruplus.py`) 를 ntruplus768 chunk
+- Phase 0b: 보드 smoke (`tests/ntruplus/smoke_ntruplus.py`) 를 ntruplus768 chunk
   (POLYBYTES=1152, 36 chunks × 32 B) 로 갱신 후 실행. 핵심 게이트:
   (a) baseline `k/e/d/p` 응답, (b) chosen-CT round-trip 후 `L` 응답이
   host 의 sha3-256(ct_bytes)[:16] 와 일치 — codec parity 직접 확인.

@@ -72,14 +72,14 @@ correlation z > +3
 
 - `firmware/simpleserial-smaug/simpleserial-smaug.c`
   - added `R` command for round_t/pack-only trigger.
-- `scripts/s2_z_capture_matrix.py`
+- `scripts/smaug/s2_z_capture_matrix.py`
   - supports `--cmd R`.
   - supports `--design-mode detector-grid`.
-- `scripts/s2_z_lowdim_analyze.py`
+- `scripts/smaug/s2_z_lowdim_analyze.py`
   - loads `cmd=R` matrix captures.
   - supports `mu_total_hw`, `mu_block32_hw`, `mu_block16_hw`,
     `mu_byte_hw`, and `mu_bit` labels.
-- `tests/test_chosen.py`
+- `tests/smaug/test_chosen.py`
   - checks the new component-local `mu_*` label path against full
     `chosen.predict_mu_prime`.
 
@@ -99,7 +99,7 @@ Result: host tests pass (`71/71 OK`), firmware builds, flash verifies.
 Command:
 
 ```bash
-python3 scripts/s2_z_capture_matrix.py --cmd R --num-keys 1 -n 3 --samples 5000 --design-mode detector-grid --coefs 0,8 --detector-alphas 64,128,192 --tag s4_r_mu_roundpack_smoke
+python3 scripts/smaug/s2_z_capture_matrix.py --cmd R --num-keys 1 -n 3 --samples 5000 --design-mode detector-grid --coefs 0,8 --detector-alphas 64,128,192 --tag s4_r_mu_roundpack_smoke
 ```
 
 Result:
@@ -115,7 +115,7 @@ Result:
 Capture:
 
 ```bash
-python3 scripts/s2_z_capture_matrix.py --cmd R --num-keys 6 -n 10 --samples 5000 --design-mode detector-grid --coefs 0,8 --detector-alphas 64,128,192 --tag s4_r_mu_roundpack_d6n10_scout
+python3 scripts/smaug/s2_z_capture_matrix.py --cmd R --num-keys 6 -n 10 --samples 5000 --design-mode detector-grid --coefs 0,8 --detector-alphas 64,128,192 --tag s4_r_mu_roundpack_d6n10_scout
 ```
 
 Result:
@@ -129,8 +129,8 @@ Result:
 Analysis:
 
 ```bash
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s4_r_mu_roundpack_d6n10_scout_k*.npz --label-kinds mu_total_hw mu_block32_hw mu_block16_hw mu_byte_hw --sweep --n-perm 100 --out-prefix results/s4_r_lowdim_roundpack_d6n10_mu_sweep_p100
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s4_r_mu_roundpack_d6n10_scout_k*.npz --label-kinds mu_byte_hw --block 8 --n-features 32 --ridge 1 --feature-mode corr --n-perm 500 --out-prefix results/s4_r_lowdim_roundpack_d6n10_mu_byte_confirm_p500
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s4_r_mu_roundpack_d6n10_scout_k*.npz --label-kinds mu_total_hw mu_block32_hw mu_block16_hw mu_byte_hw --sweep --n-perm 100 --out-prefix results/smaug/s4_r_lowdim_roundpack_d6n10_mu_sweep_p100
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s4_r_mu_roundpack_d6n10_scout_k*.npz --label-kinds mu_byte_hw --block 8 --n-features 32 --ridge 1 --feature-mode corr --n-perm 500 --out-prefix results/smaug/s4_r_lowdim_roundpack_d6n10_mu_byte_confirm_p500
 ```
 
 Results:
@@ -222,7 +222,7 @@ Candidate subwindows were the repeated selected blocks from R1:
 Command pattern:
 
 ```bash
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s4_r_mu_roundpack_d6n10_scout_k*.npz --label-kinds mu_byte_hw --sample-range START:END --block 8 --n-features 32 --ridge 1 --feature-mode corr --n-perm 300 --out-prefix results/s4_r_lowdim_roundpack_d6n10_mu_byte_winSTART_END_p300
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s4_r_mu_roundpack_d6n10_scout_k*.npz --label-kinds mu_byte_hw --sample-range START:END --block 8 --n-features 32 --ridge 1 --feature-mode corr --n-perm 300 --out-prefix results/smaug/s4_r_lowdim_roundpack_d6n10_mu_byte_winSTART_END_p300
 ```
 
 Result: all narrow windows were negative or weaker than the full window. This
@@ -232,7 +232,7 @@ model needs several repeated round/pack positions together.
 Broader segment scan:
 
 ```bash
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s4_r_mu_roundpack_d6n10_scout_k*.npz --label-kinds mu_byte_hw --sample-range 1024:5000 --block 8 --n-features 32 --ridge 1 --feature-mode corr --n-perm 500 --out-prefix results/s4_r_lowdim_roundpack_d6n10_mu_byte_seg1024_5000_confirm_p500
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s4_r_mu_roundpack_d6n10_scout_k*.npz --label-kinds mu_byte_hw --sample-range 1024:5000 --block 8 --n-features 32 --ridge 1 --feature-mode corr --n-perm 500 --out-prefix results/smaug/s4_r_lowdim_roundpack_d6n10_mu_byte_seg1024_5000_confirm_p500
 ```
 
 Best R1 broad window:
@@ -248,9 +248,9 @@ R1 still misses the strict correlation gate.
 Alpha-specific subsets on R1 data:
 
 ```bash
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s4_r_mu_roundpack_d6n10_scout_k*.npz --label-kinds mu_byte_hw --design-offset 0 --max-designs 2 --sample-range 1024:5000 --block 8 --n-features 32 --ridge 1 --feature-mode corr --n-perm 300 --out-prefix results/s4_r_lowdim_roundpack_d6n10_mu_byte_alpha64_seg1024_5000_p300
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s4_r_mu_roundpack_d6n10_scout_k*.npz --label-kinds mu_byte_hw --design-offset 2 --max-designs 2 --sample-range 1024:5000 --block 8 --n-features 32 --ridge 1 --feature-mode corr --n-perm 300 --out-prefix results/s4_r_lowdim_roundpack_d6n10_mu_byte_alpha128_seg1024_5000_p300
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s4_r_mu_roundpack_d6n10_scout_k*.npz --label-kinds mu_byte_hw --design-offset 4 --max-designs 2 --sample-range 1024:5000 --block 8 --n-features 32 --ridge 1 --feature-mode corr --n-perm 300 --out-prefix results/s4_r_lowdim_roundpack_d6n10_mu_byte_alpha192_seg1024_5000_p300
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s4_r_mu_roundpack_d6n10_scout_k*.npz --label-kinds mu_byte_hw --design-offset 0 --max-designs 2 --sample-range 1024:5000 --block 8 --n-features 32 --ridge 1 --feature-mode corr --n-perm 300 --out-prefix results/smaug/s4_r_lowdim_roundpack_d6n10_mu_byte_alpha64_seg1024_5000_p300
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s4_r_mu_roundpack_d6n10_scout_k*.npz --label-kinds mu_byte_hw --design-offset 2 --max-designs 2 --sample-range 1024:5000 --block 8 --n-features 32 --ridge 1 --feature-mode corr --n-perm 300 --out-prefix results/smaug/s4_r_lowdim_roundpack_d6n10_mu_byte_alpha128_seg1024_5000_p300
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s4_r_mu_roundpack_d6n10_scout_k*.npz --label-kinds mu_byte_hw --design-offset 4 --max-designs 2 --sample-range 1024:5000 --block 8 --n-features 32 --ridge 1 --feature-mode corr --n-perm 300 --out-prefix results/smaug/s4_r_lowdim_roundpack_d6n10_mu_byte_alpha192_seg1024_5000_p300
 ```
 
 Result: alpha-specific subsets were weak. The positive R1 signal comes from the
@@ -262,7 +262,7 @@ shifts.
 Capture:
 
 ```bash
-python3 scripts/s2_z_capture_matrix.py --cmd R --num-keys 8 -n 10 --samples 5000 --design-mode detector-grid --coefs 0,8,16,24 --detector-alphas 64,128,192 --tag s4_r_mu_roundpack_d12n10_diversity
+python3 scripts/smaug/s2_z_capture_matrix.py --cmd R --num-keys 8 -n 10 --samples 5000 --design-mode detector-grid --coefs 0,8,16,24 --detector-alphas 64,128,192 --tag s4_r_mu_roundpack_d12n10_diversity
 ```
 
 Result:
@@ -277,8 +277,8 @@ Result:
 Analysis:
 
 ```bash
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s4_r_mu_roundpack_d12n10_diversity_k*.npz --label-kinds mu_total_hw mu_block32_hw mu_block16_hw mu_byte_hw --sample-range 1024:5000 --sweep --n-perm 100 --out-prefix results/s4_r_lowdim_roundpack_d12n10_diversity_mu_seg1024_5000_sweep_p100
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s4_r_mu_roundpack_d12n10_diversity_k*.npz --label-kinds mu_block16_hw mu_byte_hw --sample-range 1024:5000 --block 8 --n-features 32 --ridge 10 --feature-mode corr --n-perm 500 --out-prefix results/s4_r_lowdim_roundpack_d12n10_diversity_mu_byte_block16_confirm_p500
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s4_r_mu_roundpack_d12n10_diversity_k*.npz --label-kinds mu_total_hw mu_block32_hw mu_block16_hw mu_byte_hw --sample-range 1024:5000 --sweep --n-perm 100 --out-prefix results/smaug/s4_r_lowdim_roundpack_d12n10_diversity_mu_seg1024_5000_sweep_p100
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s4_r_mu_roundpack_d12n10_diversity_k*.npz --label-kinds mu_block16_hw mu_byte_hw --sample-range 1024:5000 --block 8 --n-features 32 --ridge 10 --feature-mode corr --n-perm 500 --out-prefix results/smaug/s4_r_lowdim_roundpack_d12n10_diversity_mu_byte_block16_confirm_p500
 ```
 
 p100 sweep:
@@ -327,7 +327,7 @@ without claiming full key recovery.
 
 Implementation:
 
-- `scripts/s4_mu_recovery_pressure.py`
+- `scripts/smaug/s4_mu_recovery_pressure.py`
   - reuses the held-out-key ridge evaluator from `s2_z_lowdim_analyze.py`.
   - uses no target response bytes.
   - uses `alpha=128, shift=0` as a conservative support-byte detector.
@@ -340,7 +340,7 @@ Implementation:
 Command:
 
 ```bash
-python3 scripts/s4_mu_recovery_pressure.py --inputs traces/s4_r_mu_roundpack_d12n10_diversity_k*.npz --sample-range 1024:5000 --block 8 --n-features 32 --ridge 10 --feature-mode corr --out results/s4_r_mu_recovery_pressure_d12n10_seg1024_5000.txt
+python3 scripts/smaug/s4_mu_recovery_pressure.py --inputs traces/s4_r_mu_roundpack_d12n10_diversity_k*.npz --sample-range 1024:5000 --block 8 --n-features 32 --ridge 10 --feature-mode corr --out results/smaug/s4_r_mu_recovery_pressure_d12n10_seg1024_5000.txt
 ```
 
 Result:
@@ -386,7 +386,7 @@ natural full `indcpa_dec` (`Z`) trace for the same detector-grid CTs.
 Capture:
 
 ```bash
-python3 scripts/s2_z_capture_matrix.py --cmd Z --num-keys 8 -n 10 --samples 24400 --design-mode detector-grid --coefs 0,8,16,24 --detector-alphas 64,128,192 --tag s4_z_mu_detector_d12n10_transfer
+python3 scripts/smaug/s2_z_capture_matrix.py --cmd Z --num-keys 8 -n 10 --samples 24400 --design-mode detector-grid --coefs 0,8,16,24 --detector-alphas 64,128,192 --tag s4_z_mu_detector_d12n10_transfer
 ```
 
 Result:
@@ -400,7 +400,7 @@ Result:
 Full-window analysis:
 
 ```bash
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s4_z_mu_detector_d12n10_transfer_k*.npz --label-kinds mu_block16_hw mu_byte_hw --block 8 --n-features 32 --ridge 10 --feature-mode corr --n-perm 300 --out-prefix results/s4_z_lowdim_mu_detector_d12n10_full_mu_byte_block16_p300
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s4_z_mu_detector_d12n10_transfer_k*.npz --label-kinds mu_block16_hw mu_byte_hw --block 8 --n-features 32 --ridge 10 --feature-mode corr --n-perm 300 --out-prefix results/smaug/s4_z_lowdim_mu_detector_d12n10_full_mu_byte_block16_p300
 ```
 
 Results:
@@ -413,12 +413,12 @@ Results:
 Segment scan:
 
 ```bash
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s4_z_mu_detector_d12n10_transfer_k*.npz --label-kinds mu_byte_hw --sample-range 0:4096 --block 8 --n-features 32 --ridge 10 --feature-mode corr --n-perm 200 --out-prefix results/s4_z_lowdim_mu_detector_d12n10_mu_byte_seg0_4096_p200
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s4_z_mu_detector_d12n10_transfer_k*.npz --label-kinds mu_byte_hw --sample-range 4096:8192 --block 8 --n-features 32 --ridge 10 --feature-mode corr --n-perm 200 --out-prefix results/s4_z_lowdim_mu_detector_d12n10_mu_byte_seg4096_8192_p200
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s4_z_mu_detector_d12n10_transfer_k*.npz --label-kinds mu_byte_hw --sample-range 8192:12288 --block 8 --n-features 32 --ridge 10 --feature-mode corr --n-perm 200 --out-prefix results/s4_z_lowdim_mu_detector_d12n10_mu_byte_seg8192_12288_p200
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s4_z_mu_detector_d12n10_transfer_k*.npz --label-kinds mu_byte_hw --sample-range 12288:16384 --block 8 --n-features 32 --ridge 10 --feature-mode corr --n-perm 200 --out-prefix results/s4_z_lowdim_mu_detector_d12n10_mu_byte_seg12288_16384_p200
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s4_z_mu_detector_d12n10_transfer_k*.npz --label-kinds mu_byte_hw --sample-range 16384:20480 --block 8 --n-features 32 --ridge 10 --feature-mode corr --n-perm 200 --out-prefix results/s4_z_lowdim_mu_detector_d12n10_mu_byte_seg16384_20480_p200
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s4_z_mu_detector_d12n10_transfer_k*.npz --label-kinds mu_byte_hw --sample-range 20480:24400 --block 8 --n-features 32 --ridge 10 --feature-mode corr --n-perm 200 --out-prefix results/s4_z_lowdim_mu_detector_d12n10_mu_byte_seg20480_24400_p200
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s4_z_mu_detector_d12n10_transfer_k*.npz --label-kinds mu_byte_hw --sample-range 0:4096 --block 8 --n-features 32 --ridge 10 --feature-mode corr --n-perm 200 --out-prefix results/smaug/s4_z_lowdim_mu_detector_d12n10_mu_byte_seg0_4096_p200
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s4_z_mu_detector_d12n10_transfer_k*.npz --label-kinds mu_byte_hw --sample-range 4096:8192 --block 8 --n-features 32 --ridge 10 --feature-mode corr --n-perm 200 --out-prefix results/smaug/s4_z_lowdim_mu_detector_d12n10_mu_byte_seg4096_8192_p200
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s4_z_mu_detector_d12n10_transfer_k*.npz --label-kinds mu_byte_hw --sample-range 8192:12288 --block 8 --n-features 32 --ridge 10 --feature-mode corr --n-perm 200 --out-prefix results/smaug/s4_z_lowdim_mu_detector_d12n10_mu_byte_seg8192_12288_p200
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s4_z_mu_detector_d12n10_transfer_k*.npz --label-kinds mu_byte_hw --sample-range 12288:16384 --block 8 --n-features 32 --ridge 10 --feature-mode corr --n-perm 200 --out-prefix results/smaug/s4_z_lowdim_mu_detector_d12n10_mu_byte_seg12288_16384_p200
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s4_z_mu_detector_d12n10_transfer_k*.npz --label-kinds mu_byte_hw --sample-range 16384:20480 --block 8 --n-features 32 --ridge 10 --feature-mode corr --n-perm 200 --out-prefix results/smaug/s4_z_lowdim_mu_detector_d12n10_mu_byte_seg16384_20480_p200
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s4_z_mu_detector_d12n10_transfer_k*.npz --label-kinds mu_byte_hw --sample-range 20480:24400 --block 8 --n-features 32 --ridge 10 --feature-mode corr --n-perm 200 --out-prefix results/smaug/s4_z_lowdim_mu_detector_d12n10_mu_byte_seg20480_24400_p200
 ```
 
 Best segment result was still weak:
@@ -429,7 +429,7 @@ Best segment result was still weak:
 Sliding-window localization:
 
 ```bash
-python3 scripts/s2_z_label_window_scan.py --inputs traces/s4_z_mu_detector_d12n10_transfer_k*.npz --label-kind mu_byte_hw --block 8 --n-features 32 --ridge 10 --feature-mode corr --window 3976 --stride 512 --top-k 6 --n-perm 200 --out results/s4_z_label_window_scan_mu_byte_w3976_s512_p200.txt
+python3 scripts/smaug/s2_z_label_window_scan.py --inputs traces/s4_z_mu_detector_d12n10_transfer_k*.npz --label-kind mu_byte_hw --block 8 --n-features 32 --ridge 10 --feature-mode corr --window 3976 --stride 512 --top-k 6 --n-perm 200 --out results/smaug/s4_z_label_window_scan_mu_byte_w3976_s512_p200.txt
 ```
 
 Best confirmed window:
@@ -484,7 +484,7 @@ Firmware command:
 Capture:
 
 ```bash
-python3 scripts/s2_z_capture_matrix.py --cmd Q --num-keys 8 -n 10 --samples 24400 --design-mode detector-grid --coefs 0,8,16,24 --detector-alphas 64,128,192 --tag s4_q_mu_bridge_d12n10
+python3 scripts/smaug/s2_z_capture_matrix.py --cmd Q --num-keys 8 -n 10 --samples 24400 --design-mode detector-grid --coefs 0,8,16,24 --detector-alphas 64,128,192 --tag s4_q_mu_bridge_d12n10
 ```
 
 Result:
@@ -498,7 +498,7 @@ Result:
 Full-window analysis:
 
 ```bash
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s4_q_mu_bridge_d12n10_k*.npz --label-kinds mu_block16_hw mu_byte_hw --block 8 --n-features 32 --ridge 10 --feature-mode corr --n-perm 300 --out-prefix results/s4_q_lowdim_mu_bridge_d12n10_full_mu_byte_block16_p300
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s4_q_mu_bridge_d12n10_k*.npz --label-kinds mu_block16_hw mu_byte_hw --block 8 --n-features 32 --ridge 10 --feature-mode corr --n-perm 300 --out-prefix results/smaug/s4_q_lowdim_mu_bridge_d12n10_full_mu_byte_block16_p300
 ```
 
 Results:
@@ -511,8 +511,8 @@ Results:
 Sliding-window localization:
 
 ```bash
-python3 scripts/s2_z_label_window_scan.py --inputs traces/s4_q_mu_bridge_d12n10_k*.npz --label-kind mu_byte_hw --block 8 --n-features 32 --ridge 10 --feature-mode corr --window 3976 --stride 512 --top-k 6 --n-perm 200 --out results/s4_q_label_window_scan_mu_byte_w3976_s512_p200.txt
-python3 scripts/s2_z_label_window_scan.py --inputs traces/s4_q_mu_bridge_d12n10_k*.npz --label-kind mu_block16_hw --block 8 --n-features 32 --ridge 10 --feature-mode corr --window 3976 --stride 512 --top-k 6 --n-perm 200 --out results/s4_q_label_window_scan_mu_block16_w3976_s512_p200.txt
+python3 scripts/smaug/s2_z_label_window_scan.py --inputs traces/s4_q_mu_bridge_d12n10_k*.npz --label-kind mu_byte_hw --block 8 --n-features 32 --ridge 10 --feature-mode corr --window 3976 --stride 512 --top-k 6 --n-perm 200 --out results/smaug/s4_q_label_window_scan_mu_byte_w3976_s512_p200.txt
+python3 scripts/smaug/s2_z_label_window_scan.py --inputs traces/s4_q_mu_bridge_d12n10_k*.npz --label-kind mu_block16_hw --block 8 --n-features 32 --ridge 10 --feature-mode corr --window 3976 --stride 512 --top-k 6 --n-perm 200 --out results/smaug/s4_q_label_window_scan_mu_block16_w3976_s512_p200.txt
 ```
 
 Best `mu_byte_hw` confirmed window:
@@ -528,7 +528,7 @@ Best `mu_block16_hw` confirmed window:
 Stricter p500 confirmation for the best `mu_block16_hw` window:
 
 ```bash
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s4_q_mu_bridge_d12n10_k*.npz --label-kinds mu_block16_hw --sample-range 7168:11144 --block 8 --n-features 32 --ridge 10 --feature-mode corr --n-perm 500 --out-prefix results/s4_q_lowdim_mu_block16_w7168_11144_p500
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s4_q_mu_bridge_d12n10_k*.npz --label-kinds mu_block16_hw --sample-range 7168:11144 --block 8 --n-features 32 --ridge 10 --feature-mode corr --n-perm 500 --out-prefix results/smaug/s4_q_lowdim_mu_block16_w7168_11144_p500
 ```
 
 Result:
@@ -567,7 +567,7 @@ Threat-model note:
 Capture:
 
 ```bash
-python3 scripts/s2_z_capture_matrix.py --cmd Q --num-keys 8 -n 20 --samples 24400 --design-mode detector-grid --coefs 0,8,16,24 --detector-alphas 64,128,192 --tag s4_q_mu_bridge_d12n20
+python3 scripts/smaug/s2_z_capture_matrix.py --cmd Q --num-keys 8 -n 20 --samples 24400 --design-mode detector-grid --coefs 0,8,16,24 --detector-alphas 64,128,192 --tag s4_q_mu_bridge_d12n20
 ```
 
 Result:
@@ -580,7 +580,7 @@ Result:
 Fixed-window confirmation of the previous best `Q` hint:
 
 ```bash
-python3 scripts/s2_z_lowdim_analyze.py --inputs traces/s4_q_mu_bridge_d12n20_k*.npz --label-kinds mu_block16_hw --sample-range 7168:11144 --block 8 --n-features 32 --ridge 10 --feature-mode corr --n-perm 500 --out-prefix results/s4_q_lowdim_mu_block16_d12n20_w7168_11144_p500
+python3 scripts/smaug/s2_z_lowdim_analyze.py --inputs traces/s4_q_mu_bridge_d12n20_k*.npz --label-kinds mu_block16_hw --sample-range 7168:11144 --block 8 --n-features 32 --ridge 10 --feature-mode corr --n-perm 500 --out-prefix results/smaug/s4_q_lowdim_mu_block16_d12n20_w7168_11144_p500
 ```
 
 Result:
@@ -591,8 +591,8 @@ Result:
 Sliding-window localization on the new `N=20` capture:
 
 ```bash
-python3 scripts/s2_z_label_window_scan.py --inputs traces/s4_q_mu_bridge_d12n20_k*.npz --label-kind mu_block16_hw --block 8 --n-features 32 --ridge 10 --feature-mode corr --window 3976 --stride 512 --top-k 6 --n-perm 200 --out results/s4_q_label_window_scan_d12n20_mu_block16_w3976_s512_p200.txt
-python3 scripts/s2_z_label_window_scan.py --inputs traces/s4_q_mu_bridge_d12n20_k*.npz --label-kind mu_byte_hw --block 8 --n-features 32 --ridge 10 --feature-mode corr --window 3976 --stride 512 --top-k 6 --n-perm 200 --out results/s4_q_label_window_scan_d12n20_mu_byte_w3976_s512_p200.txt
+python3 scripts/smaug/s2_z_label_window_scan.py --inputs traces/s4_q_mu_bridge_d12n20_k*.npz --label-kind mu_block16_hw --block 8 --n-features 32 --ridge 10 --feature-mode corr --window 3976 --stride 512 --top-k 6 --n-perm 200 --out results/smaug/s4_q_label_window_scan_d12n20_mu_block16_w3976_s512_p200.txt
+python3 scripts/smaug/s2_z_label_window_scan.py --inputs traces/s4_q_mu_bridge_d12n20_k*.npz --label-kind mu_byte_hw --block 8 --n-features 32 --ridge 10 --feature-mode corr --window 3976 --stride 512 --top-k 6 --n-perm 200 --out results/smaug/s4_q_label_window_scan_d12n20_mu_byte_w3976_s512_p200.txt
 ```
 
 Best `mu_block16_hw` confirmed window:

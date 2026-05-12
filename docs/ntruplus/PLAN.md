@@ -4,7 +4,7 @@
 
 이 문서는 NTRU+ (KpqC final, 공식 GitHub release v1.0 / 2026-01-30) 에 대한
 chosen-CT 사이드채널 공격의 **계획 단일 진실의 원천**이다. 진행 중 실험의
-가정·과정·결과 분석은 `docs/IDEA.md` 에 누적한다. 본 문서는 전략·gate·산출물
+가정·과정·결과 분석은 `docs/ntruplus/EXPERIMENTS.md` 에 누적한다. 본 문서는 전략·gate·산출물
 규약만 담는다.
 
 현재 상태 요약 (2026-05-11): Phase 4 NTT-domain selected-lane CPA 는
@@ -12,7 +12,7 @@ attack-valid positive 결과를 확보했다. Multi-victim 결과는 240 cases �
 2 TOP-1 및 M1 baseline ∪ full-stack 기준 17 top-100 이고, single-victim
 multi-lane 확장은 3 victims / 88 lanes / 352 cases 에서 M1 baseline 9 top-100,
 M5 baseline 12 top-100, full stack 8 top-100 이다. 최신 수치는
-`docs/HANDOFF.md` 와 `results/ntruplus768/phase45/SUMMARY.md` 를 우선한다.
+`docs/ntruplus/HANDOFF.md` 와 `results/ntruplus/phase45/SUMMARY.md` 를 우선한다.
 후속 G=200 compact scout 는 clean capture 였지만 M1/full-stack 0/16 top-100,
 M5 1/16 top-100 에 그쳐, 단순 γ design 확장만으로는 single-victim score
 sharpness 문제가 해결되지 않는 것으로 정리한다. 이후 PoI/window diagnostic 에서
@@ -108,7 +108,7 @@ upstream reference 와 모든 192 entry 일치 — host 포팅은 upstream
 
 ### Phase 0 — 보드/host 스켈레톤
 - firmware (이미 있음): `k/e/d/p` baseline + `F/B/I/L/D` chosen-CT + `X` sk dump.
-- smoke (이미 있음): `tests/smoke_ntruplus.py`.
+- smoke (이미 있음): `tests/ntruplus/smoke_ntruplus.py`.
 - 추가 작업:
   1. `host/ntruplus/` 패키지 — params/codec/ntt/poly_basemul/chosen.
   2. `host/upload.py` 가 ntruplus576 hex 를 그대로 플래시하는지 확인.
@@ -195,7 +195,7 @@ upstream reference 와 모든 192 entry 일치 — host 포팅은 upstream
   - `traces` (N, T) float32, `responses` (N, R) uint8, `meta` dict.
 - results: `results/ntruplus576/<phase>/<analysis>.{npz,md,png}`.
 - 모든 .npz meta 에 firmware hex sha256 + git rev 포함 (이미 capture.py 가 함).
-- 실험 가정·과정·결과 분석은 `docs/IDEA.md` 에 추기.
+- 실험 가정·과정·결과 분석은 `docs/ntruplus/EXPERIMENTS.md` 에 추기.
 
 ## 7. 시간 예산
 

@@ -80,7 +80,7 @@ firmware/simpleserial-smaug/simpleserial-smaug.c
 Capture:
 
 ```text
-scripts/s2_z_capture_matrix.py
+scripts/smaug/s2_z_capture_matrix.py
 ```
 
 - Adds command `Y`.
@@ -90,8 +90,8 @@ scripts/s2_z_capture_matrix.py
 Analysis:
 
 ```text
-scripts/s2_z_lowdim_analyze.py
-scripts/s2_z_label_window_scan.py
+scripts/smaug/s2_z_lowdim_analyze.py
+scripts/smaug/s2_z_label_window_scan.py
 ```
 
 - Accepts `Y` matrix captures.
@@ -121,7 +121,7 @@ firmware upload/verify OK
 Smoke:
 
 ```bash
-python3 -u scripts/s2_z_capture_matrix.py \
+python3 -u scripts/smaug/s2_z_capture_matrix.py \
   --cmd Y \
   --num-keys 1 \
   -n 2 \
@@ -143,7 +143,7 @@ shape=(4, 2, 24400)
 Main scout:
 
 ```bash
-python3 -u scripts/s2_z_capture_matrix.py \
+python3 -u scripts/smaug/s2_z_capture_matrix.py \
   --cmd Y \
   --num-keys 6 \
   -n 10 \
@@ -169,7 +169,7 @@ all designs: 10/10 captures
 Command:
 
 ```bash
-python3 scripts/s2_z_lowdim_analyze.py \
+python3 scripts/smaug/s2_z_lowdim_analyze.py \
   --inputs traces/s4_y_fo_downstream_d24n10_k*.npz \
   --label-kinds fo_kr0_byte_hw fo_kr1_byte_hw fo_kr64_byte_hw mu_byte_hw mu_block16_hw \
   --block 8 \
@@ -177,7 +177,7 @@ python3 scripts/s2_z_lowdim_analyze.py \
   --ridge 10 \
   --feature-mode corr \
   --n-perm 300 \
-  --out-prefix results/s4_y_fo_downstream_d24n10_full_p300
+  --out-prefix results/smaug/s4_y_fo_downstream_d24n10_full_p300
 ```
 
 Results:
@@ -198,7 +198,7 @@ below the success gate. It is a weak hint, not evidence of usable leakage.
 Command:
 
 ```bash
-python3 scripts/s2_z_label_window_scan.py \
+python3 scripts/smaug/s2_z_label_window_scan.py \
   --inputs traces/s4_y_fo_downstream_d24n10_k*.npz \
   --label-kind fo_kr1_byte_hw \
   --block 8 \
@@ -209,7 +209,7 @@ python3 scripts/s2_z_label_window_scan.py \
   --stride 512 \
   --top-k 8 \
   --n-perm 200 \
-  --out results/s4_y_fo_downstream_window_scan_fo_kr1_w3976_s512_p200.txt
+  --out results/smaug/s4_y_fo_downstream_window_scan_fo_kr1_w3976_s512_p200.txt
 ```
 
 Best confirmed windows:

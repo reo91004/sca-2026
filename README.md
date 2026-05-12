@@ -28,8 +28,8 @@ Current NTRU+ conclusion, as of 2026-05-11:
 - This is best stated as **partial NTT-coordinate information disclosure**, not
   full secret-key recovery.  Current lattice/full-key recovery remains
   infeasible under the measured recovery rate.
-- Latest NTRU+ status lives in `docs/HANDOFF.md`,
-  `docs/IDEA.md`, `docs/PAPER_OUTLINE.md`, and
+- Latest NTRU+ status lives in `docs/ntruplus/HANDOFF.md`,
+  `docs/ntruplus/EXPERIMENTS.md`, `docs/ntruplus/PAPER_OUTLINE.md`, and
   `results/ntruplus/phase45/SUMMARY.md`.
 
 SMAUG-T conclusion, as of 2026-05-05:
@@ -77,7 +77,7 @@ Active scripts:
 - `scripts/s3_v_analyze_2sk.py`
 - `scripts/smoke.sh`
 
-The detailed NTRU+ experiment log lives in `docs/IDEA.md`.  Generated traces
+The detailed NTRU+ experiment log lives in `docs/ntruplus/EXPERIMENTS.md`.  Generated traces
 and results stay under `traces/` and `results/`, which are ignored by git.
 
 ## Reproduce Current Offline Checks
