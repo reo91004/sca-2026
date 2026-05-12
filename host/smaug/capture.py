@@ -6,11 +6,10 @@ SMAUG-T SCA 트레이스 캡처 (ChipWhisperer-Lite + CW308T-STM32F4 / STM32F415
 
 사용법:
     # SMAUG-T full pipeline (기본)
-    python3 host/smaug/capture.py -n 1000 -s 24400 -o traces/smaug1_dec.npz
+    python3 -m host.smaug.capture -n 1000 -s 24400 -o traces/smaug1_dec.npz
 
-    # HQC custom RM encode_single ('e' 명령, 16바이트 응답)
-    python3 host/smaug/capture.py --target hqc -c e --send-len 1 --resp-len 16 \\
-        -n 1000 -s 24400 -o traces/hqc_custom_e.npz
+    # SMAUG-T decap-only
+    python3 -m host.smaug.capture -c d -n 1000 -s 24400 -o traces/smaug1_d.npz
 
 흐름:
     1. CW1173 (F415가 매달린 보드, sn=TARGET_SN) 만 사용. 금지 시리얼은 거부.
@@ -43,11 +42,7 @@ from host.cw_serial import TARGET_SN, pick_serial
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
-        description="ChipWhisperer SCA 트레이스 캡처 (SMAUG-T / HQC)",
-    )
-    p.add_argument(
-        "--target", choices=("smaug", "hqc"), default="smaug",
-        help="대상 KEM (기본 smaug). 메타에만 기록되며, 실제 동작은 cmd/길이로 결정.",
+        description="ChipWhisperer SCA 트레이스 캡처 (SMAUG-T)",
     )
     p.add_argument(
         "-n", "--num-traces",
@@ -69,8 +64,7 @@ def parse_args() -> argparse.Namespace:
         default="p",
         help=(
             "펌웨어에 보낼 SimpleSerial 명령 1글자 (기본 'p'). "
-            "SMAUG: 'p' full pipeline / 'd' decaps만 / 'k' keypair / 'e' encaps. "
-            "HQC: 'e' encode_single (16B) / 'p' encode_full (16B) / 'c' code_encode (pqclean)."
+            "SMAUG: 'p' full pipeline / 'd' decaps만 / 'k' keypair / 'e' encaps."
         ),
     )
     p.add_argument(
@@ -79,7 +73,7 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument(
         "--resp-len", type=int, default=1,
-        help="응답 'r' 바이트 수 (기본 1; HQC encode 계열은 16)",
+        help="응답 'r' 바이트 수 (기본 1)",
     )
     p.add_argument(
         "-o", "--output",
@@ -178,7 +172,7 @@ def main() -> int:
     target = setup_target(scope, args.baud)
     print(f"[INFO] scope.adc.samples={scope.adc.samples} gain={scope.gain.db} dB")
     print(f"[INFO] target=SS_VER_1_1 baud={target.baud} "
-          f"target_kind={args.target} cmd='{args.cmd}' "
+          f"cmd='{args.cmd}' "
           f"send_len={args.send_len} resp_len={args.resp_len}")
 
     cmd = args.cmd  # SimpleSerial v1 takes a str, not bytes
@@ -242,7 +236,7 @@ def main() -> int:
         "scope_sn": sn,
         "samples": args.samples,
         "gain_db": args.gain_db,
-        "target": args.target,
+        "target": "smaug",
         "cmd": args.cmd,
         "send_len": args.send_len,
         "resp_len": args.resp_len,
