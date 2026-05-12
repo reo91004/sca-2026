@@ -1,117 +1,85 @@
-# SCA Workbench
+# SCA Workbench — KpqC SCA on ChipWhisperer-Lite + STM32F415
 
-Workspace for evaluating side-channel leakage in KpqC KEM implementations on
-ChipWhisperer-Lite + STM32F415.  The repository started as a SMAUG-T workbench;
-the current active paper path is the NTRU+768 chosen-ciphertext NTT-domain CPA
-line.
+Two independent side-channel research tracks live in this repo:
 
-Current NTRU+ conclusion, as of 2026-05-11:
+| Track | 진입점 | Status (2026-05-11) |
+|---|---|---|
+| **NTRU+768** chosen-CT NTT-domain CPA | [`docs/ntruplus/`](docs/ntruplus/README.md) | Paper-grade Phase 4 종료 — 2 perfect TOP-1 + 17/240 top-100 partial NTT-coordinate recovery |
+| **SMAUG-T** smaug{1,3,5} chosen-CT SCA | [`docs/smaug/`](docs/smaug/README.md) | Trace-only chosen-CT cross-key fail. PCO oracle 은 sk-universal 이지만 µ′-bit 직접 leak 없음 |
 
-- The attack-valid leakage point is natural `crypto_kem_dec` reached through the
-  NTRU+ SimpleSerial `D` command after chosen-ciphertext injection (`F/B/I/L/D`).
-- Phase 4 multi-victim data gives **2 TOP-1** NTT-coordinate recoveries and
-  **17 unique top-100 / 240** cases using M1 baseline and full-stack evidence.
-- Phase 4.5/4.6 single-victim multi-lane data is now **3 victims, 88 lanes,
-  352 cases**.  The aggregate top-100 counts are M1 baseline `9/352`, M5
-  baseline `12/352`, full stack `8/352`, and M1/M5/full union `29/352`
-  (channel-mixed upper bound), but candidate-set-size null analysis shows the
-  single-victim raw top-100 counts are not statistically meaningful recovery
-  evidence.
-- A compact G=200 follow-up scout on calibrated lanes completed cleanly
-  (`6400` traces, `0` timeouts) but did not improve the single-victim recovery
-  claim: M1/full-stack had `0/16` top-100 and M5 had `1/16` top-100.  Treat
-  simple G expansion as a negative scout, not a new positive result.  Follow-up
-  PoI/window diagnostics showed that apparent oracle-PoI gains are explained by
-  self-oracle selection bias, while attack-compatible PoI choices stay at
-  `0/16`-`1/16` top-100.  Window reducer and cross-validated window sweeps also
-  stayed at `0/16` top-10.
-- This is best stated as **partial NTT-coordinate information disclosure**, not
-  full secret-key recovery.  Current lattice/full-key recovery remains
-  infeasible under the measured recovery rate.
-- Latest NTRU+ status lives in `docs/ntruplus/HANDOFF.md`,
-  `docs/ntruplus/EXPERIMENTS.md`, `docs/ntruplus/PAPER_OUTLINE.md`, and
-  `results/ntruplus/phase45/SUMMARY.md`.
+각 트랙의 한 눈 timeline (problem → experiments → results) 은 트랙별
+`FLOW.md` 에 있다:
 
-SMAUG-T conclusion, as of 2026-05-05:
+- [`docs/ntruplus/FLOW.md`](docs/ntruplus/FLOW.md) — Phase 0 → 4.6 navigational summary
+- [`docs/smaug/FLOW.md`](docs/smaug/FLOW.md) — S1/S2/S2.x/S3/S1U/S4 + branch (C2, R, Y, D-Pair, S5) + PCO pilots 1~6
 
-- The old `8 traces / 9 keypairs / 100%` story was an instrumented `mu'`-label result and is no longer a valid attack claim.
-- PCO, MV-PC, DTW, FFT, and cross-key `mu'` extraction pilots are retired. They are negative evidence, not the current research path.
-- The active experimental spine is:
-  - **S1**: diagnostic `T` wrapper around `poly_mul_acc`. Strong cross-key leakage, sign recovery about 88%, support about 75% on held-out keys.
-  - **S2**: chosen-ciphertext `Z` trace of `indcpa_dec`. Leakage is visible in cross-key Welch-t, but current per-coordinate HW models do not recover the sparse key.
-  - **S3**: diagnostic `V` wrapper around `vec_vec_mult_add`. Current data shows weak leakage relative to S1/S2; it is a sanity/localization tool, not an attack result.
+자세한 가정·수치·다음 단계는 각 트랙 `README.md` 를 따라가면 source-
+of-truth 문서들 (NTRU+ HANDOFF/PLAN/EXPERIMENTS, SMAUG-T IDEA + branch md)
+로 연결된다.
 
-`T`, `V`, `X`, and `Z` responses are diagnostic instrumentation. Any attack-valid claim must use traces only and must not use returned `mu'` or dumped secret-key bytes for target-key inference. The defensible next step is to improve the S2 trace model or move to a natural `D`-trace window, not to revive old PCO or instrumented-oracle claims.
+## Repository layout
 
-## Active Files
-
-Core model and firmware:
-
-- `firmware/simpleserial-smaug/simpleserial-smaug.c`
-- `host/smaug/poly_mul.py`
-- `host/smaug/chosen.py`
-- `host/smaug/codec.py`
-- `host/smaug/ciphertext.py`
-- `host/smaug/params.py`
-- `host/analysis/sparse_recover.py`
-
-Active scripts:
-
-- `scripts/s1_t_roundtrip.py`
-- `scripts/s1_t_capture_main.py`
-- `scripts/s1_u_capture_matrix.py`
-- `scripts/s1_t_final_analysis.py`
-- `scripts/s1_t_recover_bayes.py`
-- `scripts/s2_z_capture_main.py`
-- `scripts/s2_z_capture_matrix.py`
-- `scripts/s2_z_analyze.py`
-- `scripts/s2_z_recover.py`
-- `scripts/s2_z_lowdim_analyze.py`
-- `scripts/s2_z_design_score.py`
-- `scripts/s2_z_leakage_select.py`
-- `scripts/s2_z_label_pressure.py`
-- `scripts/s2_z_n_sweep.py`
-- `scripts/s3_v_roundtrip.py`
-- `scripts/s3_v_capture_main.py`
-- `scripts/s3_v_lowdim_analyze.py`
-- `scripts/s3_v_analyze_2sk.py`
-- `scripts/smoke.sh`
-
-The detailed NTRU+ experiment log lives in `docs/ntruplus/EXPERIMENTS.md`.  Generated traces
-and results stay under `traces/` and `results/`, which are ignored by git.
-
-## Reproduce Current Offline Checks
-
-```bash
-python3 scripts/s1_t_final_analysis.py --out-prefix results/recheck_s1_final --n-shuffles 50
-python3 scripts/s1_t_recover_bayes.py --out-prefix results/recheck_s1_recover_bayes --conservative --margin-thresh 1.0
-python3 scripts/s2_z_analyze.py --out-prefix results/recheck_s2_z_final --n-shuffles 50
-python3 scripts/s3_v_analyze_2sk.py --sk-a traces/s3_v_skA_a4_n200.npz --sk-b traces/s3_v_skB_a4_n200.npz --out-prefix results/recheck_s3_v_2sk
-python3 tests/run_all.py
+```
+sca-2026/
+├── README.md                    (이 문서 — cross-track hub)
+├── docs/
+│   ├── README.md                (docs hub)
+│   ├── ntruplus/                (NTRU+ 트랙 문서)
+│   ├── smaug/                   (SMAUG-T 트랙 문서)
+│   └── paper/                   (HQC reference PDFs, 공유)
+├── firmware/
+│   ├── simpleserial-ntruplus/   (NTRU+ STM32F415 펌웨어)
+│   ├── simpleserial-smaug/      (SMAUG-T 펌웨어)
+│   └── simpleserial-hqc/        (HQC reference firmware)
+├── host/
+│   ├── ntruplus/                (NTRU+ codec/NTT/inject 패키지)
+│   ├── smaug/                   (SMAUG-T ciphertext/codec/poly_mul 패키지)
+│   ├── analysis/                (TVLA + sparse-recover 분석 라이브러리)
+│   ├── cw_serial.py             (양 트랙 공유 — ChipWhisperer serial picker)
+│   ├── chosen_ct.py, upload.py, capture.py   (SMAUG-T 전용)
+├── scripts/
+│   ├── ntruplus/                (n01_*~n59_* + shell drivers)
+│   └── smaug/                   (s1_*/s2_*/s3_*/s4_* + smoke.sh)
+├── tests/
+│   ├── ntruplus/                (round-trip + smoke)
+│   ├── smaug/                   (analyzer 정합성 + oracle 테스트)
+│   └── run_all.py               (양 트랙 일괄 실행)
+├── results/{ntruplus,smaug}/    (분석 산출물, git-ignored 단 디렉토리만 유지)
+├── traces/                      (캡처 산출물, git-ignored)
+└── history/                     (top-level archive — 옛 자료)
 ```
 
-Latest recheck results:
-
-- S1 final: `99.9-pct |rho|` z-score about `+27`, Bonferroni PoIs `3664`.
-- S1 Bayes LOO: coordinate `0.7363`, support `0.7466`, sign `0.8778`.
-- S2 HW models: all tested single-coordinate HW models remain at shuffle-null level.
-- S3 V two-key sanity: `max|t|=36.43`, much weaker than S1 and S2.
-
-## Hardware Capture
-
-Build and flash the firmware before capture:
+## 빠른 실행
 
 ```bash
+# 양 트랙 테스트 (host/codec/analysis 정합성)
+python3 tests/run_all.py
+
+# NTRU+ 캡처/분석 entry
+python3 scripts/ntruplus/n01_phase1_capture.py --help
+python3 scripts/ntruplus/n39_full_stack.py --help
+
+# SMAUG-T 캡처/분석 entry
+python3 scripts/smaug/s1_t_capture_main.py --help
+python3 scripts/smaug/s2_z_analyze.py --help
+```
+
+캡처 보드는 자동으로 시리얼을 선택한다 (`host/cw_serial.py` 의
+`pick_serial` 정책 — TARGET_SN 우선, FORBIDDEN_SN 거부).
+
+## 펌웨어 빌드/플래시
+
+```bash
+# SMAUG-T
 make -C firmware/simpleserial-smaug PLATFORM=CW308_STM32F4 SMAUG_LEVEL=1
 python3 host/upload.py firmware/simpleserial-smaug/simpleserial-smaug-CW308_STM32F4.hex
+
+# NTRU+ (scripts/ntruplus/ 의 캡처 스크립트가 hex 경로 hard-code; --help 참조)
 ```
 
-Capture examples:
+## 정정 (Corrigendum)
 
-```bash
-python3 scripts/s1_t_capture_main.py -n 500 --out traces/s1_main_new_c0_j0_a1_n500.npz
-python3 scripts/s2_z_capture_main.py -n 200 --alpha 4 --out traces/s2_z_new_a4_n200.npz
-python3 scripts/s3_v_capture_main.py -n 200 --alpha 4 --out traces/s3_v_new_a4_n200.npz
-```
-
-Keep new claims conservative: diagnostic wrappers can locate leakage, but the paper-grade claim must be trace-only and target a natural decapsulation path.
+이전 commit 들에 남아 있을 수 있는 "instrumented µ′-label" 결과 (예 :
+SMAUG-T `8 traces / 9 keypairs / 100%`) 는 **IND-CCA 위반** 이며 attack-valid
+주장에서 제외되었다. 자세한 내용은 [`docs/smaug/FLOW.md`](docs/smaug/FLOW.md)
+와 메모리 `corrigendum_2026_05_04.md` 참조.
