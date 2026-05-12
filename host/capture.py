@@ -2,6 +2,9 @@
 """
 SCA 트레이스 캡처 (ChipWhisperer-Lite + CW308T-STM32F4 / STM32F415).
 
+트랙: **SMAUG-T / HQC 전용**. NTRU+ 트랙은 각 `scripts/ntruplus/n*` 캡처
+스크립트가 자체적으로 ChipWhisperer 통신을 수행한다.
+
 지원 타겟:
     --target smaug : SMAUG-T KEM (firmware/simpleserial-smaug)
     --target hqc   : HQC (firmware/simpleserial-hqc)

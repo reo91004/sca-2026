@@ -1,5 +1,8 @@
 """sca-2026 공통: CW1173 ChipWhisperer-Lite 시리얼 선택 정책.
 
+트랙: **양 트랙 공유**. NTRU+ 트랙의 `scripts/ntruplus/n*` 와 SMAUG-T
+트랙의 `scripts/smaug/s*` 모두 `pick_serial` 을 import 한다.
+
 벤치 환경:
     이 사용자의 책상에는 CW1173 두 대가 동시에 꽂혀 있을 수 있다.
         - TARGET_SN  -> CW308T-STM32F4 (STM32F415)  : SCA 대상

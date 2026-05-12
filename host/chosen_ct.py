@@ -1,5 +1,8 @@
 """Chosen-ciphertext Serial 세션 (SMAUG-T 'F'/'I'/'L'/'D' 명령).
 
+트랙: **SMAUG-T 전용**. NTRU+ 트랙은 자체 inject plumbing 을 쓰며
+(`host/ntruplus/inject.py`), `host/chosen_ct.py` 를 import 하지 않는다.
+
 펌웨어 상주 sk + ct_inj 위에 chosen ct 를 host 가 주입하고, 무결성 지문을
 host 측 시뮬레이터의 sha3_256 기대값과 비교해 *전송 sanity* 까지 보장한
 뒤, 이후 capture loop 가 'D' 만 반복 호출해도 동일 ct 위에서 트레이스를

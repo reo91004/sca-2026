@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """SMAUG-T 펌웨어 업로더 (CW1173 ChipWhisperer-Lite + CW308T-STM32F4 / STM32F415).
 
+트랙: **SMAUG-T 전용**. NTRU+ 트랙은 `scripts/ntruplus/n01_phase1_capture.py`
+같은 캡처 스크립트에서 직접 `cw.program_target` 을 호출하므로
+이 모듈을 import 하지 않는다.
+
 CW 보드 선택은 ``cw_serial.pick_serial`` 정책을 따른다:
     - TARGET_SN 보드가 있으면 그것을 사용
     - 없고 forbidden 제외 단일 보드면 그것을 자동 선택
