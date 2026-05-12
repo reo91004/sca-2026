@@ -30,7 +30,7 @@ Current NTRU+ conclusion, as of 2026-05-11:
   infeasible under the measured recovery rate.
 - Latest NTRU+ status lives in `docs/HANDOFF.md`,
   `docs/IDEA.md`, `docs/PAPER_OUTLINE.md`, and
-  `results/ntruplus768/phase45/SUMMARY.md`.
+  `results/ntruplus/phase45/SUMMARY.md`.
 
 SMAUG-T conclusion, as of 2026-05-05:
 

@@ -37,7 +37,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--input",  type=Path,
                    default=ROOT / "traces/ntruplus768/phase1/d_map.npz")
     p.add_argument("--out-prefix", type=Path,
-                   default=ROOT / "results/ntruplus768/phase1/d_map")
+                   default=ROOT / "results/ntruplus/phase1/d_map")
     p.add_argument("--n-shuffles", type=int, default=200)
     p.add_argument("--seed", type=int, default=2026_05_08)
     return p.parse_args()

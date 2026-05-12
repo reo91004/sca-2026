@@ -19,8 +19,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 ROOT = Path(__file__).resolve().parents[2]
-RESULTS = ROOT / "results/ntruplus768/phase4"
-FIGS = ROOT / "results/ntruplus768/phase4/figures"
+RESULTS = ROOT / "results/ntruplus/phase4"
+FIGS = ROOT / "results/ntruplus/phase4/figures"
 FIGS.mkdir(parents=True, exist_ok=True)
 
 

@@ -35,7 +35,7 @@ def main() -> int:
     p.add_argument("--input", type=Path,
                    default=ROOT / "traces/ntruplus768/phase3/scout_hw1.npz")
     p.add_argument("--out-prefix", type=Path,
-                   default=ROOT / "results/ntruplus768/phase3/basemul_model")
+                   default=ROOT / "results/ntruplus/phase3/basemul_model")
     p.add_argument("--slot", type=int, default=0)
     p.add_argument("--base", type=int, default=3014)
     p.add_argument("--per-iter", type=float, default=33.2)

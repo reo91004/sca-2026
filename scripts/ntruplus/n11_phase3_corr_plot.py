@@ -60,7 +60,7 @@ def main() -> int:
     fig.suptitle("Phase 3 v3 — |corr(trace, HW(γ·f mod q))| around predicted basemul PoI",
                  fontsize=11)
     fig.tight_layout()
-    out = ROOT / "results/ntruplus768/phase3/scout_hw1_corr_profile.png"
+    out = ROOT / "results/ntruplus/phase3/scout_hw1_corr_profile.png"
     fig.savefig(out, dpi=130)
     print(f"[OK] saved {out}")
     return 0

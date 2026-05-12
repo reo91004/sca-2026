@@ -100,7 +100,7 @@ def main() -> int:
               f"{top100:>4}/{n} | {above99_cnt:>4}/{n} | {med_rank:>11} | "
               f"{nulls99.mean():>11.3f} | {nullmax.max():>8.3f}")
 
-    out = ROOT / "results/ntruplus768/phase4/v2w_window_sweep_lane64.npz"
+    out = ROOT / "results/ntruplus/phase4/v2w_window_sweep_lane64.npz"
     out.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(out, rows=np.array(rows, dtype=object))
     print(f"\n[OK] saved → {out}")

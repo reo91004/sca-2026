@@ -154,7 +154,7 @@ def main() -> int:
                   f"f={r['true_f']} |f_c|={r['abs_f_c']}: "
                   f"M1 rk {r['rk_M1']} → M5 rk {r['rk_M5']}")
 
-    out = ROOT / "results/ntruplus768/phase4/montgomery_all.npz"
+    out = ROOT / "results/ntruplus/phase4/montgomery_all.npz"
     np.savez_compressed(out, rows=np.array(rows, dtype=object))
     print(f"\n[OK] saved → {out}")
     return 0

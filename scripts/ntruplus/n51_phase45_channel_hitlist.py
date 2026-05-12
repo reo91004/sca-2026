@@ -15,8 +15,8 @@ from pathlib import Path
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_IN = ROOT / "results/ntruplus768/phase45/combined.npz"
-DEFAULT_OUT = ROOT / "results/ntruplus768/phase45/channel_hitlist"
+DEFAULT_IN = ROOT / "results/ntruplus/phase45/combined.npz"
+DEFAULT_OUT = ROOT / "results/ntruplus/phase45/channel_hitlist"
 
 CHANNELS = [
     ("M1", "rk_M1_pred"),

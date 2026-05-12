@@ -6,8 +6,8 @@ single victim if we extend lane coverage. Each (batch, key) tuple is a
 unique sk (sk_blobs differ across batches per Phase 4.5 sanity check).
 
 Outputs:
-  - results/ntruplus768/phase4/per_key_dist.npz
-  - results/ntruplus768/phase4/per_key_dist.md (table)
+  - results/ntruplus/phase4/per_key_dist.npz
+  - results/ntruplus/phase4/per_key_dist.md (table)
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def main() -> int:
-    rows = np.load(ROOT / "results/ntruplus768/phase4/full_stack.npz",
+    rows = np.load(ROOT / "results/ntruplus/phase4/full_stack.npz",
                    allow_pickle=True)["rows"]
     cases = list(rows)
     print(f"[INFO] {len(cases)} (batch, key, slot) cases loaded\n")
@@ -101,14 +101,14 @@ def main() -> int:
           f"unique top-100 coords / victim (assuming 30% overlap)")
 
     # Save artifacts
-    out_npz = ROOT / "results/ntruplus768/phase4/per_key_dist.npz"
+    out_npz = ROOT / "results/ntruplus/phase4/per_key_dist.npz"
     np.savez_compressed(out_npz,
                         rate_summary=np.array(rate_summary, dtype=object),
                         unique_keys=np.array(keys, dtype=object))
     print(f"\n[OK] saved → {out_npz}")
 
     # Markdown summary for paper / handoff
-    out_md = ROOT / "results/ntruplus768/phase4/per_key_dist.md"
+    out_md = ROOT / "results/ntruplus/phase4/per_key_dist.md"
     lines = ["# Per-(batch, key) recovery distribution", "",
              f"From `full_stack.npz` ({len(cases)} cases, "
              f"{len(keys)} unique sks, each 1 lane × 4 slots).", "",

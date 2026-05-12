@@ -6,7 +6,7 @@
   2. cross-sk Welch-t 검증 (sk 의존 누설 신호 존재 입증).
   3. per-coord HW CPA + shuffle null + Bonferroni-corrected threshold.
   4. LOO sk recovery 시도 — 단일 coord HW 모델이 성능에 도달 가능한지.
-  5. 모든 결과를 results/s1_final_*.{txt,png} 로 저장.
+  5. 모든 결과를 results/smaug/s1_final_*.{txt,png} 로 저장.
 
 본 스크립트는 sk_A..J (N=500) + sk_11..sk_30 (N=200) 등 capture 명명 규약에
 구애받지 않고, ``s1_main_*c0_j0_a1*.npz`` glob 으로 모두 읽는다.

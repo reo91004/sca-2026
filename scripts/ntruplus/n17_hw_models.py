@@ -159,7 +159,7 @@ def main() -> int:
               f"{above.mean():>13.3f}")
 
     # Save summary
-    out = ROOT / "results/ntruplus768/phase4/hw_models.npz"
+    out = ROOT / "results/ntruplus/phase4/hw_models.npz"
     out.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(out, **{k: v[0] for k, v in summary.items()})
     print(f"\n[OK] saved → {out}")

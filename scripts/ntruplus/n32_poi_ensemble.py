@@ -130,7 +130,7 @@ def main() -> int:
         print(f"{lane:>5} {n_l:>4} {(rps<100).sum():>2}/{n_l:>2} "
               f"{(rqs<100).sum():>3}/{n_l:>2} {(res<100).sum():>3}/{n_l:>2}")
 
-    out = ROOT / "results/ntruplus768/phase4/poi_ensemble.npz"
+    out = ROOT / "results/ntruplus/phase4/poi_ensemble.npz"
     np.savez_compressed(out, rows=np.array(rows, dtype=object))
     print(f"\n[OK] saved → {out}")
     return 0

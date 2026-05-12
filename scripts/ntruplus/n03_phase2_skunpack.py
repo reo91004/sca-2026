@@ -46,7 +46,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--input",  type=Path,
                    default=ROOT / "traces/ntruplus768/phase1/d_map.npz")
     p.add_argument("--out-prefix", type=Path,
-                   default=ROOT / "results/ntruplus768/phase2/skunpack")
+                   default=ROOT / "results/ntruplus/phase2/skunpack")
     p.add_argument("--label-source", choices=("sk", "ct"), default="sk",
                    help="byte-HW label source: sk_blobs (sk-leak hypothesis) "
                         "or ct (ct-leak hypothesis using fingerprint as proxy).")

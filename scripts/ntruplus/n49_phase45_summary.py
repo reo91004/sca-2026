@@ -5,7 +5,7 @@ Run after main capture completes. Produces:
   - F10: per-victim recovery summary (top-1/10/100 per victim)
   - F11: lane-by-lane recovery hit rate (heatmap)
   - F12: cumulative coords vs lanes covered
-  - results/ntruplus768/phase45/SUMMARY.md (paper-ready statistics)
+  - results/ntruplus/phase45/SUMMARY.md (paper-ready statistics)
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "host"))
 
-P45 = ROOT / "results/ntruplus768/phase45"
+P45 = ROOT / "results/ntruplus/phase45"
 FIGS = P45 / "figures"
 FIGS.mkdir(parents=True, exist_ok=True)
 

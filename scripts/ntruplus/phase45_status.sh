@@ -15,7 +15,7 @@ ls -la traces/ntruplus768/phase45/ 2>&1 | grep -v "^total"
 
 echo ""
 echo "[2] Result files:"
-ls -la results/ntruplus768/phase45/ 2>&1 | grep -v "^total"
+ls -la results/ntruplus/phase45/ 2>&1 | grep -v "^total"
 
 echo ""
 echo "[3] Running processes:"
@@ -37,20 +37,20 @@ tail -5 /tmp/scout_capture.log 2>/dev/null | sed 's/^/    /' || echo "    (empty
 
 echo ""
 echo "[6] Phase 4.5 summary file (if exists):"
-if [ -f results/ntruplus768/phase45/SUMMARY.md ]; then
-    head -30 results/ntruplus768/phase45/SUMMARY.md | sed 's/^/    /'
+if [ -f results/ntruplus/phase45/SUMMARY.md ]; then
+    head -30 results/ntruplus/phase45/SUMMARY.md | sed 's/^/    /'
 else
     echo "    (not yet generated)"
 fi
 
 echo ""
 echo "[7] Phase 4.5 figures:"
-ls results/ntruplus768/phase45/figures/ 2>&1 | sed 's/^/    /'
+ls results/ntruplus/phase45/figures/ 2>&1 | sed 's/^/    /'
 
 echo ""
 echo "=========================================="
 echo "Quick actions:"
 echo "  rerun analysis:  python3 scripts/n45_singleVictim_combine.py traces/ntruplus768/phase45/*.npz"
 echo "  regen figures:   python3 scripts/n49_phase45_summary.py"
-echo "  view summary:    cat results/ntruplus768/phase45/SUMMARY.md"
+echo "  view summary:    cat results/ntruplus/phase45/SUMMARY.md"
 echo "=========================================="

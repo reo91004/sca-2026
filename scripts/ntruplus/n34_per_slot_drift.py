@@ -119,7 +119,7 @@ def main() -> int:
             print(f"{lane:>5} {slot:>5} {len(sub_sorted):>3} "
                   f"{int(np.median(drifts)):>+5d}  {cases}")
 
-    out = ROOT / "results/ntruplus768/phase4/per_slot_drift.npz"
+    out = ROOT / "results/ntruplus/phase4/per_slot_drift.npz"
     np.savez_compressed(out, rows=np.array(rows, dtype=object))
     print(f"\n[OK] saved → {out}")
     return 0

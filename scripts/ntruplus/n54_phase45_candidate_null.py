@@ -15,8 +15,8 @@ from pathlib import Path
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_IN = ROOT / "results/ntruplus768/phase45/candidate_export.npz"
-DEFAULT_OUT = ROOT / "results/ntruplus768/phase45/candidate_null"
+DEFAULT_IN = ROOT / "results/ntruplus/phase45/candidate_export.npz"
+DEFAULT_OUT = ROOT / "results/ntruplus/phase45/candidate_null"
 Q_MINUS_1 = 3456
 CHANNELS = ["M1", "M5", "M1_slot", "M5_slot", "Full"]
 UNIONS = [

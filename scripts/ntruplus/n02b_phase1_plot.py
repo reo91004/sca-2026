@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def main() -> int:
-    res = np.load(ROOT / "results/ntruplus768/phase1/d_map.npz")
+    res = np.load(ROOT / "results/ntruplus/phase1/d_map.npz")
     snr = res["snr"]
     t   = res["max_t"]
     null = res["null_max_t"]
@@ -50,7 +50,7 @@ def main() -> int:
     axes[2].set_xlabel("sample index")
     axes[2].grid(alpha=0.3)
 
-    out = ROOT / "results/ntruplus768/phase1/d_map_overview.png"
+    out = ROOT / "results/ntruplus/phase1/d_map_overview.png"
     fig.tight_layout()
     fig.savefig(out, dpi=130)
     print(f"[OK] saved {out}")

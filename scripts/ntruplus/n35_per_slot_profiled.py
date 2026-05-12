@@ -149,7 +149,7 @@ def main() -> int:
                   f"f={r['true_f']} |f_c|={r['abs_f_c']} (off={r['slot_offset']:+d}): "
                   f"rk {r['rk_pred']} → {r['rk_slot']}")
 
-    out = ROOT / "results/ntruplus768/phase4/per_slot_profiled.npz"
+    out = ROOT / "results/ntruplus/phase4/per_slot_profiled.npz"
     np.savez_compressed(out, rows=np.array(rows, dtype=object))
     print(f"\n[OK] saved → {out}")
     return 0

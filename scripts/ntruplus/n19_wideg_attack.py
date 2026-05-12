@@ -34,7 +34,7 @@ def main() -> int:
     p.add_argument("--input", type=Path,
                    default=ROOT / "traces/ntruplus768/phase3/wideg_lane0_n32.npz")
     p.add_argument("--out-prefix", type=Path,
-                   default=ROOT / "results/ntruplus768/phase4/wideg_lane0_attack")
+                   default=ROOT / "results/ntruplus/phase4/wideg_lane0_attack")
     p.add_argument("--window", type=int, default=10)
     args = p.parse_args()
     args.out_prefix.parent.mkdir(parents=True, exist_ok=True)

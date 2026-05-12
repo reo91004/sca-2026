@@ -179,7 +179,7 @@ def main() -> int:
                   f"all peak SNR median={np.median(snrs):.4f}, "
                   f"|f_c|∈[100,1000) median={np.median(mid):.4f}")
 
-    out = ROOT / "results/ntruplus768/phase4/lane_snr_compare.npz"
+    out = ROOT / "results/ntruplus/phase4/lane_snr_compare.npz"
     out.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(out, rows=np.array(all_rows, dtype=object))
     print(f"\n[OK] saved → {out}")

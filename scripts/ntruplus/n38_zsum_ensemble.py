@@ -142,7 +142,7 @@ def main() -> int:
                   f"M1 rk {r['rk_M1']:>4}, M5 rk {r['rk_M5']:>4}, "
                   f"Zsum rk {r['rk_ZS']:>4}")
 
-    out = ROOT / "results/ntruplus768/phase4/zsum_ensemble.npz"
+    out = ROOT / "results/ntruplus/phase4/zsum_ensemble.npz"
     np.savez_compressed(out, rows=np.array(rows, dtype=object))
     print(f"\n[OK] saved → {out}")
     return 0

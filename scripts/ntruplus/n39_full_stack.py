@@ -174,7 +174,7 @@ def main() -> int:
                   f"{r['rk_M1_pred']:>8} {r['rk_M1_slot']:>6} "
                   f"{r['rk_M5_slot']:>6} {r['rk_full']:>5}")
 
-    out = ROOT / "results/ntruplus768/phase4/full_stack.npz"
+    out = ROOT / "results/ntruplus/phase4/full_stack.npz"
     np.savez_compressed(out, rows=np.array(rows, dtype=object))
     print(f"\n[OK] saved → {out}")
     return 0

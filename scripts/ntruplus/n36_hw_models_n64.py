@@ -129,7 +129,7 @@ def main() -> int:
               f"{(rs==0).sum():>3}/{n} | {(rs<10).sum():>3}/{n} | "
               f"{(rs<100).sum():>3}/{n} | {(rs<500).sum():>3}/{n}")
 
-    out = ROOT / "results/ntruplus768/phase4/hw_models_n64.npz"
+    out = ROOT / "results/ntruplus/phase4/hw_models_n64.npz"
     np.savez_compressed(out, rows=np.array(rows, dtype=object))
     print(f"\n[OK] saved → {out}")
     return 0

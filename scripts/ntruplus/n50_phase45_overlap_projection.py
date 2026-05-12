@@ -16,8 +16,8 @@ from pathlib import Path
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_IN = ROOT / "results/ntruplus768/phase45/combined.npz"
-DEFAULT_OUT = ROOT / "results/ntruplus768/phase45/overlap_projection"
+DEFAULT_IN = ROOT / "results/ntruplus/phase45/combined.npz"
+DEFAULT_OUT = ROOT / "results/ntruplus/phase45/overlap_projection"
 Q = 3457
 SK_ENTROPY_BITS = 1152.0
 FULL_LANES = 192

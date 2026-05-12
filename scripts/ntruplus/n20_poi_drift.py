@@ -93,7 +93,7 @@ def main() -> int:
     for i, h in enumerate(hist):
         print(f"    [{edges[i]:>+4}, {edges[i+1]:>+4}): {h}")
 
-    out = ROOT / "results/ntruplus768/phase4/poi_drift.npz"
+    out = ROOT / "results/ntruplus/phase4/poi_drift.npz"
     out.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(out, rows=np.array(rows, dtype=object))
     print(f"[OK] saved → {out}")

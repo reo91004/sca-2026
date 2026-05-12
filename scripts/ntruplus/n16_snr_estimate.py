@@ -139,7 +139,7 @@ def main() -> int:
                   f"N_med={np.median(nreq[nf]):.1f}  "
                   f"(n={len(rs)}, finite={nf.sum()})")
 
-    out = ROOT / "results/ntruplus768/phase4/snr_estimate.npz"
+    out = ROOT / "results/ntruplus/phase4/snr_estimate.npz"
     out.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(out, rows=np.array(rows, dtype=object))
     print(f"[OK] saved → {out}")

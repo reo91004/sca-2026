@@ -47,7 +47,7 @@ def main() -> int:
     p.add_argument("--input", type=Path,
                    default=ROOT / "traces/ntruplus768/phase3/scout.npz")
     p.add_argument("--out-prefix", type=Path,
-                   default=ROOT / "results/ntruplus768/phase3/scout")
+                   default=ROOT / "results/ntruplus/phase3/scout")
     p.add_argument("--label", choices=("modq_hw", "modq_value"), default="modq_hw",
                    help="label = HW(γ·f mod q) (modq_hw) or γ·f mod q centred (modq_value)")
     p.add_argument("--n-shuffles", type=int, default=300)

@@ -145,7 +145,7 @@ def main() -> int:
                   f"f={r['true_f']} |f_c|={r['abs_f_c']}: rk "
                   f"{r['v2_pred_rank']} → {r['v2_prof_rank']}")
 
-    out = ROOT / "results/ntruplus768/phase4/profiled_poi.npz"
+    out = ROOT / "results/ntruplus/phase4/profiled_poi.npz"
     np.savez_compressed(out, rows=np.array(all_rows, dtype=object))
     print(f"\n[OK] saved → {out}")
     return 0

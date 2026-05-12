@@ -9,10 +9,10 @@ cd "$ROOT"
 
 SCOUT="traces/ntruplus768/phase45/scout_K1_L16_N8.npz"
 MAIN="traces/ntruplus768/phase45/main_K1_L24_N16.npz"
-SCOUT_OUT="results/ntruplus768/phase45/scout_K1_L16_N8"
-MAIN_OUT="results/ntruplus768/phase45/main_K1_L24_N16"
-COMBINED_OUT="results/ntruplus768/phase45/combined"
-LOG_DIR="results/ntruplus768/phase45/logs"
+SCOUT_OUT="results/ntruplus/phase45/scout_K1_L16_N8"
+MAIN_OUT="results/ntruplus/phase45/main_K1_L24_N16"
+COMBINED_OUT="results/ntruplus/phase45/combined"
+LOG_DIR="results/ntruplus/phase45/logs"
 
 mkdir -p "$(dirname "$SCOUT_OUT")" "$LOG_DIR"
 

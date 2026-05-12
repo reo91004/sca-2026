@@ -155,7 +155,7 @@ def main() -> int:
         print(f"     corr_N: " + " ".join(f"{c:.3f}" for c in r["corr_n"]))
         print(f"     rank_N: " + " ".join(f"{rk}" for rk in r["rank_n"]))
 
-    out = ROOT / "results/ntruplus768/phase4/n64_diagnose.npz"
+    out = ROOT / "results/ntruplus/phase4/n64_diagnose.npz"
     np.savez_compressed(out, rows=np.array(rows, dtype=object))
     print(f"\n[OK] saved → {out}")
     return 0

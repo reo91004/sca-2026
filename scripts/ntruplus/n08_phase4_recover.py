@@ -54,7 +54,7 @@ def main() -> int:
     p.add_argument("--input", type=Path,
                    default=ROOT / "traces/ntruplus768/phase3/multikey_hw1.npz")
     p.add_argument("--out-prefix", type=Path,
-                   default=ROOT / "results/ntruplus768/phase4/recover_hw1")
+                   default=ROOT / "results/ntruplus/phase4/recover_hw1")
     p.add_argument("--slots", type=str, default="0,1,2,3",
                    help="comma-separated slots within lane to recover. "
                         "All four slots leak at the same PoI from a single "

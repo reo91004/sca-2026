@@ -43,7 +43,7 @@ def main() -> int:
     p.add_argument("--input", type=Path,
                    default=ROOT / "traces/ntruplus768/phase3/multikey_hw1.npz")
     p.add_argument("--out-prefix", type=Path,
-                   default=ROOT / "results/ntruplus768/phase4/cpa_per_key")
+                   default=ROOT / "results/ntruplus/phase4/cpa_per_key")
     p.add_argument("--window", type=int, default=10,
                    help="±half-window around predicted PoI for per-candidate "
                         "best-sample search")

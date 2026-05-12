@@ -156,7 +156,7 @@ def main() -> int:
     ap.add_argument("inputs", nargs="+", type=Path,
                     help="Phase 4.5 trace files (one or more victims)")
     ap.add_argument("--out-prefix", type=Path,
-                    default=ROOT / "results/ntruplus768/phase45/combined")
+                    default=ROOT / "results/ntruplus/phase45/combined")
     args = ap.parse_args()
     args.out_prefix.parent.mkdir(parents=True, exist_ok=True)
 

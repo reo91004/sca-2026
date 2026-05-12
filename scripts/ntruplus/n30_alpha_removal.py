@@ -143,7 +143,7 @@ def main() -> int:
             print(f"   {r['batch']:>10} k={r['key']} sl={r['slot']} f={r['true_f']} "
                   f"|f_c|={r['abs_f_c']}: rk {r['rank_raw']} → {r['rank_a1']}")
 
-    out = ROOT / "results/ntruplus768/phase4/alpha_removal.npz"
+    out = ROOT / "results/ntruplus/phase4/alpha_removal.npz"
     np.savez_compressed(out, rows=np.array(rows, dtype=object))
     print(f"\n[OK] saved → {out}")
     return 0

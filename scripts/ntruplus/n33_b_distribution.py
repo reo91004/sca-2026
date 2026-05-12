@@ -167,7 +167,7 @@ def main() -> int:
         print(f"   [{lo:>4},{hi:>4}) {len(sub):>4} {np.median(bs):>8.5f} "
               f"{np.median(sH):>9.3f} {np.median(cs):>9.3f}")
 
-    out = ROOT / "results/ntruplus768/phase4/b_distribution.npz"
+    out = ROOT / "results/ntruplus/phase4/b_distribution.npz"
     np.savez_compressed(out, rows=np.array(rows, dtype=object))
     print(f"\n[OK] saved → {out}")
     return 0

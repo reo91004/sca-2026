@@ -22,7 +22,7 @@ sys.path.insert(0, str(ROOT / "host"))
 from ntruplus.codec import center, from_bytes  # noqa: E402
 from ntruplus.params import D, POLYBYTES, Q, QINV  # noqa: E402
 
-DEFAULT_OUT = ROOT / "results/ntruplus768/phase45/candidate_export"
+DEFAULT_OUT = ROOT / "results/ntruplus/phase45/candidate_export"
 MASK16 = (1 << 16) - 1
 SIGN16 = 1 << 15
 

@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle, FancyArrow
 
 ROOT = Path(__file__).resolve().parents[2]
-FIGS = ROOT / "results/ntruplus768/phase4/figures"
+FIGS = ROOT / "results/ntruplus/phase4/figures"
 FIGS.mkdir(parents=True, exist_ok=True)
 
 

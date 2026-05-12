@@ -181,7 +181,7 @@ def main() -> int:
                   f"{r['v2_pct']:>7.2f} {r['v2w_pct']:>8.2f}")
 
     # save
-    out = ROOT / "results/ntruplus768/phase4/combined.npz"
+    out = ROOT / "results/ntruplus/phase4/combined.npz"
     out.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(out, rows=np.array(all_rows, dtype=object))
     print(f"\n[OK] saved → {out}")

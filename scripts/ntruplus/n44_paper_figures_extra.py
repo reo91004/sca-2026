@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "host"))
 
-RESULTS = ROOT / "results/ntruplus768/phase4"
+RESULTS = ROOT / "results/ntruplus/phase4"
 FIGS = RESULTS / "figures"
 FIGS.mkdir(parents=True, exist_ok=True)
 

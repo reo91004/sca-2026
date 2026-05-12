@@ -151,7 +151,7 @@ def main() -> int:
     ap.add_argument("--ntt-recovered", type=int, default=30,
                     help="number of NTT coords perfectly recovered")
     ap.add_argument("--out", type=Path,
-                    default=ROOT / "results/ntruplus768/phase45/partial_analysis.md")
+                    default=ROOT / "results/ntruplus/phase45/partial_analysis.md")
     args = ap.parse_args()
     args.out.parent.mkdir(parents=True, exist_ok=True)
 
