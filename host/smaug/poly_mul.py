@@ -160,7 +160,7 @@ def monomial_predict(
     where `sgn_wrap = +1 if i ≥ idx else -1`.
 
     이 식은 ``negacyclic_mul(sk_poly, monomial_b(idx, alpha))`` 와 동일해야 하며
-    (단위테스트 ``tests/test_poly_mul.py`` 가 검증).
+    (단위테스트 ``tests/smaug/test_poly_mul.py`` 가 검증).
     """
     if sk_poly.shape != (n,):
         raise ValueError(f"sk_poly shape must be ({n},), got {sk_poly.shape}")
